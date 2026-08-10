@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { GameSetupProvider } from "@/lib/game-setup-context";
 
 export const metadata: Metadata = {
   title: "Imposter Word — The party game of secret words",
@@ -19,7 +20,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-iw-void text-iw-ink-100">
-        {children}
+        <GameSetupProvider>{children}</GameSetupProvider>
       </body>
     </html>
   );

@@ -38,12 +38,12 @@ export default function HomeScreen() {
                 title="GAME SETTINGS"
                 subtitle="Timers, sounds and more"
               />
-              <HomeMenuItem
+              {/* <HomeMenuItem
                 href="/statistics"
                 icon={BarChart3}
                 title="STATISTICS"
                 subtitle="View your game stats"
-              />
+              /> */}
             </nav>
           </div>
 
