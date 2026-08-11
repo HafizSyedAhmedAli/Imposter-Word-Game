@@ -1,33 +1,12 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Users } from "lucide-react";
 import ConnectionStatus from "@/components/home/ConnectionStatus";
 
-function SetupPlanetIcon() {
-  return (
-    <div
-      className="relative mx-auto h-7 w-7 shrink-0 sm:h-8 sm:w-8"
-      aria-hidden="true"
-    >
-      <div
-        className="h-full w-full rounded-full"
-        style={{
-          background:
-            "radial-gradient(circle at 35% 30%, #cbb4ff, #7a52e8 55%, #3c2280 100%)",
-        }}
-      />
-      <div
-        className="absolute left-1/2 top-1/2 h-2.5 w-full -translate-x-1/2 -translate-y-1/2 rotate-[-18deg] rounded-full border border-white/30"
-        aria-hidden="true"
-      />
-    </div>
-  );
-}
-
-export default function SetupHeader() {
+export default function PlayersHeader() {
   return (
     <header className="flex items-start justify-between gap-3">
       <Link
-        href="/"
+        href="/setup"
         aria-label="Go back"
         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-iw-border bg-iw-surface/60 text-iw-ink-100 backdrop-blur-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-iw-border-strong hover:bg-iw-surface-2 active:translate-y-0 active:scale-95"
       >
@@ -35,12 +14,17 @@ export default function SetupHeader() {
       </Link>
 
       <div className="flex flex-1 flex-col items-center px-1 text-center">
-        <SetupPlanetIcon />
-        <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-iw-ink-100 sm:text-4xl">
-          GAME SETUP
+        <span
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-iw-violet-500/20 text-iw-violet-300 sm:h-9 sm:w-9"
+          aria-hidden="true"
+        >
+          <Users className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.5} />
+        </span>
+        <h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-iw-ink-100 sm:text-4xl">
+          WHO&apos;S PLAYING?
         </h1>
         <p className="mt-1 max-w-[22rem] text-sm text-iw-violet-300 sm:text-base">
-          Customize your game and get ready to play!
+          Add everyone joining the game
         </p>
       </div>
 

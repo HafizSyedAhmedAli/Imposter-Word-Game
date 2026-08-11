@@ -39,3 +39,24 @@ export type GameConfig = {
   difficulty: Difficulty;
   options: GameOptions;
 };
+
+/**
+ * A player's public identity only. Screen 3 (Players) is the only place
+ * this type is constructed -- it deliberately carries no secret game
+ * state (no role, word, hint, or imposter flag). That information is
+ * added later, per-round, by the Round Provider in Screen 4+.
+ */
+export type Player = {
+  id: string;
+  name: string;
+};
+
+/**
+ * The handoff shape passed from Players (Screen 3) into Round Preparation
+ * (Screen 4). Roles/word/hint are intentionally absent here -- Screen 4
+ * is responsible for generating/loading them and assigning roles.
+ */
+export type GameSession = {
+  config: GameConfig;
+  players: Player[];
+};
