@@ -1,0 +1,291 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import SpaceBackdrop from "@/components/home/SpaceBackdrop";
+import { useGameSetup } from "@/lib/game-setup-context";
+import { getImposterCount, isPlayerCountValid } from "@/game/game-rules";
+import type { RoundSession } from "@/game/game-types";
+import { prepareGameRound, type PreparationStage } from "@/game/game-engine";
+import {
+  clearStoredRoundSession,
+  getStoredRoundSession,
+  storeRoundSession,
+} from "@/lib/round-session-store";
+import RoundPreparationHeader from "./RoundPreparationHeader";
+import GameSummaryCard from "./GameSummaryCard";
+import PreparationAnimation from "./PreparationAnimation";
+import PreparationProgress from "./PreparationProgress";
+import PreparationStatus from "./PreparationStatus";
+import RoundSourceIndicator from "./RoundSourceIndicator";
+import RoundErrorRecovery from "./RoundErrorRecovery";
+
+type ScreenPhase = "preparing" | "ready" | "no-players" | "error";
+
+const STAGE_META: Record<
+  PreparationStage,
+  { step: number; onlineStatus: string; offlineStatus: string }
+> = {
+  word: {
+    step: 1,
+    onlineStatus: "Creating your secret word...",
+    offlineStatus: "Using your offline word collection...",
+  },
+  hint: {
+    step: 2,
+    onlineStatus: "Crafting a clever hint...",
+    offlineStatus: "Preparing your offline hint...",
+  },
+  roles: {
+    step: 3,
+    onlineStatus: "Choosing the imposters...",
+    offlineStatus: "Choosing the imposters...",
+  },
+  finalizing: {
+    step: 4,
+    onlineStatus: "Securing the round...",
+    offlineStatus: "Securing the round...",
+  },
+};
+
+// Small, deliberate pause per post-fetch stage so the progress meter never
+// jumps straight from 25% to 100% -- but short enough that it never reads
+// as an artificial delay (see Screen 4 spec, section 48).
+const STAGE_PACING_MS = 320;
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Reads any already-prepared round out of session storage. Used as a lazy
+// useState initializer (not inside an effect) so recovering a session on
+// refresh never causes an extra render pass.
+function readExistingSession(): RoundSession | null {
+  if (typeof window === "undefined") return null;
+  return getStoredRoundSession();
+}
+
+export default function RoundPreparationScreen() {
+  const router = useRouter();
+  const { config, players } = useGameSetup();
+
+  const [session, setSession] = useState<RoundSession | null>(
+    readExistingSession,
+  );
+  const [phase, setPhase] = useState<ScreenPhase>(() => {
+    if (readExistingSession()) return "ready";
+    if (!isPlayerCountValid(config.mode, players.length)) return "no-players";
+    return "preparing";
+  });
+  const [stage, setStage] = useState<PreparationStage>(
+    session ? "finalizing" : "word",
+  );
+  const [wasOnlineAtStart, setWasOnlineAtStart] = useState(true);
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
+
+  const startedRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  async function runPreparation() {
+    // Explicitly defer to a microtask before touching state. The initial
+    // call happens from the mount effect below, where `phase` is already
+    // "preparing" via the lazy initializer -- this just ensures every
+    // state update here happens from an async callback, not synchronously
+    // inside the effect body itself.
+    await Promise.resolve();
+
+    setPhase("preparing");
+    setStage("word");
+    setSession(null);
+    setWasOnlineAtStart(
+      typeof navigator === "undefined" ? true : navigator.onLine,
+    );
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      const prepared = await prepareGameRound(config, players, {
+        signal: controller.signal,
+        onStage: async (nextStage) => {
+          setStage(nextStage);
+          if (nextStage !== "word") {
+            await wait(STAGE_PACING_MS);
+          }
+        },
+      });
+
+      if (controller.signal.aborted) return;
+
+      storeRoundSession(prepared);
+      setSession(prepared);
+      setPhase("ready");
+
+      await wait(1100);
+      if (!controller.signal.aborted) {
+        router.push("/pass");
+      }
+    } catch {
+      if (controller.signal.aborted) return;
+      setPhase("error");
+    }
+  }
+
+  useEffect(() => {
+    // Guards against React StrictMode's double-invoked effects in dev --
+    // a round must only ever be generated once (see Screen 4 spec,
+    // section 35).
+    if (startedRef.current) return;
+    startedRef.current = true;
+
+    if (phase === "ready") {
+      // A prepared round was already recovered from session storage by
+      // the lazy state initializers above (e.g. a refresh) -- nothing to
+      // regenerate, just continue on to Screen 5 (see Screen 4 spec,
+      // section 36).
+      const timer = setTimeout(() => router.push("/pass"), 900);
+      return () => clearTimeout(timer);
+    }
+
+    if (phase === "preparing") {
+      // Kicking off the (cancellable, StrictMode-guarded) round
+      // preparation pipeline on mount -- its state updates happen from
+      // async callbacks, not synchronously here. See runPreparation().
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      void runPreparation();
+      return () => {
+        abortRef.current?.abort();
+      };
+    }
+
+    // phase === "no-players": nothing to run, the recovery card handles it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleBack() {
+    if (phase === "preparing") {
+      // Preparation is still running -- cancel it outright rather than
+      // leaving an AI request running in the background (see Screen 4
+      // spec, section 17).
+      abortRef.current?.abort();
+      router.push("/players");
+      return;
+    }
+    if (phase === "ready") {
+      setConfirmingLeave(true);
+      return;
+    }
+    router.push("/players");
+  }
+
+  function confirmLeave() {
+    clearStoredRoundSession();
+    router.push("/players");
+  }
+
+  const displayConfig = session?.config ?? config;
+  const displayPlayerCount = session?.players.length ?? players.length;
+  const displayImposterCount =
+    session?.round.imposterCount ??
+    getImposterCount(players.length, config.mode);
+
+  const stageMeta = STAGE_META[stage];
+  const statusText = wasOnlineAtStart
+    ? stageMeta.onlineStatus
+    : stageMeta.offlineStatus;
+
+  return (
+    <div className="relative flex min-h-dvh w-full justify-center">
+      <SpaceBackdrop />
+
+      <div className="flex w-full max-w-[1400px] flex-col px-4 pl-safe pr-safe pt-safe pb-safe sm:px-6 sm:py-8 lg:px-10">
+        <RoundPreparationHeader onBack={handleBack} />
+
+        <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center gap-6 py-6 text-center lg:max-w-3xl">
+          <div className="animate-iw-fade-up">
+            <h1 className="font-display text-3xl font-bold tracking-tight text-iw-ink-100 sm:text-4xl">
+              {phase === "ready" ? "ROUND READY!" : "GETTING READY..."}
+            </h1>
+            <p className="mt-1 text-sm text-iw-violet-300 sm:text-base">
+              {phase === "ready"
+                ? "Pass the phone to the first player."
+                : "Preparing your secret round"}
+            </p>
+          </div>
+
+          {(phase === "preparing" || phase === "ready") && (
+            <>
+              <GameSummaryCard
+                config={displayConfig}
+                playerCount={displayPlayerCount}
+                imposterCount={displayImposterCount}
+              />
+
+              <PreparationAnimation ready={phase === "ready"} />
+
+              {phase === "preparing" && (
+                <>
+                  <PreparationStatus text={statusText} />
+                  <PreparationProgress step={stageMeta.step} />
+                </>
+              )}
+
+              <RoundSourceIndicator
+                source={session?.round.contentSource ?? null}
+              />
+            </>
+          )}
+
+          {phase === "no-players" && (
+            <RoundErrorRecovery
+              title="Let's set up the players first"
+              message="We couldn't find a player list for this round. Head back to add your players."
+              onBack={() => router.push("/players")}
+            />
+          )}
+
+          {phase === "error" && (
+            <RoundErrorRecovery
+              title="Couldn't prepare the round"
+              message="Something went wrong getting your round ready. Give it another try, or head back to check your players."
+              onRetry={() => void runPreparation()}
+              onBack={() => {
+                clearStoredRoundSession();
+                router.push("/players");
+              }}
+            />
+          )}
+        </main>
+
+        {confirmingLeave && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-iw-void/70 px-6 backdrop-blur-sm">
+            <div className="animate-iw-fade-up w-full max-w-sm rounded-3xl border border-iw-border bg-iw-surface p-6 text-center">
+              <h2 className="font-display text-lg font-bold text-iw-ink-100">
+                Leave round setup?
+              </h2>
+              <p className="mt-2 text-sm text-iw-ink-500">
+                Your prepared round will be discarded.
+              </p>
+              <div className="mt-5 flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={() => setConfirmingLeave(false)}
+                  className="w-full rounded-2xl border border-iw-gold-600/40 bg-gradient-to-b from-iw-gold-100 via-iw-gold-400 to-iw-gold-500 px-6 py-3 font-display text-sm font-bold text-iw-gold-ink cursor-pointer"
+                >
+                  STAY HERE
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmLeave}
+                  className="w-full rounded-2xl border border-iw-border bg-iw-surface-2 px-6 py-3 font-display text-sm font-bold text-iw-ink-100 transition-colors hover:border-iw-border-strong cursor-pointer"
+                >
+                  LEAVE ROUND SETUP
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

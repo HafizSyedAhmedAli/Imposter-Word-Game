@@ -60,3 +60,53 @@ export type GameSession = {
   config: GameConfig;
   players: Player[];
 };
+
+/* -------------------------------------------------------------------- */
+/* Round Preparation (Screen 4)                                          */
+/*                                                                       */
+/* Types describing the *result* of preparing a round: the generated     */
+/* word/hint, the resolved role assignment, and the full session that    */
+/* Screen 5 (and beyond) will consume. Nothing in this section is ever   */
+/* rendered on Screen 4 itself -- see game/game-engine.ts.                */
+/* -------------------------------------------------------------------- */
+
+export type RoundContentSource = "ai" | "local";
+
+/**
+ * The output of a word provider (AI or local), before it's attached to a
+ * round. Both providers return this exact shape so the game engine stays
+ * provider-agnostic (see providers/word-provider.ts).
+ */
+export type GeneratedRoundContent = {
+  word: string;
+  hint: string;
+  source: RoundContentSource;
+};
+
+export type PlayerRole =
+  | { playerId: string; role: "player" }
+  | { playerId: string; role: "imposter" };
+
+export type RoundData = {
+  number: number;
+  word: string;
+  hint: string;
+  imposterCount: number;
+  roles: PlayerRole[];
+  contentSource: RoundContentSource;
+};
+
+export type RoundStatus = "preparing" | "ready" | "playing" | "finished";
+
+/**
+ * The fully-prepared round, ready to hand off to Screen 5. Distinct from
+ * `GameSession` above (which is only the Setup -> Players handoff) --
+ * this is what exists once word/hint/roles have actually been resolved.
+ */
+export type RoundSession = {
+  id: string;
+  config: GameConfig;
+  players: Player[];
+  round: RoundData;
+  status: RoundStatus;
+};
