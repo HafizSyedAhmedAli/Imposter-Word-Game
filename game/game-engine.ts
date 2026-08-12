@@ -9,8 +9,10 @@ import type {
 import { getImposterCount } from "./game-rules";
 import { assignRoles } from "./role-assignment";
 import { generateId } from "@/lib/id";
+import { cacheAiWord } from "@/lib/db";
 import { AiWordProvider } from "@/providers/ai-word-provider";
-import { LocalWordProvider } from "@/providers/local-word-provider";
+import { IndexedDbCacheProvider } from "@/providers/indexeddb-cache-provider";
+import { FallbackWordProvider } from "@/providers/fallback-word-provider";
 
 export type PreparationStage = "word" | "hint" | "roles" | "finalizing";
 
@@ -27,41 +29,83 @@ export type PrepareRoundOptions = {
 };
 
 const aiProvider = new AiWordProvider();
-const localProvider = new LocalWordProvider();
+const cacheProvider = new IndexedDbCacheProvider();
+const fallbackProvider = new FallbackWordProvider();
 
+/**
+ * The official 3-tier word source priority:
+ *
+ *   1. AI generation      (fresh, requires a working connection)
+ *   2. IndexedDB AI cache (a previously AI-generated round, reused)
+ *   3. Static fallback    (in-bundle array -- always succeeds)
+ *
+ * Never throws: tier 3 is a synchronous, non-empty constant, so this
+ * function always resolves. The player never sees an "AI failed" or
+ * "offline" message (see Screen 4 spec, section 27) -- whichever tier
+ * wins is reflected only in `source`, shown as a small dev-facing badge
+ * on Screen 4 and otherwise invisible to gameplay.
+ */
 async function getRoundContent(
   category: Category,
   difficulty: Difficulty,
   signal?: AbortSignal,
 ): Promise<GeneratedRoundContent> {
+  // Skipping a guaranteed-to-fail AI attempt when the device is clearly
+  // offline avoids a pointless ~10s timeout (see AiWordProvider) -- it's
+  // a latency optimization, not a change to the priority order, since
+  // AI genuinely cannot succeed with no connection either way.
   const isOnline = typeof navigator === "undefined" ? true : navigator.onLine;
 
   if (isOnline) {
     try {
-      return await aiProvider.generateRoundContent(category, difficulty, {
-        signal,
+      const content = await aiProvider.generateRoundContent(
+        category,
+        difficulty,
+        {
+          signal,
+        },
+      );
+
+      // Cache the fresh AI result for future offline rounds. Best-effort
+      // and non-blocking to the round itself -- see cacheAiWord's doc
+      // comment for why a failed write here must never surface as an
+      // error to the player.
+      void cacheAiWord({
+        word: content.word,
+        hint: content.hint,
+        category,
+        difficulty,
       });
+
+      return content;
     } catch {
-      // AI down, slow, or returned something invalid -- silently fall
-      // back to the offline collection. The player must never see "AI
-      // failed" (see Screen 4 spec, section 27).
       if (signal?.aborted) throw new Error("Round preparation cancelled.");
-      return localProvider.generateRoundContent(category, difficulty);
+      // Fall through to tier 2 below.
     }
   }
 
-  return localProvider.generateRoundContent(category, difficulty);
+  try {
+    return await cacheProvider.generateRoundContent(category, difficulty);
+  } catch {
+    if (signal?.aborted) throw new Error("Round preparation cancelled.");
+    // Fall through to tier 3 below.
+  }
+
+  return fallbackProvider.generateRoundContent(category, difficulty);
 }
 
 /**
  * Coordinates the entire round-preparation pipeline: imposter count ->
- * word/hint (AI, with local fallback) -> role assignment -> a finished
- * RoundSession. This is the ONLY function the Round Preparation screen
- * calls -- it never talks to a provider or assigns roles itself (see
+ * word/hint (AI -> IndexedDB cache -> static fallback, see
+ * getRoundContent above) -> role assignment -> a finished RoundSession.
+ * This is the ONLY function the Round Preparation screen calls -- it
+ * never talks to a provider or assigns roles itself (see
  * components/round/RoundPreparationScreen.tsx).
  *
- * Throws only when BOTH the AI provider and the local collection fail --
- * the screen treats that as the "something went wrong" recovery state.
+ * In practice this never throws for word/hint reasons -- the tier-3
+ * fallback always succeeds. The only remaining failure mode is an
+ * invalid imposter count for the given player count/mode, which the
+ * screen treats as the "something went wrong" recovery state.
  */
 export async function prepareGameRound(
   config: GameConfig,
@@ -83,9 +127,6 @@ export async function prepareGameRound(
   );
   if (signal?.aborted) throw new Error("Round preparation cancelled.");
 
-  // Word + hint are generated together by the provider (see
-  // providers/word-provider.ts) -- this stage exists purely so the UI can
-  // show a distinct "crafting a hint" beat once content is already in hand.
   await onStage?.("hint");
   if (signal?.aborted) throw new Error("Round preparation cancelled.");
 
@@ -108,5 +149,6 @@ export async function prepareGameRound(
       contentSource: content.source,
     },
     status: "ready",
+    currentPlayerIndex: 0,
   };
 }
