@@ -98,20 +98,25 @@ export async function cacheAiWord(entry: {
 }
 
 /**
- * TIER 2 -- looks up a previously cached AI round from IndexedDB, with
- * the same graceful matching tiers the static fallback uses:
+ * TIER 2 -- looks up a previously cached AI round from IndexedDB.
  *
- *   1. Exact category + difficulty, excluding recently used words
- *   2. Exact category + difficulty (recent words allowed)
- *   3. Exact category, any difficulty
- *   4. Any category, exact difficulty
- *   5. Any cached entry
+ * Selection rule (never relaxed):
+ *   - difficulty MUST always match exactly.
+ *   - category MUST always match exactly, UNLESS the selected category
+ *     is "random", in which case any category is acceptable.
  *
- * Returns `null` (never throws) when nothing suitable is cached yet --
- * an empty/sparse cache is an expected, normal state (e.g. the very
- * first offline round on a fresh install), not an error. The caller
- * (providers/indexeddb-cache-provider.ts) is what turns "null" into a
- * fall-through to tier 3.
+ * Within that fixed set of valid entries:
+ *   1. Prefer entries that are not in recent-word history.
+ *   2. If every valid entry is recent, a recent valid entry is allowed
+ *      (recent-word avoidance never overrides correctness).
+ *
+ * Returns `null` (never throws) when nothing VALID is cached yet -- this
+ * covers both "the cache is empty" and "the cache has entries, but none
+ * for this exact category/difficulty" (e.g. a Science/Hard entry when
+ * Food/Medium was requested). Both are normal, expected states, not
+ * errors. The caller (providers/indexeddb-cache-provider.ts) is what
+ * turns "null" into a fall-through to tier 3 -- this function must never
+ * substitute a mismatched entry just to avoid returning null.
  */
 export async function getRandomCachedWord(
   category: Category,
@@ -121,28 +126,18 @@ export async function getRandomCachedWord(
   const all = await db.words.toArray();
   if (all.length === 0) return null;
 
-  const recentIds = new Set(getRecentWordIds());
   const isRandomCategory = category === "random";
-
-  const byCategoryAndDifficulty = all.filter(
+  const matching = all.filter(
     (w) =>
       (isRandomCategory || w.category === category) &&
       w.difficulty === difficulty,
   );
-  const byCategory = all.filter(
-    (w) => isRandomCategory || w.category === category,
-  );
-  const byDifficulty = all.filter((w) => w.difficulty === difficulty);
+  if (matching.length === 0) return null;
 
-  const pools = [
-    byCategoryAndDifficulty.filter((w) => !recentIds.has(w.id)),
-    byCategoryAndDifficulty,
-    byCategory,
-    byDifficulty,
-    all,
-  ];
+  const recentIds = new Set(getRecentWordIds());
+  const nonRecent = matching.filter((w) => !recentIds.has(w.id));
+  const pool = nonRecent.length > 0 ? nonRecent : matching;
 
-  const pool = pools.find((p) => p.length > 0) ?? all;
   const entry = pool[Math.floor(Math.random() * pool.length)];
   rememberWordId(entry.id);
 

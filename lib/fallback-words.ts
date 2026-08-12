@@ -583,30 +583,23 @@ export function getRandomFallbackWord(
   category: Category,
   difficulty: Difficulty,
 ): FallbackWordEntry {
-  const recentIds = new Set(getRecentWordIds());
   const isRandomCategory = category === "random";
-
-  const byCategoryAndDifficulty = FALLBACK_WORDS.filter(
+  const matching = FALLBACK_WORDS.filter(
     (w) =>
       (isRandomCategory || w.category === category) &&
       w.difficulty === difficulty,
   );
-  const byCategory = FALLBACK_WORDS.filter(
-    (w) => isRandomCategory || w.category === category,
-  );
-  const byDifficulty = FALLBACK_WORDS.filter(
-    (w) => w.difficulty === difficulty,
-  );
 
-  const pools = [
-    byCategoryAndDifficulty.filter((w) => !recentIds.has(w.id)),
-    byCategoryAndDifficulty,
-    byCategory,
-    byDifficulty,
-    FALLBACK_WORDS,
-  ];
+  if (matching.length === 0) {
+    throw new Error(
+      `No fallback word available for category "${category}" and difficulty "${difficulty}".`,
+    );
+  }
 
-  const pool = pools.find((p) => p.length > 0) ?? FALLBACK_WORDS;
+  const recentIds = new Set(getRecentWordIds());
+  const nonRecent = matching.filter((w) => !recentIds.has(w.id));
+  const pool = nonRecent.length > 0 ? nonRecent : matching;
+
   const entry = pickRandom(pool);
   rememberWordId(entry.id);
 

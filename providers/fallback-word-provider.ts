@@ -9,9 +9,12 @@ import type { WordProvider } from "./word-provider";
 /**
  * TIER 3 -- final emergency fallback (see lib/fallback-words.ts). Used
  * only when BOTH AI generation and the IndexedDB cache lookup have
- * failed. Backed by a static, non-empty in-bundle array, so this is the
- * one provider in the chain that's guaranteed to succeed -- there's
- * nowhere further to fall back to.
+ * failed. Backed by a static, in-bundle array that covers every real
+ * category/difficulty combination, so this succeeds in practice -- but
+ * it still enforces the selected category/difficulty exactly (see
+ * getRandomFallbackWord) and throws rather than substituting a
+ * mismatched entry in the (currently unreachable) case where no exact
+ * match exists. There's nowhere further to fall back to after this.
  */
 export class FallbackWordProvider implements WordProvider {
   async generateRoundContent(
