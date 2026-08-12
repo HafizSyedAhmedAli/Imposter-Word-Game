@@ -11,12 +11,14 @@ export function getRecentWordIds(): string[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = sessionStorage.getItem(RECENT_WORDS_KEY);
-    return raw ? (JSON.parse(raw) as string[]) : [];
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((id): id is string => typeof id === "string");
   } catch {
     return [];
   }
 }
-
 export function rememberWordId(id: string): void {
   if (typeof window === "undefined") return;
   try {

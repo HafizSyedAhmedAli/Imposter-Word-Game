@@ -107,12 +107,15 @@ export async function cacheAiWord(entry: {
  *
  * Within that fixed set of valid entries:
  *   1. Prefer entries that are not in recent-word history.
- *   2. If every valid entry is recent, a recent valid entry is allowed
- *      (recent-word avoidance never overrides correctness).
+ * Returns `null` when nothing suitable is cached yet -- an empty/sparse
+ * cache is an expected, normal state (e.g. the very first offline round
+ * on a fresh install), not an error. The caller
+ * (providers/indexeddb-cache-provider.ts) turns "null" into a
+ * fall-through to tier 3.
  *
- * Returns `null` (never throws) when nothing VALID is cached yet -- this
- * covers both "the cache is empty" and "the cache has entries, but none
- * for this exact category/difficulty" (e.g. a Science/Hard entry when
+ * This function CAN reject: `getDb()` throws outside the browser, and
+ * the IndexedDB read rejects when storage is unavailable. Tier 2 in
+ * game/game-engine.ts catches both cases and falls through to tier 3.
  * Food/Medium was requested). Both are normal, expected states, not
  * errors. The caller (providers/indexeddb-cache-provider.ts) is what
  * turns "null" into a fall-through to tier 3 -- this function must never

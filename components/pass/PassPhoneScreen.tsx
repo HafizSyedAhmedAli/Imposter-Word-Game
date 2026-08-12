@@ -25,40 +25,47 @@ import ImposterRevealCard from "./ImposterRevealCard";
 import AllPlayersReadyCard from "./AllPlayersReadyCard";
 import LeaveRoundDialog from "./LeaveRoundDialog";
 
-function readExistingSession(): RoundSession | null {
-  if (typeof window === "undefined") return null;
-  return getStoredRoundSession();
-}
-
 export default function PassPhoneScreen() {
   const router = useRouter();
 
-  const [session, setSession] = useState<RoundSession | null>(
-    readExistingSession,
-  );
-
-  // Safe default is always "pass-phone" -- a refresh must never resume
-  // straight into a revealed secret (spec sections 23, 66). The one
-  // exception is a session that already moved past "ready" (e.g. this
-  // screen is revisited after discussion started) -- in that case skip
-  // straight to "all-ready" rather than re-running anyone's turn. Derived
-  // once from the recovered session via a lazy initializer so mounting
-  // never needs a setState call from inside an effect.
-  const [passState, setPassState] = useState<PassState>(() => {
-    const existing = readExistingSession();
-    return existing && existing.status !== "ready" ? "all-ready" : "pass-phone";
-  });
+  // Deterministic initial state -- must NOT depend on sessionStorage,
+  // since this component is server-rendered on the initial full page
+  // load (see "use client" in Next.js App Router) and `window` doesn't
+  // exist there. If these read the browser's stored session directly
+  // (e.g. via a lazy useState initializer), the server render and the
+  // client's first hydration render diverge whenever a session is
+  // already stored -- server renders nothing (`session === null` below
+  // returns null), client renders the full pass-flow UI -- which is a
+  // hydration mismatch. The real value is read once, client-only, in
+  // the effect below instead.
+  const [session, setSession] = useState<RoundSession | null>(null);
+  const [passState, setPassState] = useState<PassState>("pass-phone");
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const advancingRef = useRef(false); // guards double-taps on Hide & Pass
 
-  // No prepared round to consume (e.g. someone deep-linked to /pass) --
-  // send them back to build one instead of rendering nothing forever.
-  // A pure navigation side-effect, not a state update, so it's safe to
-  // run directly in the effect body.
+  // Runs once, after hydration completes (effects never run during SSR,
+  // so `sessionStorage` is always safe here). Reading the stored session
+  // AND deciding whether to redirect both happen in this single effect --
+  // splitting them (e.g. a separate effect checking `session === null`)
+  // would check state from before this effect had a chance to restore
+  // it, and could redirect a player away from a round that actually
+  // exists in storage (spec sections 23, 66).
   useEffect(() => {
-    if (session === null) {
+    const existing = getStoredRoundSession();
+
+    if (existing === null) {
+      // No prepared round to consume (e.g. someone deep-linked to /pass)
+      // -- send them back to build one instead of rendering nothing
+      // forever.
       router.replace("/round");
+      return;
     }
+
+    setSession(existing);
+    // A session that already moved past "ready" (e.g. this screen is
+    // revisited after discussion started) should skip straight to
+    // "all-ready" rather than re-running anyone's turn.
+    setPassState(existing.status !== "ready" ? "all-ready" : "pass-phone");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

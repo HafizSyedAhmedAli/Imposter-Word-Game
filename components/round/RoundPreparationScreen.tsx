@@ -57,29 +57,27 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Reads any already-prepared round out of session storage. Used as a lazy
-// useState initializer (not inside an effect) so recovering a session on
-// refresh never causes an extra render pass.
-function readExistingSession(): RoundSession | null {
-  if (typeof window === "undefined") return null;
-  return getStoredRoundSession();
-}
-
 export default function RoundPreparationScreen() {
   const router = useRouter();
   const { config, players } = useGameSetup();
 
-  const [session, setSession] = useState<RoundSession | null>(
-    readExistingSession,
+  // Deterministic initial state -- must NOT depend on sessionStorage,
+  // since this component is server-rendered on the initial full page
+  // load (see "use client" in Next.js App Router) and `window` doesn't
+  // exist there. `config`/`players` come from GameSetupProvider, which
+  // is in-memory-only React state (always its defaults on a fresh
+  // mount), so `isPlayerCountValid` here is safe -- it's only the
+  // sessionStorage-backed recovery below that has to move into an
+  // effect. The real stored session (if any) is read once, client-only,
+  // in the mount effect below, which corrects `session`/`phase`/`stage`
+  // together in one step.
+  const [session, setSession] = useState<RoundSession | null>(null);
+  const [phase, setPhase] = useState<ScreenPhase>(() =>
+    isPlayerCountValid(config.mode, players.length)
+      ? "preparing"
+      : "no-players",
   );
-  const [phase, setPhase] = useState<ScreenPhase>(() => {
-    if (readExistingSession()) return "ready";
-    if (!isPlayerCountValid(config.mode, players.length)) return "no-players";
-    return "preparing";
-  });
-  const [stage, setStage] = useState<PreparationStage>(
-    session ? "finalizing" : "word",
-  );
+  const [stage, setStage] = useState<PreparationStage>("word");
   const [wasOnlineAtStart, setWasOnlineAtStart] = useState(true);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
 
@@ -138,27 +136,38 @@ export default function RoundPreparationScreen() {
     if (startedRef.current) return;
     startedRef.current = true;
 
-    if (phase === "ready") {
-      // A prepared round was already recovered from session storage by
-      // the lazy state initializers above (e.g. a refresh) -- nothing to
-      // regenerate, just continue on to Screen 5 (see Screen 4 spec,
-      // section 36).
+    // Reading sessionStorage here -- not in a useState initializer --
+    // keeps this component's first client render identical to its
+    // server render (see the note on session/phase/stage above). A
+    // recovered session always takes priority over the player-count
+    // check below, matching the original recovery behavior: if a round
+    // was already prepared before a refresh, it's reused rather than
+    // regenerated, regardless of what the current player list looks
+    // like.
+    const existing = getStoredRoundSession();
+    if (existing) {
+      setSession(existing);
+      setStage("finalizing");
+      setPhase("ready");
+      // Nothing to regenerate -- just continue on to Screen 5 (see
+      // Screen 4 spec, section 36).
       const timer = setTimeout(() => router.push("/pass"), 900);
       return () => clearTimeout(timer);
     }
 
-    if (phase === "preparing") {
-      // Kicking off the (cancellable, StrictMode-guarded) round
-      // preparation pipeline on mount -- its state updates happen from
-      // async callbacks, not synchronously here. See runPreparation().
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      void runPreparation();
-      return () => {
-        abortRef.current?.abort();
-      };
+    if (phase === "no-players") {
+      // Nothing to run, the recovery card handles it.
+      return;
     }
 
-    // phase === "no-players": nothing to run, the recovery card handles it.
+    // Kicking off the (cancellable, StrictMode-guarded) round
+    // preparation pipeline on mount -- its state updates happen from
+    // async callbacks, not synchronously here. See runPreparation().
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void runPreparation();
+    return () => {
+      abortRef.current?.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
