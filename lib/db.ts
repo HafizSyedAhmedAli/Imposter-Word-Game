@@ -75,6 +75,14 @@ export function getDb(): ImposterWordDB {
  * round that's already in progress, since the word/hint have already
  * been decided by the time this runs.
  */
+// Upper bound on how many AI rounds this table will hold. Without this,
+// the table grows for the lifetime of the install -- eventually hitting
+// IndexedDB quota, which fails writes silently (see the catch below).
+// 500 is comfortably more than any offline session will exhaust, while
+// still keeping the table small enough that a full scan in
+// getRandomCachedWord stays cheap.
+const MAX_CACHED_WORDS = 500;
+
 export async function cacheAiWord(entry: {
   word: string;
   hint: string;
@@ -83,6 +91,22 @@ export async function cacheAiWord(entry: {
 }): Promise<void> {
   try {
     const db = getDb();
+
+    // Skip if this exact word is already cached for this
+    // category/difficulty. Without this, the AI returning the same word
+    // twice (which it does -- there's no cross-call dedupe on that side)
+    // creates multiple rows with different `id`s. Since
+    // getRandomCachedWord's recent-word filter keys on `id`, duplicate
+    // rows for the same word defeat repeat-word protection: the "recent"
+    // copy gets filtered out, but an identical un-tracked copy is still
+    // in the pool.
+    const duplicate = await db.words
+      .where("[category+difficulty]")
+      .equals([entry.category, entry.difficulty])
+      .filter((w) => w.word.toLowerCase() === entry.word.toLowerCase())
+      .first();
+    if (duplicate) return;
+
     await db.words.put({
       id: generateId(),
       word: entry.word,
@@ -92,6 +116,17 @@ export async function cacheAiWord(entry: {
       source: "ai",
       createdAt: Date.now(),
     });
+
+    // Evict the oldest rows once the cache grows past its bound, using
+    // the `createdAt` index added in v2.
+    const count = await db.words.count();
+    if (count > MAX_CACHED_WORDS) {
+      const stale = await db.words
+        .orderBy("createdAt")
+        .limit(count - MAX_CACHED_WORDS)
+        .primaryKeys();
+      await db.words.bulkDelete(stale);
+    }
   } catch {
     // Non-fatal -- see doc comment above.
   }

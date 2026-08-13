@@ -59,20 +59,31 @@ export default function PassPromptCard({
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-iw-ink-500">
           Player order
         </p>
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <div className="flex items-start gap-2 overflow-x-auto pb-1">
           {players.map((player, index) => (
-            <div key={player.id} className="flex shrink-0 items-center gap-2">
-              <div
-                className={`rounded-full ${
-                  index === currentPlayerIndex
-                    ? "ring-2 ring-iw-gold-400 ring-offset-2 ring-offset-iw-void"
-                    : "opacity-40"
-                }`}
-              >
-                <PlayerAvatar index={index} />
+            <div key={player.id} className="flex shrink-0 items-start gap-2">
+              <div className="flex flex-col items-center gap-1">
+                <div
+                  className={`rounded-full ${
+                    index === currentPlayerIndex
+                      ? "ring-2 ring-iw-gold-400 ring-offset-2 ring-offset-iw-void"
+                      : "opacity-40"
+                  }`}
+                >
+                  <PlayerAvatar index={index} />
+                </div>
+                <span
+                  className={`max-w-[64px] truncate text-[11px] font-semibold ${
+                    index === currentPlayerIndex
+                      ? "text-iw-ink-100"
+                      : "text-iw-ink-600"
+                  }`}
+                >
+                  {player.name}
+                </span>
               </div>
               {index < players.length - 1 && (
-                <span className="text-iw-ink-600" aria-hidden="true">
+                <span className="mt-3 text-iw-ink-600" aria-hidden="true">
                   &rsaquo;
                 </span>
               )}

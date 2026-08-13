@@ -1,3 +1,4 @@
+// components/pass/PassPhoneScreen.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -45,11 +46,16 @@ export default function PassPhoneScreen() {
 
   // Runs once, after hydration completes (effects never run during SSR,
   // so `sessionStorage` is always safe here). Reading the stored session
-  // AND deciding whether to redirect both happen in this single effect --
-  // splitting them (e.g. a separate effect checking `session === null`)
-  // would check state from before this effect had a chance to restore
-  // it, and could redirect a player away from a round that actually
-  // exists in storage (spec sections 23, 66).
+  // AND deciding whether/where to redirect both happen in this single
+  // effect -- splitting them (e.g. a separate effect checking
+  // `session === null`) would check state from before this effect had a
+  // chance to restore it (spec sections 23, 66).
+  //
+  // Every `RoundStatus` is handled explicitly and exhaustively here --
+  // this screen is ONLY the right place to render for "ready" sessions.
+  // Anything else routes (or redirects) to that status's real screen,
+  // rather than falling into a generic "all-ready" fallback that could
+  // let a stale/finished session reach beginDiscussion() again.
   useEffect(() => {
     const existing = getStoredRoundSession();
 
@@ -61,11 +67,41 @@ export default function PassPhoneScreen() {
       return;
     }
 
-    setSession(existing);
-    // A session that already moved past "ready" (e.g. this screen is
-    // revisited after discussion started) should skip straight to
-    // "all-ready" rather than re-running anyone's turn.
-    setPassState(existing.status !== "ready" ? "all-ready" : "pass-phone");
+    switch (existing.status) {
+      case "preparing":
+        // The round hasn't finished being generated yet -- there's
+        // nothing to reveal or pass around. Send them back to finish
+        // that step instead of rendering an invalid pass flow.
+        router.replace("/round");
+        return;
+
+      case "ready":
+        // The only status this screen is actually for: reveal-and-pass
+        // hasn't started (or is still in progress).
+        setSession(existing);
+        setPassState("pass-phone");
+        return;
+
+      case "playing":
+        // Discussion has already begun -- beginDiscussion() already ran
+        // for this session, so their real current screen is Discussion,
+        // not this one. Routing there (rather than rendering
+        // "all-ready" here) means there's no START DISCUSSION button
+        // left on this screen that could call beginDiscussion() a
+        // second time on an already-playing round.
+        router.replace("/game");
+        return;
+
+      case "finished":
+        // Nothing left to reveal, pass, or discuss, and there's no
+        // results screen to return to yet -- go to the safest known
+        // destination. Critically, this must NOT fall through to
+        // "all-ready": that screen's START DISCUSSION button calls
+        // beginDiscussion(), which would flip a finished round straight
+        // back to "playing".
+        router.replace("/");
+        return;
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -88,7 +124,7 @@ export default function PassPhoneScreen() {
   // confirmation as the header button instead (spec section 22, 65).
   useEffect(() => {
     function handlePopState() {
-      setConfirmingLeave(true);
+      openLeaveConfirmation();
       window.history.pushState(null, "", window.location.href);
     }
     window.history.pushState(null, "", window.location.href);
@@ -164,6 +200,19 @@ export default function PassPhoneScreen() {
     router.push("/game");
   }
 
+  // Opens the leave-round confirmation. If a secret is currently on
+  // screen ("revealed"), it's hidden FIRST -- otherwise the reveal card
+  // stays mounted behind the (translucent) dialog and the word or hint
+  // can still be read by someone else. Cancelling the dialog leaves
+  // `passState` at "private-reveal", so the player has to explicitly
+  // tap reveal again rather than the secret silently reappearing.
+  function openLeaveConfirmation() {
+    setPassState((current) =>
+      current === "revealed" ? "private-reveal" : current,
+    );
+    setConfirmingLeave(true);
+  }
+
   function handleLeaveConfirmed() {
     clearStoredRoundSession();
     router.push("/players");
@@ -174,7 +223,7 @@ export default function PassPhoneScreen() {
       <SpaceBackdrop />
 
       <div className="flex w-full max-w-[1400px] flex-col px-4 pl-safe pr-safe pt-safe pb-safe sm:px-6 sm:py-8">
-        <RoundPreparationHeader onBack={() => setConfirmingLeave(true)} />
+        <RoundPreparationHeader onBack={openLeaveConfirmation} />
 
         <main className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center gap-6 py-6">
           {passState === "pass-phone" && (
