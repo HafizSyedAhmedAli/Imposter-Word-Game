@@ -130,4 +130,15 @@ export type RoundSession = {
    * (see spec sections 58-64).
    */
   votes: Record<string, string>;
+  /**
+   * Screen 8's (Results) persisted outcome of every vote applied so far
+   * this game -- player IDs who have been voted out. Optional/defensive
+   * for the same reason `votes` is: sessions created before this field
+   * existed won't have it. Lives here (not derived fresh from `votes`
+   * on every render) because a tie eliminates no one, so "who's out"
+   * is NOT simply "who got the most votes" -- it's the accumulated
+   * result of every verdict, and must survive a refresh on the Results
+   * screen itself (spec's "DATA / STATE REQUIREMENTS").
+   */
+  eliminatedPlayerIds?: string[];
 };

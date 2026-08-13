@@ -4,16 +4,16 @@ import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import LeaveRoundDialog from "@/components/pass/LeaveRoundDialog";
 import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
 import {
-    getDiscussionDuration,
-    getSpeakingOrder,
+  getDiscussionDuration,
+  getSpeakingOrder,
 } from "@/game/discussion-flow";
 import type { RoundSession } from "@/game/game-types";
 import {
-    clearStoredRoundSession,
-    getStoredRoundSession,
+  clearStoredRoundSession,
+  getStoredRoundSession,
 } from "@/lib/round-session-store";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DiscussionControls from "./DiscussionControls";
 import DiscussionPlayersCard from "./DiscussionPlayersCard";
 import DiscussionStatusCard from "./DiscussionStatusCard";
@@ -37,6 +37,16 @@ export default function DiscussionScreen() {
   // whether/where to redirect both happen in this single effect, same
   // as PassPhoneScreen -- splitting them risks redirecting based on
   // state from before the session was restored.
+
+  // same pattern as VoteScreen's playerIndexById
+  const playerIndexById = useMemo(() => {
+    const map = new Map<string, number>();
+    if (session) {
+      session.players.forEach((player, index) => map.set(player.id, index));
+    }
+    return map;
+  }, [session]);
+
   useEffect(() => {
     const existing = getStoredRoundSession();
 
@@ -117,7 +127,7 @@ export default function DiscussionScreen() {
             onExpire={() => setTimerExpired(true)}
           />
 
-          <DiscussionPlayersCard players={players} />
+          <DiscussionPlayersCard players={players} indexById={playerIndexById} />
 
           <DiscussionTipsCard />
 

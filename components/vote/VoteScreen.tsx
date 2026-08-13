@@ -13,6 +13,7 @@ import {
 } from "@/lib/round-session-store";
 import type { RoundSession } from "@/game/game-types";
 import {
+    getActiveVotingOrder,
   getCurrentVoter,
   getEligibleVoteTargets,
   getVotesCastCount,
@@ -207,7 +208,7 @@ export default function VoteScreen() {
           {timeUp ? (
             <TimesUpCard
               votesCast={getVotesCastCount(activeSession)}
-              totalPlayers={getVotingOrder(activeSession).length}
+              totalPlayers={getActiveVotingOrder(activeSession).length}
               onContinue={() => setTimeUp(false)}
             />
           ) : (

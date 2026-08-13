@@ -1,5 +1,6 @@
 // game/vote-flow.ts
 import type { Player, RoundSession } from "./game-types";
+import { getActivePlayers, isEliminated } from "./elimination";
 
 /**
  * Screen 7's own state machine, kept separate from `RoundStatus`
@@ -30,6 +31,59 @@ export function getVotingOrder(session: RoundSession): Player[] {
 }
 
 /**
+ * Resolves whose private voting turn it is right now, skipping
+ * eliminated players entirely -- they don't get asked to vote in a
+ * round they're no longer part of.
+ */
+export function getCurrentVoter(session: RoundSession): Player | null {
+  return (
+    getActivePlayers(session).find((player) => !hasVoted(session, player.id)) ??
+    null
+  );
+}
+
+/** Active players only -- what "how many are we waiting on" should count. */
+export function getActiveVotingOrder(session: RoundSession): Player[] {
+  return getActivePlayers(session);
+}
+
+export function getVotesCastCount(session: RoundSession): number {
+  return getActivePlayers(session).filter((p) => hasVoted(session, p.id))
+    .length;
+}
+
+/**
+ * Every player a given voter may select: everyone active except
+ * themselves. Eliminated players are never eligible targets going
+ * forward -- this is the actual fix for "round not starting with that
+ * crew absent" (they were never removed from this list before).
+ */
+export function getEligibleVoteTargets(
+  session: RoundSession,
+  voterId: string,
+): Player[] {
+  return getActivePlayers(session).filter((player) => player.id !== voterId);
+}
+
+export function submitVote(
+  session: RoundSession,
+  voterId: string,
+  targetId: string,
+): RoundSession {
+  const currentVoter = getCurrentVoter(session);
+  if (!currentVoter || currentVoter.id !== voterId) return session;
+  if (targetId === voterId) return session;
+  if (hasVoted(session, voterId)) return session;
+  if (isEliminated(session, voterId) || isEliminated(session, targetId))
+    return session; // defense in depth
+
+  return {
+    ...session,
+    votes: { ...getVotes(session), [voterId]: targetId },
+  };
+}
+
+/**
  * Defensive accessor -- older/partial `RoundSession`s persisted before
  * this screen existed won't have a `votes` field at all. Every other
  * function in this module reads votes through this helper so "no votes
@@ -44,41 +98,8 @@ export function hasVoted(session: RoundSession, playerId: string): boolean {
   return Object.prototype.hasOwnProperty.call(getVotes(session), playerId);
 }
 
-/**
- * Resolves whose private voting turn it is right now: the first player
- * in voting order who hasn't cast a vote yet. This is the ONLY source of
- * truth for "current voter" -- there is intentionally no persisted
- * index to keep in sync, so a mid-voting page refresh recovers exactly
- * where it left off (spec sections 60-64) without re-asking anyone who
- * already voted to vote again. Returns `null` once everyone has voted.
- */
-export function getCurrentVoter(session: RoundSession): Player | null {
-  return (
-    getVotingOrder(session).find((player) => !hasVoted(session, player.id)) ??
-    null
-  );
-}
-
 export function isVotingComplete(session: RoundSession): boolean {
   return getCurrentVoter(session) === null;
-}
-
-export function getVotesCastCount(session: RoundSession): number {
-  return Object.keys(getVotes(session)).length;
-}
-
-/**
- * Every player a given voter is allowed to select -- everyone except
- * themselves. Self-voting is filtered out here, at the data layer, so
- * that no rendering path (keyboard, mouse, touch, or a bug in the
- * selection UI) can ever produce a self-vote by construction, not just
- * by a disabled button (spec section 12).
- */
-export function getEligibleVoteTargets(
-  session: RoundSession,
-  voterId: string,
-): Player[] {
-  return getVotingOrder(session).filter((player) => player.id !== voterId);
 }
 
 /**
@@ -91,38 +112,4 @@ export function getEligibleVoteTargets(
 export function getVotingDuration(session: RoundSession): number | null {
   const timer = session.config.options.votingTimer;
   return timer.enabled ? timer.duration : null;
-}
-
-/**
- * Records one voter's ballot and returns a new session -- the only
- * mutation this module performs (word, hint, roles, and every earlier
- * vote are carried over untouched). Guards, in order:
- *
- *  - the voter must actually be the current voter (blocks a stale
- *    private-voting screen -- e.g. two tabs, or a slow tap after a
- *    refresh already advanced the turn -- from recording out of turn)
- *  - a player can never vote for themselves (spec section 12)
- *  - a player who already voted can never vote again (spec section 55)
- *
- * Any violation returns `session` unchanged rather than throwing, since
- * these are all "shouldn't happen if the UI is honest" cases -- the
- * caller UI should never present the option in the first place.
- */
-export function submitVote(
-  session: RoundSession,
-  voterId: string,
-  targetId: string,
-): RoundSession {
-  const currentVoter = getCurrentVoter(session);
-  if (!currentVoter || currentVoter.id !== voterId) return session;
-  if (targetId === voterId) return session;
-  if (hasVoted(session, voterId)) return session;
-
-  return {
-    ...session,
-    votes: {
-      ...getVotes(session),
-      [voterId]: targetId,
-    },
-  };
 }

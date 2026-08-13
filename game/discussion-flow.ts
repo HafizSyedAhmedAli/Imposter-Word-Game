@@ -1,4 +1,5 @@
 // game/discussion-flow.ts
+import { getActivePlayers } from "./elimination";
 import type { Player, RoundSession } from "./game-types";
 
 /**
@@ -34,6 +35,11 @@ export function getDiscussionDuration(session: RoundSession): number | null {
  * players list read from this same function, so there's exactly one
  * source of truth for "who's playing, in what order".
  */
+/**
+ * The public speaking order for discussion -- active players only.
+ * Round 1, this is everyone; round 2+, whoever was voted out no longer
+ * appears here.
+ */
 export function getSpeakingOrder(session: RoundSession): Player[] {
-  return session.players;
+  return getActivePlayers(session);
 }
