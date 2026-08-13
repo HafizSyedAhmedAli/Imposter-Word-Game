@@ -118,4 +118,16 @@ export type RoundSession = {
   round: RoundData;
   status: RoundStatus;
   currentPlayerIndex: number;
+  /**
+   * Screen 7's (Voting) persisted ballot box -- keyed by voter player ID,
+   * valued by the player ID they voted for. Lives on `RoundSession` (not
+   * `RoundData`) for the same reason `currentPlayerIndex` does: it's
+   * mutable turn-taking state for one phase of the round, not part of
+   * the round's static generated content. There is deliberately no
+   * separate "current voter index" field -- game/vote-flow.ts derives
+   * whose turn it is directly from this map plus `players` order, so a
+   * refresh mid-voting can never desync from who has actually voted
+   * (see spec sections 58-64).
+   */
+  votes: Record<string, string>;
 };

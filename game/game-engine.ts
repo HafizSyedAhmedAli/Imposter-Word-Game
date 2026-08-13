@@ -150,5 +150,10 @@ export async function prepareGameRound(
     },
     status: "ready",
     currentPlayerIndex: 0,
+    // No one has voted yet -- Screen 7 doesn't exist until Screens 5/6
+    // finish, but the field is initialized here (rather than lazily on
+    // first entry to /voting) so `RoundSession` is always a complete,
+    // valid shape the moment a round exists.
+    votes: {},
   };
 }
