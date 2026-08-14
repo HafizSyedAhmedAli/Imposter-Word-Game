@@ -177,7 +177,7 @@ export default function FinalResultsScreen() {
 
           <PlayerResultsList results={playerResults} />
 
-          {verdict.type !== "tie" && (
+          {/* {verdict.type !== "tie" && (
             <VerdictCard
               playerName={verdict.eliminated.name}
               wasImposter={verdict.type === "imposter-caught"}
@@ -185,7 +185,7 @@ export default function FinalResultsScreen() {
                 outcome === "crew-win" ? 0 : totalImposters - impostersCaught
               }
             />
-          )}
+          )} */}
 
           <VoteResultsCard tally={tally} highestVotes={highestVotes} />
 

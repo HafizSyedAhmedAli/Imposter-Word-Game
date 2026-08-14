@@ -129,7 +129,7 @@ export type RoundSession = {
    * refresh mid-voting can never desync from who has actually voted
    * (see spec sections 58-64).
    */
-  votes: Record<string, string>;
+  votes?: Record<string, string>;
   /**
    * Screen 8's (Results) persisted outcome of every vote applied so far
    * this game -- player IDs who have been voted out. Optional/defensive

@@ -76,7 +76,7 @@ export default function VoteSelectionCard({
           WHO IS THE IMPOSTER?
         </p>
         <p className="mt-2 text-sm text-iw-ink-500">
-          Choose the player you think is the imposter.
+          {voterName}, choose the player you think is the imposter.
         </p>
       </div>
 

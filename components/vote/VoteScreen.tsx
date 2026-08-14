@@ -13,7 +13,7 @@ import {
 } from "@/lib/round-session-store";
 import type { RoundSession } from "@/game/game-types";
 import {
-    getActiveVotingOrder,
+  getActiveVotingOrder,
   getCurrentVoter,
   getEligibleVoteTargets,
   getVotesCastCount,
@@ -158,6 +158,12 @@ export default function VoteScreen() {
     advancingRef.current = true;
 
     const next = submitVote(activeSession, currentVoter.id, selectedTargetId);
+    if (next === activeSession) {
+      setSelectedTargetId(null);
+      setScreenState("pass-phone");
+      advancingRef.current = false;
+      return;
+    }
     storeRoundSession(next);
     setSession(next);
     setSelectedTargetId(null);

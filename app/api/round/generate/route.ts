@@ -139,12 +139,22 @@ export async function POST(request: Request) {
 
   const category = body.category ?? "random";
   const difficulty = body.difficulty ?? "medium";
+  const MAX_EXCLUDED_WORDS = 8;
+  const MAX_EXCLUDED_WORD_LENGTH = 100;
   const excludeWords = Array.isArray(body.excludeWords)
-    ? body.excludeWords.filter(
-        (word): word is string => typeof word === "string",
-      )
+    ? [
+        ...new Set(
+          body.excludeWords
+            .filter((word): word is string => typeof word === "string")
+            .map((word) => word.trim().toLowerCase())
+            .filter(
+              (word) =>
+                word.length > 0 && word.length <= MAX_EXCLUDED_WORD_LENGTH,
+            ),
+        ),
+      ].slice(0, MAX_EXCLUDED_WORDS)
     : [];
-  const excludeSet = new Set(excludeWords.map((word) => word.toLowerCase()));
+  const excludeSet = new Set(excludeWords);
 
   try {
     // Up to two attempts: if the model ignores the exclusion list on

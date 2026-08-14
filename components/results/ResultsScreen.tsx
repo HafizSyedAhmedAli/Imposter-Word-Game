@@ -17,6 +17,7 @@ import type { RoundSession } from "@/game/game-types";
 import {
   applyVerdict,
   continueRound,
+  getEliminatedPlayerIds,
   getHighestVoteCount,
   getRoundOutcome,
   getTotalImposterCount,
@@ -51,6 +52,7 @@ export default function ResultsScreen() {
     // crew-win / imposter-win: no dedicated final-results screen exists
     // yet (see app/statistics/page.tsx's own placeholder) -- home is the
     // safest real destination today.
+    storeRoundSession({ ...session!, status: "finished" });
     router.push("/final-results");
   }
 
@@ -102,9 +104,11 @@ export default function ResultsScreen() {
   const highestVotes = getHighestVoteCount(tally);
   const verdict = getVerdict(session);
   const outcome = getRoundOutcome(session);
-  const totalImposters = getTotalImposterCount(session);
-  const remainingImposters =
-    verdict.type === "imposter-caught" ? totalImposters - 1 : totalImposters;
+  const eliminatedPlayerIds = new Set(getEliminatedPlayerIds(session));
+  const remainingImposters = session.round.roles.filter(
+    (role) =>
+      role.role === "imposter" && !eliminatedPlayerIds.has(role.playerId),
+  ).length;
 
   function openLeaveConfirmation() {
     setConfirmingLeave(true);

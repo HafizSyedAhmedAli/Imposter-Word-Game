@@ -3,7 +3,7 @@ import "./globals.css";
 import { GameSetupProvider } from "@/lib/game-setup-context";
 
 export const metadata: Metadata = {
-  title: "Imposter Word — The party game of secret words",
+  title: "Imposter Word",
   description:
     "A pass-the-phone party game of secret words and not-so-secret imposters. Works fully offline, with AI-generated words when you're online.",
 };
