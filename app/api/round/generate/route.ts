@@ -13,7 +13,16 @@ const DIFFICULTY_GUIDANCE: Record<Difficulty, string> = {
   hard: "Use a less obvious, more specific concept. The hint should be subtle, without being unfair.",
 };
 
-function buildPrompt(category: Category, difficulty: Difficulty): string {
+function buildPrompt(
+  category: Category,
+  difficulty: Difficulty,
+  excludeWords: string[],
+): string {
+  const exclusionRule =
+    excludeWords.length > 0
+      ? `\n- Do not use any of these words -- they were used in recent rounds and must be avoided: ${excludeWords.join(", ")}.`
+      : "";
+
   return `Generate exactly one secret word and one hint for a social party game called "Imposter Word", where most players know a secret word and one "imposter" does not.
 
 Category: ${category === "random" ? "any family-friendly category" : category}
@@ -25,13 +34,76 @@ Rules:
 - ${DIFFICULTY_GUIDANCE[difficulty]}
 - The hint must relate to the word but must NEVER contain the word itself (or an obvious variant of it).
 - Do not use real people, brands, or copyrighted characters as the word.
+- Vary your answer -- avoid defaulting to the single most obvious or stereotypical example for this category every time.${exclusionRule}
 
 Respond with ONLY a JSON object in this exact shape:
 {"word": "...", "hint": "..."}`;
 }
 
 /**
- * POST { category, difficulty } -> { word, hint }
+ * One call to the Gemini API: build the prompt, extract and validate the
+ * { word, hint } pair. Split out from POST so it can be retried below
+ * without duplicating the fetch/parse/validate logic.
+ */
+async function requestRoundContent(
+  apiKey: string,
+  category: Category,
+  difficulty: Difficulty,
+  excludeWords: string[],
+): Promise<{ word: string; hint: string } | null> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
+
+  const aiResponse = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [{ text: buildPrompt(category, difficulty, excludeWords) }],
+        },
+      ],
+      generationConfig: {
+        // Forces the model to output clean JSON without markdown blocks
+        responseMimeType: "application/json",
+        // Explicit (rather than relying on the API default) -- a low or
+        // unset temperature is exactly what let the model collapse onto
+        // the single highest-probability word for a given
+        // category/difficulty every time (e.g. "pizza" for every
+        // food/easy request). This alone doesn't guarantee variety --
+        // see the exclusion list above and the retry below -- but it
+        // widens the pool the model draws from.
+        temperature: 1.2,
+      },
+    }),
+  });
+
+  if (!aiResponse.ok) return null;
+
+  const data = await aiResponse.json();
+  const rawText: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch {
+    return null;
+  }
+
+  const candidate =
+    typeof parsed === "object" && parsed !== null
+      ? (parsed as { word?: unknown; hint?: unknown })
+      : {};
+
+  const validated = validateRoundContent(candidate);
+  if (!validated.valid) return null;
+
+  return { word: validated.word, hint: validated.hint };
+}
+
+/**
+ * POST { category, difficulty, excludeWords } -> { word, hint }
  *
  * This route is the ONLY place the AI provider's API key is ever read.
  * It never forwards the raw AI response to the client -- only a
@@ -51,7 +123,11 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { category?: Category; difficulty?: Difficulty };
+  let body: {
+    category?: Category;
+    difficulty?: Difficulty;
+    excludeWords?: unknown;
+  };
   try {
     body = await request.json();
   } catch {
@@ -63,65 +139,41 @@ export async function POST(request: Request) {
 
   const category = body.category ?? "random";
   const difficulty = body.difficulty ?? "medium";
+  const excludeWords = Array.isArray(body.excludeWords)
+    ? body.excludeWords.filter(
+        (word): word is string => typeof word === "string",
+      )
+    : [];
+  const excludeSet = new Set(excludeWords.map((word) => word.toLowerCase()));
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
+    // Up to two attempts: if the model ignores the exclusion list on
+    // the first try (it's a prompt instruction, not an enforced
+    // constraint), retry once with the same exclusion list before
+    // giving up and accepting whatever came back. This is a
+    // best-effort second line of defense on top of the prompt-level
+    // exclusion and temperature above -- never a loop that can hang the
+    // request indefinitely.
+    let result: { word: string; hint: string } | null = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      result = await requestRoundContent(
+        apiKey,
+        category,
+        difficulty,
+        excludeWords,
+      );
+      if (!result) break; // a real failure -- fall through to tier 2/3, don't retry a broken response
+      if (!excludeSet.has(result.word.toLowerCase())) break; // got a fresh word
+    }
 
-    const aiResponse = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: buildPrompt(category, difficulty) }],
-          },
-        ],
-        generationConfig: {
-          // Forces the model to output clean JSON without markdown blocks
-          responseMimeType: "application/json",
-        },
-      }),
-    });
-
-    if (!aiResponse.ok) {
+    if (!result) {
       return NextResponse.json(
         { error: "Round generation failed." },
         { status: 502 },
       );
     }
 
-    const data = await aiResponse.json();
-
-    // Extract the text content from the Gemini response structure
-    const rawText: string =
-      data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(rawText);
-    } catch {
-      return NextResponse.json(
-        { error: "Round generation failed." },
-        { status: 502 },
-      );
-    }
-
-    const candidate =
-      typeof parsed === "object" && parsed !== null
-        ? (parsed as { word?: unknown; hint?: unknown })
-        : {};
-
-    const validated = validateRoundContent(candidate);
-    if (!validated.valid) {
-      return NextResponse.json(
-        { error: "Round generation failed." },
-        { status: 502 },
-      );
-    }
-
-    return NextResponse.json({ word: validated.word, hint: validated.hint });
+    return NextResponse.json({ word: result.word, hint: result.hint });
   } catch {
     return NextResponse.json(
       { error: "Round generation failed." },

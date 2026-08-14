@@ -15,6 +15,6 @@ export interface WordProvider {
   generateRoundContent(
     category: Category,
     difficulty: Difficulty,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; excludeWords?: string[] },
   ): Promise<GeneratedRoundContent>;
 }

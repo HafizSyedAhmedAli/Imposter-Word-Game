@@ -1,5 +1,5 @@
-import ResultsScreen from "@/components/results/ResultsScreen";
+import FinalResultsScreen from "@/components/final-results/FinalResultsScreen";
 
-export default function ResultsPage() {
-  return <ResultsScreen />;
+export default function FinalResultsPage() {
+  return <FinalResultsScreen />;
 }

@@ -51,7 +51,7 @@ export default function ResultsScreen() {
     // crew-win / imposter-win: no dedicated final-results screen exists
     // yet (see app/statistics/page.tsx's own placeholder) -- home is the
     // safest real destination today.
-    router.push("/");
+    router.push("/final-results");
   }
 
   useEffect(() => {
@@ -82,7 +82,7 @@ export default function ResultsScreen() {
     appliedRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  
+
   // Same hardware/browser-back guard as every other in-round screen --
   // it must go through the leave-round confirmation, never silently
   // fall back into the voting flow (spec's HEADER section).

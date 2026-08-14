@@ -10,6 +10,7 @@ import { getImposterCount } from "./game-rules";
 import { assignRoles } from "./role-assignment";
 import { generateId } from "@/lib/id";
 import { cacheAiWord } from "@/lib/db";
+import { getRecentWordText, rememberWordText } from "@/lib/recent-words";
 import { AiWordProvider } from "@/providers/ai-word-provider";
 import { IndexedDbCacheProvider } from "@/providers/indexeddb-cache-provider";
 import { FallbackWordProvider } from "@/providers/fallback-word-provider";
@@ -58,11 +59,17 @@ async function getRoundContent(
 
   if (isOnline) {
     try {
+      // Tell the AI which words it (or another tier) has produced
+      // recently in this session, so a static category/difficulty
+      // prompt (e.g. "food" + "easy") doesn't keep collapsing onto the
+      // same single most-obvious answer every round (see
+      // lib/recent-words.ts's `getRecentWordText`).
       const content = await aiProvider.generateRoundContent(
         category,
         difficulty,
         {
           signal,
+          excludeWords: getRecentWordText(),
         },
       );
 
@@ -77,6 +84,7 @@ async function getRoundContent(
         difficulty,
       });
 
+      rememberWordText(content.word);
       return content;
     } catch {
       if (signal?.aborted) throw new Error("Round preparation cancelled.");
@@ -85,13 +93,23 @@ async function getRoundContent(
   }
 
   try {
-    return await cacheProvider.generateRoundContent(category, difficulty);
+    const content = await cacheProvider.generateRoundContent(
+      category,
+      difficulty,
+    );
+    rememberWordText(content.word);
+    return content;
   } catch {
     if (signal?.aborted) throw new Error("Round preparation cancelled.");
     // Fall through to tier 3 below.
   }
 
-  return fallbackProvider.generateRoundContent(category, difficulty);
+  const content = await fallbackProvider.generateRoundContent(
+    category,
+    difficulty,
+  );
+  rememberWordText(content.word);
+  return content;
 }
 
 /**

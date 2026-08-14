@@ -23,7 +23,7 @@ export class AiWordProvider implements WordProvider {
   async generateRoundContent(
     category: Category,
     difficulty: Difficulty,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; excludeWords?: string[] },
   ): Promise<GeneratedRoundContent> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
@@ -38,7 +38,11 @@ export class AiWordProvider implements WordProvider {
       const response = await fetch("/api/round/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category, difficulty }),
+        body: JSON.stringify({
+          category,
+          difficulty,
+          excludeWords: options?.excludeWords ?? [],
+        }),
         signal: controller.signal,
       });
 

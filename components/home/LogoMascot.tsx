@@ -55,10 +55,10 @@ export default function LogoMascot() {
         <path d="M64 62 C74 58 90 56 100 57" stroke="#f4fbff" strokeWidth="6" strokeLinecap="round" opacity="0.75" fill="none" />
 
         {/* Shh hand: mitten + raised finger in front of the visor */}
-        <g>
+        {/* <g>
           <ellipse cx="123" cy="118" rx="20" ry="24" fill="url(#iwBody)" stroke="#3a0a12" strokeWidth="3.5" />
           <rect x="112" y="70" width="15" height="42" rx="7.5" fill="url(#iwBody)" stroke="#3a0a12" strokeWidth="3.5" />
-        </g>
+        </g> */}
 
         {/* Ground shadow */}
         <ellipse cx="100" cy="204" rx="46" ry="8" fill="#000" opacity="0.28" />
