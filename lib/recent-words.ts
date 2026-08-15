@@ -78,3 +78,21 @@ export function rememberWordText(word: string): void {
     // Best-effort only, same reasoning as rememberWordId above.
   }
 }
+
+// lib/recent-words.ts (append at end of file, after rememberWordText)
+
+/**
+ * Clears both recent-word trackers above. Part of "Reset Game Data" (see
+ * lib/reset-game-data.ts) -- without this, a reset round could still
+ * feel non-random immediately afterwards, since these session-scoped
+ * "don't repeat" lists would otherwise survive the reset untouched.
+ */
+export function clearRecentWords(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(RECENT_WORDS_KEY);
+    sessionStorage.removeItem(RECENT_WORD_TEXT_KEY);
+  } catch {
+    // Best-effort only, same reasoning as rememberWordId above.
+  }
+}

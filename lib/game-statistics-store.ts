@@ -61,6 +61,25 @@ export function getStatistics(): GameStatistics {
   return { ...EMPTY_STATISTICS, ...readJSON(STATS_KEY, EMPTY_STATISTICS) };
 }
 
+// lib/game-statistics-store.ts (insert after getStatistics)
+
+/**
+ * Clears lifetime statistics and the finalized-round-id dedupe list.
+ * Part of "Reset Game Data" (see lib/reset-game-data.ts) -- both keys
+ * are localStorage-backed, so unlike the IndexedDB AI cache they can't
+ * meaningfully fail to clear; this mirrors the best-effort shape of the
+ * rest of this file rather than throwing.
+ */
+export function resetStatistics(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(STATS_KEY);
+    localStorage.removeItem(FINALIZED_ROUNDS_KEY);
+  } catch {
+    // Best-effort, same as writeJSON above.
+  }
+}
+
 function hasBeenFinalized(roundId: string): boolean {
   return readJSON<string[]>(FINALIZED_ROUNDS_KEY, []).includes(roundId);
 }
@@ -68,7 +87,10 @@ function hasBeenFinalized(roundId: string): boolean {
 function markFinalized(roundId: string): void {
   const ids = readJSON<string[]>(FINALIZED_ROUNDS_KEY, []);
   if (ids.includes(roundId)) return;
-  writeJSON(FINALIZED_ROUNDS_KEY, [...ids, roundId].slice(-MAX_TRACKED_ROUND_IDS));
+  writeJSON(
+    FINALIZED_ROUNDS_KEY,
+    [...ids, roundId].slice(-MAX_TRACKED_ROUND_IDS),
+  );
 }
 
 /**
