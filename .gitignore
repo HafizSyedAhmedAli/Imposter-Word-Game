@@ -6,3 +6,7 @@ out
 
 .env
 .env.local
+
+# Generated from public/sw-template.js by scripts/generate-sw.js on
+# every dev/build run -- do not edit or commit directly.
+public/sw.js
