@@ -21,10 +21,20 @@ const CURRENT_CACHES = new Set([STATIC_CACHE, RUNTIME_CACHE]);
 // install time. This is what lets the whole Home -> Play Game -> ... ->
 // Results flow work offline right after the very first install, rather
 // than only working for whichever screens happen to have been visited
-// online first. (App Router client-side navigation between these
-// fetches an RSC data payload, not this cached HTML directly -- but if
-// that fetch fails, Next.js falls back to a real document navigation,
-// which these precached entries do serve. See the fetch handler below.)
+// online first.
+//
+// Keep this in sync with lib/app-routes.ts (the client-side copy of
+// this same list -- see the comment there for why there are two) --
+// scripts/generate-sw.js checks the two against each other at build
+// time and fails the build if they drift.
+//
+// App Router client-side navigation between these routes fetches an
+// RSC data payload, not this cached HTML directly, and does NOT
+// reliably fall back to a real document navigation on its own if that
+// fetch fails offline. So the app itself (lib/offline-navigation.ts)
+// forces a real document navigation while offline, which is what
+// actually reaches this precache -- see the fetch handler below for the
+// service-worker side of that.
 const APP_ROUTES = [
   "/",
   "/setup",
@@ -51,16 +61,32 @@ const PRECACHE_URLS = [
   "/apple-touch-icon.png",
 ];
 
+// Precache every URL independently rather than with cache.addAll(),
+// which is atomic: if even one entry 404s (or otherwise fails), the
+// whole addAll() call rejects and *nothing* in the batch gets cached.
+// Swallowing that rejection (the old `.catch(() => {})` below) made it
+// fail silently -- install "succeeded" while precaching had actually
+// cached nothing at all, which is exactly why offline support looked
+// inconsistent: routes only worked offline if the player happened to
+// have visited them online first (picked up by the runtime cache in
+// networkFirst() below), and every route that was never visited failed
+// with "Site can't be reached". Caching each URL on its own means one
+// bad entry only costs that entry.
+async function precacheAll(urls) {
+  const cache = await caches.open(STATIC_CACHE);
+  const results = await Promise.allSettled(urls.map((url) => cache.add(url)));
+  results.forEach((result, i) => {
+    if (result.status === "rejected") {
+      // Visible in the browser console / Application > Service Workers
+      // panel for development and build verification. Never shown to
+      // normal users, who don't have devtools open for this.
+      console.warn(`[sw] failed to precache "${urls[i]}":`, result.reason);
+    }
+  });
+}
+
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(STATIC_CACHE)
-      .then((cache) => cache.addAll(PRECACHE_URLS))
-      .catch(() => {
-        // Precaching is best-effort -- a single missing/blocked asset
-        // (e.g. during local dev) should never fail install.
-      }),
-  );
+  event.waitUntil(precacheAll(PRECACHE_URLS));
   // Intentionally NOT calling self.skipWaiting() here. An update should
   // sit in "waiting" until the user is done with their current game and
   // explicitly asks to refresh (see components/pwa/ServiceWorkerRegister.tsx),
@@ -118,11 +144,11 @@ function isKnownStaticFile(url) {
 // like these. We let that fetch go straight to the network untouched:
 // its response body can be an in-progress stream, and cloning a stream
 // for cache.put() is exactly the kind of thing that can throw and get
-// misread as a network failure. The precached HTML documents in
-// APP_ROUTES are what actually make each screen work offline; if this
-// RSC fetch fails while offline, Next.js falls back to a full document
-// navigation to the same URL, which the "navigate" branch below serves
-// from that precache.
+// misread as a network failure. This fetch is simply left to fail
+// offline -- the app itself (lib/offline-navigation.ts) is what turns
+// that into a real document navigation to the same URL when needed, and
+// THAT request is what the "navigate" branch below serves from the
+// APP_ROUTES precache.
 function isNextDataRequest(request) {
   return (
     request.headers.has("RSC") ||

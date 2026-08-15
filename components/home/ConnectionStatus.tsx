@@ -1,26 +1,7 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import { Wifi, WifiOff } from "lucide-react";
-
-function subscribe(callback: () => void) {
-  window.addEventListener("online", callback);
-  window.addEventListener("offline", callback);
-  return () => {
-    window.removeEventListener("online", callback);
-    window.removeEventListener("offline", callback);
-  };
-}
-
-function getSnapshot() {
-  return navigator.onLine;
-}
-
-// Assume online during SSR / before hydration -- this is only a cosmetic
-// indicator, never a gate on functionality.
-function getServerSnapshot() {
-  return true;
-}
+import { useOnlineStatus } from "@/lib/use-online-status";
 
 /**
  * Lightweight, non-blocking connectivity indicator.
@@ -31,7 +12,7 @@ function getServerSnapshot() {
  * Round Provider, not here.
  */
 export default function ConnectionStatus() {
-  const online = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const online = useOnlineStatus();
 
   return (
     <div

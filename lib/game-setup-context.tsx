@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -22,6 +23,10 @@ import {
 } from "@/game/game-rules";
 import { generateId } from "@/lib/id";
 import { shuffle } from "@/lib/shuffle";
+import {
+  getStoredGameSetup,
+  storeGameSetup,
+} from "@/lib/game-setup-session-store";
 
 export type PlayerActionResult = { ok: true } | { ok: false; error: string };
 
@@ -51,10 +56,20 @@ const GameSetupContext = createContext<GameSetupContextValue | null>(null);
  * navigation between routes without needing a state library, a server
  * round-trip, or URL query strings.
  *
- * A hard refresh intentionally resets to defaults for the MVP (see
- * DEFAULT_GAME_CONFIG) -- nothing here is persisted to disk.
+ * Also mirrored to sessionStorage (see lib/game-setup-session-store.ts)
+ * so it survives a full *document* navigation too, not just a
+ * client-side one -- offline navigation between these same routes has
+ * to fall back to a real document navigation (see
+ * lib/offline-navigation.ts), which remounts this provider from
+ * scratch. Deliberately still `sessionStorage`, not `localStorage`: it
+ * clears itself when the tab closes, matching the lifetime this state
+ * already had as plain in-memory React state.
  */
 export function GameSetupProvider({ children }: { children: React.ReactNode }) {
+  // Deterministic on the very first render (including the server
+  // render) -- must NOT read sessionStorage here, same reasoning as
+  // components/round/RoundPreparationScreen.tsx. The mount effect below
+  // corrects this once, client-side only, right after.
   const [config, setConfig] = useState<GameConfig>(DEFAULT_GAME_CONFIG);
 
   const setMode = useCallback((mode: GameMode) => {
@@ -97,6 +112,27 @@ export function GameSetupProvider({ children }: { children: React.ReactNode }) {
   // just in-progress setup state that needs to survive client-side
   // navigation between /setup and /players without a state library.
   const [players, setPlayers] = useState<Player[]>([]);
+
+  // Hydrate once from sessionStorage, client-side only, after the
+  // deterministic default-state render above. Gates the persist effect
+  // below (via `isHydrated`, not a ref) so that effect's first run --
+  // which happens in the same commit as this one, before this state
+  // update has taken effect -- doesn't turn around and immediately
+  // overwrite real stored data with the defaults it's about to replace.
+  const [isHydrated, setIsHydrated] = useState(false);
+  useEffect(() => {
+    const stored = getStoredGameSetup();
+    if (stored) {
+      setConfig(stored.config);
+      setPlayers(stored.players);
+    }
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    storeGameSetup({ config, players });
+  }, [isHydrated, config, players]);
 
   const addPlayer = useCallback((name: string): PlayerActionResult => {
     let result: PlayerActionResult = {
