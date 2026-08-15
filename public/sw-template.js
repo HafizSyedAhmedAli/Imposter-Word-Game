@@ -17,13 +17,31 @@ const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime-${CACHE_VERSION}`;
 const CURRENT_CACHES = new Set([STATIC_CACHE, RUNTIME_CACHE]);
 
-// Small, known-good set of URLs we can safely precache at install time.
-// We deliberately do NOT try to precache hashed /_next/static/ build
-// output here (that list isn't known without a bundler plugin) -- those
-// are instead cached at runtime, cache-first, as the user visits pages
-// while online. See requirement: "open the app online, browse the main
-// screens" before first offline use.
+// Every screen in the game, precached as a full HTML document at
+// install time. This is what lets the whole Home -> Play Game -> ... ->
+// Results flow work offline right after the very first install, rather
+// than only working for whichever screens happen to have been visited
+// online first. (App Router client-side navigation between these
+// fetches an RSC data payload, not this cached HTML directly -- but if
+// that fetch fails, Next.js falls back to a real document navigation,
+// which these precached entries do serve. See the fetch handler below.)
+const APP_ROUTES = [
+  "/",
+  "/setup",
+  "/players",
+  "/round",
+  "/pass",
+  "/game",
+  "/voting",
+  "/results",
+  "/final-results",
+  "/how-to-play",
+  "/settings",
+  "/statistics",
+];
+
 const PRECACHE_URLS = [
+  ...APP_ROUTES,
   "/offline.html",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
@@ -94,6 +112,36 @@ function isKnownStaticFile(url) {
   );
 }
 
+// Next.js App Router client-side navigation (router.push, <Link>, etc.)
+// doesn't do a real document navigation -- it fetches an RSC data
+// payload for the target route in the background, tagged with headers
+// like these. We let that fetch go straight to the network untouched:
+// its response body can be an in-progress stream, and cloning a stream
+// for cache.put() is exactly the kind of thing that can throw and get
+// misread as a network failure. The precached HTML documents in
+// APP_ROUTES are what actually make each screen work offline; if this
+// RSC fetch fails while offline, Next.js falls back to a full document
+// navigation to the same URL, which the "navigate" branch below serves
+// from that precache.
+function isNextDataRequest(request) {
+  return (
+    request.headers.has("RSC") ||
+    request.headers.has("Next-Router-State-Tree") ||
+    request.headers.has("Next-Router-Prefetch")
+  );
+}
+
+// Best-effort cache write: never let a caching side-effect turn a
+// perfectly good network response into a failure.
+async function safePut(cacheName, request, response) {
+  try {
+    const cache = await caches.open(cacheName);
+    await cache.put(request, response);
+  } catch {
+    // Ignore -- e.g. a streamed body that can't be cloned/cached.
+  }
+}
+
 // Cache-first: for content-hashed, immutable build assets and local
 // media/fonts. Safe to serve straight from cache; a fresh copy is only
 // ever fetched once per cache version.
@@ -103,28 +151,36 @@ async function cacheFirst(request) {
 
   const response = await fetch(request);
   if (response && response.ok) {
-    const cache = await caches.open(STATIC_CACHE);
-    cache.put(request, response.clone());
+    safePut(STATIC_CACHE, request, response.clone());
   }
   return response;
 }
 
-// Network-first: for navigations and same-origin data/RSC fetches, so
-// players online always get the freshest content, while still working
-// offline once a route has been visited at least once.
+// Network-first: for navigations and other same-origin GETs, so players
+// online always get the freshest content, while still working offline
+// for anything precached (see APP_ROUTES) or previously visited.
 async function networkFirst(request) {
+  const skipCache = isNextDataRequest(request);
+
   try {
     const response = await fetch(request);
-    if (response && response.ok) {
-      const cache = await caches.open(RUNTIME_CACHE);
-      cache.put(request, response.clone());
+    if (!skipCache && response && response.ok) {
+      safePut(RUNTIME_CACHE, request, response.clone());
     }
     return response;
   } catch (err) {
-    const cached = await caches.match(request);
-    if (cached) return cached;
+    if (!skipCache) {
+      const cached = await caches.match(request);
+      if (cached) return cached;
+    }
 
     if (request.mode === "navigate") {
+      // The target route's own document may be precached even if this
+      // exact request (e.g. with RSC headers) wasn't.
+      const url = new URL(request.url);
+      const routeMatch = await caches.match(url.pathname);
+      if (routeMatch) return routeMatch;
+
       const offline = await caches.match("/offline.html");
       if (offline) return offline;
     }
@@ -155,7 +211,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Everything else same-origin (page navigations, RSC/data fetches for
-  // client-side route transitions, manifest, etc.)
+  // Everything else same-origin: page navigations, RSC/data fetches for
+  // client-side route transitions, the manifest, etc.
   event.respondWith(networkFirst(request));
 });
