@@ -39,8 +39,22 @@ export type WordEntry = {
   usageCount: number;
 };
 
+/**
+ * Device-local preference row (Settings screen: Sound, Haptics, ...).
+ * Single-row table -- always read/written at the fixed `id: "app"` key
+ * (see lib/settings-store.ts) since this app has no concept of multiple
+ * local profiles. Kept in its own table rather than folded into `words`
+ * so the two can evolve independently.
+ */
+export type SettingsRow = {
+  id: string;
+  sound: boolean;
+  haptics: boolean;
+};
+
 class ImposterWordDB extends Dexie {
   words!: Table<WordEntry, string>;
+  settings!: Table<SettingsRow, string>;
 
   constructor() {
     super("imposter-word-db");
@@ -93,6 +107,15 @@ class ImposterWordDB extends Dexie {
             }
           });
       });
+
+    // v4: adds the `settings` table (Settings screen: Sound, Haptics).
+    // Purely additive -- existing `words` rows are untouched, and a new
+    // empty table needs no upgrade function.
+    this.version(4).stores({
+      words:
+        "id, category, difficulty, [category+difficulty], createdAt, normalizedWord, lastUsedAt",
+      settings: "id",
+    });
   }
 }
 

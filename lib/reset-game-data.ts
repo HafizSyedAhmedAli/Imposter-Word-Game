@@ -1,14 +1,16 @@
 import { resetUserData } from "./db";
 import { resetStatistics } from "./game-statistics-store";
+import { resetSettings } from "./settings-store";
 import { clearRecentWords } from "./recent-words";
 import { clearStoredRoundSession } from "./round-session-store";
 
 /**
  * The single entry point for "Reset Game Data" (Settings screen). Wipes
- * every piece of *user-generated/local* data across all four persistence
+ * every piece of *user-generated/local* data across all five persistence
  * layers this app uses:
  *
  *   - IndexedDB (lib/db.ts)               -- cached AI rounds
+ *   - IndexedDB (lib/settings-store.ts)   -- saved Sound/Haptics prefs
  *   - localStorage (game-statistics-store) -- lifetime stats + dedupe list
  *   - sessionStorage (recent-words)        -- short-term repeat avoidance
  *   - sessionStorage (round-session-store) -- the in-progress round, if any
@@ -43,6 +45,7 @@ let inFlight: Promise<void> | null = null;
 async function performReset(): Promise<void> {
   await resetUserData();
   resetStatistics();
+  await resetSettings();
   clearRecentWords();
   clearStoredRoundSession();
 }

@@ -4,8 +4,11 @@ import { useCallback, useState } from "react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import { resetGameData } from "@/lib/reset-game-data";
 import SettingsHeader from "./SettingsHeader";
+import PreferencesCard from "./PreferencesCard";
+import InstallAppCard from "./InstallAppCard";
 import ResetGameDataCard from "./ResetGameDataCard";
 import ResetGameDataDialog from "./ResetGameDataDialog";
+import AboutCard from "./AboutCard";
 
 export type ResetStatus = "idle" | "resetting" | "success" | "error";
 
@@ -54,11 +57,14 @@ export default function SettingsScreen() {
         <SettingsHeader />
 
         <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 py-6 lg:max-w-4xl">
+          <PreferencesCard />
+          <InstallAppCard />
           <ResetGameDataCard
             status={status}
             errorMessage={errorMessage}
             onRequestReset={handleRequestReset}
           />
+          <AboutCard />
         </main>
       </div>
 

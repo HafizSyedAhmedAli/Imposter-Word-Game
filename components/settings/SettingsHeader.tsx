@@ -24,7 +24,7 @@ export default function SettingsHeader() {
           GAME SETTINGS
         </h1>
         <p className="mt-1 max-w-[22rem] text-sm text-iw-violet-300 sm:text-base">
-          Manage your locally saved game data.
+          Sound, install, and locally saved game data.
         </p>
       </div>
 
