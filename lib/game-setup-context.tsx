@@ -23,10 +23,7 @@ import {
 } from "@/game/game-rules";
 import { generateId } from "@/lib/id";
 import { shuffle } from "@/lib/shuffle";
-import {
-  getStoredGameSetup,
-  storeGameSetup,
-} from "@/lib/game-setup-session-store";
+import { getStoredGameSetup, storeGameSetup } from "@/lib/game-setup-store";
 
 export type PlayerActionResult = { ok: true } | { ok: false; error: string };
 
@@ -45,6 +42,16 @@ type GameSetupContextValue = {
   removePlayer: (id: string) => void;
   randomizePlayers: () => void;
   resetPlayers: () => void;
+
+  /**
+   * True once the sessionStorage recovery check below has run. Screens
+   * that treat an empty `players` array as a hard error (Round
+   * Preparation's "no players" recovery card) should wait for this
+   * before trusting `players.length === 0`, since it's `false` (not yet
+   * meaningful) for one tick on every fresh mount of this provider --
+   * see the doc comment on the hydration effect below.
+   */
+  isHydrated: boolean;
 };
 
 const GameSetupContext = createContext<GameSetupContextValue | null>(null);
@@ -56,21 +63,55 @@ const GameSetupContext = createContext<GameSetupContextValue | null>(null);
  * navigation between routes without needing a state library, a server
  * round-trip, or URL query strings.
  *
- * Also mirrored to sessionStorage (see lib/game-setup-session-store.ts)
- * so it survives a full *document* navigation too, not just a
- * client-side one -- offline navigation between these same routes has
- * to fall back to a real document navigation (see
- * lib/offline-navigation.ts), which remounts this provider from
- * scratch. Deliberately still `sessionStorage`, not `localStorage`: it
- * clears itself when the tab closes, matching the lifetime this state
- * already had as plain in-memory React state.
+ * Also mirrored into sessionStorage (lib/game-setup-store.ts) as a
+ * safety net -- not the primary source of truth, GameSetupProvider's own
+ * state is. This exists because a client-side route transition can fail
+ * offline (the RSC payload fetch for the destination route has nothing
+ * to succeed against) and fall back to a full browser navigation, which
+ * remounts this entire provider from scratch. Without the sessionStorage
+ * recovery below, that remount would silently wipe `players` back to
+ * `[]` moments after someone finished adding them, surfacing Round
+ * Preparation's "Let's set up the players first" card even though
+ * nothing was actually wrong -- see components/round/RoundPreparationScreen.tsx's
+ * `isHydrated`-gated recovery effect, which this hand-off exists to feed.
+ *
+ * A hard refresh (deliberately, on the same tab) still recovers via this
+ * same mechanism, which is a nicer default than resetting to blank
+ * defaults -- there is no legitimate scenario where silently discarding
+ * a person's already-entered player list is the better outcome.
  */
 export function GameSetupProvider({ children }: { children: React.ReactNode }) {
-  // Deterministic on the very first render (including the server
-  // render) -- must NOT read sessionStorage here, same reasoning as
-  // components/round/RoundPreparationScreen.tsx. The mount effect below
-  // corrects this once, client-side only, right after.
   const [config, setConfig] = useState<GameConfig>(DEFAULT_GAME_CONFIG);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // null-then-hydrate: sessionStorage doesn't exist during SSR and the
+  // very first client render must match the server-rendered markup
+  // exactly (same convention as round-session-store.ts), so recovery
+  // happens here in an effect, never in the useState initializers above.
+  // Session-restore-on-mount is an accepted, pre-existing exception to
+  // the "no setState in effect bodies" rule elsewhere in this codebase
+  // (see RoundPreparationScreen's own sessionStorage recovery) --
+  // hydrating from storage IS the synchronization this effect exists to
+  // do, so there's no state-only alternative here.
+  useEffect(() => {
+    const stored = getStoredGameSetup();
+    if (stored) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setConfig(stored.config);
+      setPlayers(stored.players);
+    }
+    setIsHydrated(true);
+  }, []);
+
+  // Persists on every change, but only once hydration above has had a
+  // chance to apply any recovered value first -- otherwise this would
+  // fire on the same initial mount with the pre-hydration defaults and
+  // clobber the very data the effect above just read.
+  useEffect(() => {
+    if (!isHydrated) return;
+    storeGameSetup({ config, players });
+  }, [config, players, isHydrated]);
 
   const setMode = useCallback((mode: GameMode) => {
     setConfig((prev) => ({ ...prev, mode }));
@@ -111,29 +152,6 @@ export function GameSetupProvider({ children }: { children: React.ReactNode }) {
   // Players (Screen 3). Kept in the same provider as `config` -- both are
   // just in-progress setup state that needs to survive client-side
   // navigation between /setup and /players without a state library.
-  const [players, setPlayers] = useState<Player[]>([]);
-
-  // Hydrate once from sessionStorage, client-side only, after the
-  // deterministic default-state render above. Gates the persist effect
-  // below (via `isHydrated`, not a ref) so that effect's first run --
-  // which happens in the same commit as this one, before this state
-  // update has taken effect -- doesn't turn around and immediately
-  // overwrite real stored data with the defaults it's about to replace.
-  const [isHydrated, setIsHydrated] = useState(false);
-  useEffect(() => {
-    const stored = getStoredGameSetup();
-    if (stored) {
-      setConfig(stored.config);
-      setPlayers(stored.players);
-    }
-    setIsHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isHydrated) return;
-    storeGameSetup({ config, players });
-  }, [isHydrated, config, players]);
-
   const addPlayer = useCallback((name: string): PlayerActionResult => {
     let result: PlayerActionResult = {
       ok: false,
@@ -204,6 +222,7 @@ export function GameSetupProvider({ children }: { children: React.ReactNode }) {
       removePlayer,
       randomizePlayers,
       resetPlayers,
+      isHydrated,
     }),
     [
       config,
@@ -219,6 +238,7 @@ export function GameSetupProvider({ children }: { children: React.ReactNode }) {
       removePlayer,
       randomizePlayers,
       resetPlayers,
+      isHydrated,
     ],
   );
 

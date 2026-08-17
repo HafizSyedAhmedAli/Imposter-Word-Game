@@ -59,18 +59,19 @@ function wait(ms: number) {
 
 export default function RoundPreparationScreen() {
   const router = useRouter();
-  const { config, players } = useGameSetup();
+  const { config, players, isHydrated } = useGameSetup();
 
-  // Deterministic initial state -- must NOT depend on sessionStorage,
-  // since this component is server-rendered on the initial full page
-  // load (see "use client" in Next.js App Router) and `window` doesn't
-  // exist there. `config`/`players` come from GameSetupProvider, which
-  // is in-memory-only React state (always its defaults on a fresh
-  // mount), so `isPlayerCountValid` here is safe -- it's only the
-  // sessionStorage-backed recovery below that has to move into an
-  // effect. The real stored session (if any) is read once, client-only,
-  // in the mount effect below, which corrects `session`/`phase`/`stage`
-  // together in one step.
+  // NOTE: GameSetupProvider *also* has its own sessionStorage recovery
+  // now (lib/game-setup-store.ts), covering the case where this whole
+  // component tree just remounted from scratch (e.g. a client-side
+  // route transition that fell back to a hard navigation while offline
+  // -- see that file's doc comment for the full mechanism). That
+  // recovery lands one tick AFTER this first render, so `players` here
+  // is still `[]` on the very first paint even when a real player list
+  // is about to be restored. The recovery effect further below (keyed
+  // on `isHydrated`) is what corrects `phase` once that lands -- it
+  // must not be removed just because this initializer "looks" correct
+  // in isolation.
   const [session, setSession] = useState<RoundSession | null>(null);
   const [phase, setPhase] = useState<ScreenPhase>(() =>
     isPlayerCountValid(config.mode, players.length)
@@ -82,6 +83,7 @@ export default function RoundPreparationScreen() {
   const [confirmingLeave, setConfirmingLeave] = useState(false);
 
   const startedRef = useRef(false);
+  const recoveredRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
 
   async function runPreparation() {
@@ -170,6 +172,28 @@ export default function RoundPreparationScreen() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Recovers from a false "no-players" reading. `phase` was decided
+  // synchronously above, before GameSetupProvider's own sessionStorage
+  // hydration (lib/game-setup-store.ts) had a chance to run -- normally
+  // that's moot because `players` really is `[]` on a fresh mount, but
+  // after an offline hard-navigation remount it usually isn't: hydration
+  // lands a tick later with the real player list. `isHydrated` gates
+  // this so it never fires before that recovery has actually resolved
+  // one way or the other, and `recoveredRef` (separate from
+  // `startedRef`, which the effect above already marked `true`) ensures
+  // this can only ever trigger `runPreparation()` once.
+  useEffect(() => {
+    if (phase !== "no-players") return;
+    if (!isHydrated) return;
+    if (recoveredRef.current) return;
+    if (!isPlayerCountValid(config.mode, players.length)) return;
+
+    recoveredRef.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void runPreparation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, isHydrated, config.mode, players.length]);
 
   function handleBack() {
     if (phase === "preparing") {
