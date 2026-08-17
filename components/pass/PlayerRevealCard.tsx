@@ -107,10 +107,18 @@ export default function PlayerRevealCard({
         </p>
       </div>
 
+      {/*
+        Disabled for the same CREW_REVEAL_DELAY_MS window the word is
+        masked for -- stops a quick tap from hiding/passing the phone
+        before the player has actually seen their word. `disabled` (not
+        just a style) also blocks Enter/Space activation via keyboard,
+        not only pointer taps.
+      */}
       <button
         type="button"
         onClick={onHide}
-        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border border-iw-gold-600/40 bg-gradient-to-b from-iw-gold-100 via-iw-gold-400 to-iw-gold-500 px-6 py-4 font-display text-base font-bold text-iw-gold-ink shadow-[0_16px_32px_-14px_rgba(255,184,0,0.6)] transition-transform duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
+        disabled={!wordVisible}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-iw-gold-600/40 bg-gradient-to-b from-iw-gold-100 via-iw-gold-400 to-iw-gold-500 px-6 py-4 font-display text-base font-bold text-iw-gold-ink shadow-[0_16px_32px_-14px_rgba(255,184,0,0.6)] transition-all duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] cursor-pointer  disabled:pointer-events-none disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:translate-y-0"
       >
         <EyeOff className="h-5 w-5" strokeWidth={2.5} aria-hidden="true" />
         HIDE &amp; PASS PHONE

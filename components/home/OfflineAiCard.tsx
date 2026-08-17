@@ -21,7 +21,7 @@ export default function OfflineAiCard() {
             AI Powered
           </p>
           <p className="mt-1 text-xs leading-snug text-iw-ink-500">
-            Online: AI generated words &amp; hints. Offline: local word collection.
+            AI generated words &amp; hints. 
           </p>
         </div>
       </div>
