@@ -99,7 +99,7 @@ export default function VoteScreen() {
   useEffect(() => {
     if (screenState === "all-cast" && !allCastSoundPlayedRef.current) {
       allCastSoundPlayedRef.current = true;
-      playSound("results-buildup");
+      playSound("results-lose");
     }
   }, [screenState]);
 

@@ -8,9 +8,9 @@
  *
  * Every file this module references lives in public/sounds/ and MUST
  * also be listed in public/sw-template.js's PRECACHE_URLS -- see the
- * comment there. A key with no file yet (see MISSING below) is safe to
- * call: Howler's `onloaderror` marks it dead and playSound() no-ops for
- * it from then on, it never throws.
+ * comment there. If a file 404s or fails to decode at runtime, Howler's
+ * `onloaderror` marks that key dead and playSound() silently no-ops for
+ * it from then on -- it never throws.
  */
 import { Howl, Howler } from "howler";
 
@@ -23,24 +23,11 @@ export type SoundKey =
   | "transition-pass"
   | "phase-discussion"
   | "reveal-player"
-  | "reveal-crew"
-  | "reveal-imposter"
   | "timer-tick"
   | "timer-end"
-  | "results-buildup"
   | "results-lose"
   | "result-imposter-wins"
   | "result-crew-wins";
-
-// Keys with no sourced file yet. playSound() on these is a deliberate,
-// silent no-op (logged once in dev) rather than an error -- lets the
-// rest of the app call them today and get real audio the moment a file
-// is dropped into public/sounds/, with zero code changes.
-const UNAVAILABLE: ReadonlySet<SoundKey> = new Set([
-  "reveal-crew",
-  "reveal-imposter",
-  "results-buildup",
-]);
 
 const SRC: Record<SoundKey, string> = {
   "ambient-menu": "/sounds/ambient-menu.mp3",
@@ -51,11 +38,8 @@ const SRC: Record<SoundKey, string> = {
   "transition-pass": "/sounds/transition-pass.mp3",
   "phase-discussion": "/sounds/phase-discussion.mp3",
   "reveal-player": "/sounds/reveal-player.mp3",
-  "reveal-crew": "/sounds/reveal-crew.mp3",
-  "reveal-imposter": "/sounds/reveal-imposter.mp3",
   "timer-tick": "/sounds/timer-tick.mp3",
   "timer-end": "/sounds/timer-end.mp3",
-  "results-buildup": "/sounds/results-buildup.mp3",
   "results-lose": "/sounds/results-lose.mp3",
   "result-imposter-wins": "/sounds/result-imposter-wins.mp3",
   "result-crew-wins": "/sounds/result-crew-wins.mp3",
@@ -73,7 +57,7 @@ let enabled = true; // mirrors GameSettings.sound, set once by SoundProvider
 let ambientHowl: Howl | null = null;
 
 function getHowl(key: SoundKey): Howl | null {
-  if (UNAVAILABLE.has(key) || failed.has(key)) return null;
+  if (failed.has(key)) return null;
 
   const existing = cache.get(key);
   if (existing) return existing;

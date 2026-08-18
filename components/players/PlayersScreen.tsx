@@ -5,6 +5,7 @@ import { useState } from "react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import { useGameSetup } from "@/lib/game-setup-context";
 import { isPlayerCountValid, MAX_PLAYERS } from "@/game/game-rules";
+import { playSound } from "@/lib/sound-engine";
 import PlayersHeader from "./PlayersHeader";
 import GameConfigSummary from "./GameConfigSummary";
 import PlayerCount from "./PlayerCount";
@@ -43,7 +44,11 @@ export default function PlayersScreen() {
     // Player setup is complete: GameConfig + Players are ready to hand
     // off. Word/hint generation and role assignment happen on the next
     // screen (Round Preparation), not here.
-    if (!canContinue) return;
+    if (!canContinue) {
+      playSound("ui-error");
+      return;
+    }
+    playSound("ui-tap");
     router.push("/round");
   }
 

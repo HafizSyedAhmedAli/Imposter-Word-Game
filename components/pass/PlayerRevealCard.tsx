@@ -21,7 +21,7 @@ export default function PlayerRevealCard({
   useEffect(() => {
     const timer = setTimeout(() => {
       setWordVisible(true);
-      playSound("reveal-crew");
+      playSound("reveal-player");
     }, CREW_REVEAL_DELAY_MS - CREW_REVEAL_TRANSITION_MS);
 
     return () => clearTimeout(timer);

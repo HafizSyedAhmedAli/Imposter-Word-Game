@@ -123,9 +123,7 @@ export default function PassPhoneScreen() {
     // beat in the round, so it gets a distinct sting per role. The
     // Crew word's own reveal (the ~2s unblur inside PlayerRevealCard)
     // has its own separate sound, fired from that component.
-    playSound(
-      currentRole!.role === "imposter" ? "reveal-imposter" : "reveal-player",
-    );
+    playSound("reveal-player");
   }
 
   function handleHideAndPass() {

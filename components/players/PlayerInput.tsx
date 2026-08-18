@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Plus, User } from "lucide-react";
 import { MAX_PLAYER_NAME_LENGTH } from "@/game/game-rules";
+import { playSound } from "@/lib/sound-engine";
 
 export default function PlayerInput({
   onAdd,
@@ -20,6 +21,7 @@ export default function PlayerInput({
 
   function handleSubmit() {
     if (disabled) return;
+    playSound("ui-tap");
     const added = onAdd(value);
     if (added) {
       setValue("");
