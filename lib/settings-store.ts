@@ -50,10 +50,16 @@ export async function updateSettings(
   patch: Partial<GameSettings>,
 ): Promise<GameSettings> {
   const db = getDb();
-  const current = await getSettings();
-  const next: GameSettings = { ...current, ...patch };
-  await db.settings.put({ id: SETTINGS_ID, ...next });
-  return next;
+  return db.transaction("rw", db.settings, async () => {
+    const current = await db.settings.get(SETTINGS_ID);
+    const next: GameSettings = {
+      ...DEFAULT_SETTINGS,
+      ...current,
+      ...patch,
+    };
+    await db.settings.put({ id: SETTINGS_ID, ...next });
+    return next;
+  });
 }
 
 /**

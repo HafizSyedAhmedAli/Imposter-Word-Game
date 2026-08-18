@@ -36,7 +36,7 @@ export default function FinalResultsScreen() {
 
   const [session, setSession] = useState<RoundSession | null>(null);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
-  const recordedRef = useRef(false);
+  const recordedRef = useRef<string | null>(null);
   const outcomeSoundPlayedRef = useRef(false);
 
   useEffect(() => {
@@ -76,25 +76,33 @@ export default function FinalResultsScreen() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
+  // --- PASTE THIS NEW BLOCK HERE ---
+
+  // Handle side-effects (stats and sound) safely inside a useEffect
+  useEffect(() => {
+    if (!session) return;
+    const outcome = getFinalOutcome(session);
+    if (outcome === null) return;
+
+    // 1. Record Final Result
+    if (recordedRef.current !== session.id) {
+      recordedRef.current = session.id;
+      recordFinalResult(session, outcome);
+    }
+
+    // 2. Play Outcome Sound
+    if (!outcomeSoundPlayedRef.current) {
+      outcomeSoundPlayedRef.current = true;
+      playSound(
+        outcome === "crew-win" ? "result-crew-wins" : "result-imposter-wins",
+      );
+    }
+  }, [session]);
+
   if (!session) return null;
 
   const outcome = getFinalOutcome(session);
   if (outcome === null) return null;
-
-  if (!recordedRef.current) {
-    recordFinalResult(session, outcome);
-    recordedRef.current = true;
-  }
-
-  // Same once-per-mount guard as the stats recording just above --
-  // this only ever fires the first time this session's outcome is
-  // rendered, never again on a refresh of this same finished round.
-  if (!outcomeSoundPlayedRef.current) {
-    outcomeSoundPlayedRef.current = true;
-    playSound(
-      outcome === "crew-win" ? "result-crew-wins" : "result-imposter-wins",
-    );
-  }
 
   const reason = getWinReason(session, outcome);
   const playerResults = getFinalPlayerResults(session);

@@ -1,4 +1,3 @@
-// components/vote/VotingTimer.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -18,10 +17,12 @@ export default function VotingTimer({
   const expiredRef = useRef(false);
   const tickIdRef = useRef<number | null>(null);
   const tickStartedRef = useRef(false);
+  const resettingRef = useRef(false);
 
   useEffect(() => {
     if (durationSeconds === null) return;
 
+    resettingRef.current = true;
     setRemaining(durationSeconds);
     expiredRef.current = false;
     tickStartedRef.current = false;
@@ -39,6 +40,11 @@ export default function VotingTimer({
 
   useEffect(() => {
     if (durationSeconds === null) return;
+
+    if (resettingRef.current) {
+      if (remaining !== durationSeconds) return;
+      resettingRef.current = false;
+    }
 
     if (
       remaining > 0 &&

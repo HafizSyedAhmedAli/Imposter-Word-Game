@@ -18,10 +18,13 @@ export default function DiscussionTimer({
   const expiredRef = useRef(false);
   const tickIdRef = useRef<number | null>(null);
   const tickStartedRef = useRef(false);
+  const resettingRef = useRef(false); // 1. Add resetting flag
 
+  // Effect 1: Handle duration resets and main interval loop
   useEffect(() => {
     if (durationSeconds === null) return;
 
+    resettingRef.current = true; // Mark reset in progress
     setRemaining(durationSeconds);
     expiredRef.current = false;
     tickStartedRef.current = false;
@@ -37,10 +40,17 @@ export default function DiscussionTimer({
     };
   }, [durationSeconds]);
 
+  // Effect 2: Handle sound effects and expiration trigger
   useEffect(() => {
     if (durationSeconds === null) return;
 
-    // Fire the tick track once, right as the final stretch begins.
+    // Gate execution until state update catches up with duration reset
+    if (resettingRef.current) {
+      if (remaining !== durationSeconds) return;
+      resettingRef.current = false;
+    }
+
+    // Fire tick sound during final 10-second countdown
     if (
       remaining > 0 &&
       remaining <= TICK_WINDOW_SECONDS &&
@@ -50,6 +60,7 @@ export default function DiscussionTimer({
       tickIdRef.current = playSound("timer-tick");
     }
 
+    // Trigger completion
     if (remaining === 0 && !expiredRef.current) {
       expiredRef.current = true;
       stopSound("timer-tick", tickIdRef.current);

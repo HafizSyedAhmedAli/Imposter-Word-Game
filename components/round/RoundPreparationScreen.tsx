@@ -176,6 +176,12 @@ export default function RoundPreparationScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+  return () => {
+    abortRef.current?.abort();
+  };
+}, []);
+
   // Recovers from a false "no-players" reading. `phase` was decided
   // synchronously above, before GameSetupProvider's own sessionStorage
   // hydration (lib/game-setup-store.ts) had a chance to run -- normally

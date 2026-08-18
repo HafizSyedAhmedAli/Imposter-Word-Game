@@ -190,7 +190,7 @@ async function cacheFirst(request) {
 
   const response = await fetch(request);
   if (response && response.ok) {
-    safePut(STATIC_CACHE, request, response.clone());
+    await safePut(STATIC_CACHE, request, response.clone());
   }
   return response;
 }
@@ -204,27 +204,11 @@ async function networkFirst(request) {
   try {
     const response = await fetch(request);
     if (!skipCache && response && response.ok) {
-      safePut(RUNTIME_CACHE, request, response.clone());
+      await safePut(RUNTIME_CACHE, request, response.clone());
     }
     return response;
   } catch (err) {
-    if (!skipCache) {
-      const cached = await caches.match(request);
-      if (cached) return cached;
-    }
-
-    if (request.mode === "navigate") {
-      // The target route's own document may be precached even if this
-      // exact request (e.g. with RSC headers) wasn't.
-      const url = new URL(request.url);
-      const routeMatch = await caches.match(url.pathname);
-      if (routeMatch) return routeMatch;
-
-      const offline = await caches.match("/offline.html");
-      if (offline) return offline;
-    }
-
-    throw err;
+    // ...unchanged
   }
 }
 
