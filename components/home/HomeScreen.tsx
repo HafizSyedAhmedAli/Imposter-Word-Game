@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect } from "react";
 import { BookOpenText, Users, BarChart3 } from "lucide-react";
 import SpaceBackdrop from "./SpaceBackdrop";
 import HomeHeader from "./HomeHeader";
@@ -7,8 +10,14 @@ import HomeMenuItem from "./HomeMenuItem";
 import OfflineAiCard from "./OfflineAiCard";
 import HomeFooter from "./HomeFooter";
 import GameRecoveryPrompt from "./GameRecoveryPrompt";
+import { playAmbient, stopAmbient } from "@/lib/sound-engine";
 
 export default function HomeScreen() {
+  useEffect(() => {
+    playAmbient();
+    return () => stopAmbient();
+  }, []);
+
   return (
     <div className="relative flex min-h-dvh w-full justify-center">
       <SpaceBackdrop />
@@ -40,12 +49,6 @@ export default function HomeScreen() {
                 title="GAME SETTINGS"
                 subtitle="Timers, sounds and more"
               />
-              {/* <HomeMenuItem
-                href="/statistics"
-                icon={BarChart3}
-                title="STATISTICS"
-                subtitle="View your game stats"
-              /> */}
             </nav>
           </div>
 

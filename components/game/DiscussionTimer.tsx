@@ -3,17 +3,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { TimerReset } from "lucide-react";
+import { playSound, stopSound } from "@/lib/sound-engine";
 
-/**
- * Self-contained countdown. DiscussionScreen passes in a duration (in
- * seconds, from the round's own config) or `null` when no discussion
- * timer was configured -- all running/remaining/expired state lives
- * here, so a future shared/synced round-timer can be swapped in later
- * just by changing what feeds `durationSeconds`, without touching
- * DiscussionScreen itself (spec section 12).
- *
- * Never renders anything derived from the round's word, hint, or roles.
- */
+const TICK_WINDOW_SECONDS = 10;
+
 export default function DiscussionTimer({
   durationSeconds,
   onExpire,
@@ -22,41 +15,48 @@ export default function DiscussionTimer({
   onExpire: () => void;
 }) {
   const [remaining, setRemaining] = useState(durationSeconds ?? 0);
-  // Guards against calling onExpire more than once if the "remaining
-  // reaches 0" effect below re-runs for any reason.
   const expiredRef = useRef(false);
+  const tickIdRef = useRef<number | null>(null);
+  const tickStartedRef = useRef(false);
 
-  // Ticks the countdown down. This effect ONLY updates this component's
-  // own `remaining` state -- it never calls `onExpire` (a different
-  // component's setState) directly from inside a setState updater,
-  // since that runs during React's render/commit work and isn't a safe
-  // place to update another component (see the effect below instead).
   useEffect(() => {
     if (durationSeconds === null) return;
 
     setRemaining(durationSeconds);
     expiredRef.current = false;
+    tickStartedRef.current = false;
 
     const interval = setInterval(() => {
       setRemaining((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      stopSound("timer-tick", tickIdRef.current);
+      tickIdRef.current = null;
+    };
   }, [durationSeconds]);
 
-  // Reports expiry back up to DiscussionScreen. Runs as its own effect
-  // (a safe point to update a different component's state) once
-  // `remaining` actually reaches 0, rather than from inside the ticking
-  // interval above.
   useEffect(() => {
     if (durationSeconds === null) return;
+
+    // Fire the tick track once, right as the final stretch begins.
+    if (
+      remaining > 0 &&
+      remaining <= TICK_WINDOW_SECONDS &&
+      !tickStartedRef.current
+    ) {
+      tickStartedRef.current = true;
+      tickIdRef.current = playSound("timer-tick");
+    }
+
     if (remaining === 0 && !expiredRef.current) {
       expiredRef.current = true;
+      stopSound("timer-tick", tickIdRef.current);
+      tickIdRef.current = null;
+      playSound("timer-end");
       onExpire();
     }
-    // `onExpire` is intentionally omitted -- DiscussionScreen passes a
-    // fresh inline function each render, and this should only re-run
-    // when `remaining` actually changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, durationSeconds]);
 

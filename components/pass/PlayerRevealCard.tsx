@@ -1,26 +1,12 @@
-// components/pass/PlayerRevealCard.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { EyeOff } from "lucide-react";
+import { playSound } from "@/lib/sound-engine";
 
-// Total time from mount until the Crew word is fully revealed. Crew-only
-// -- the Imposter reveal has no equivalent delay and is untouched by
-// this constant.
 const CREW_REVEAL_DELAY_MS = 2000;
-
-// How long the unblur/unmask transition itself takes. Kept shorter than
-// CREW_REVEAL_DELAY_MS and fired late enough that it finishes exactly
-// when CREW_REVEAL_DELAY_MS elapses, so the word sits masked, then
-// resolves smoothly into focus right at the 2-second mark, instead of
-// holding still and then snapping into view.
 const CREW_REVEAL_TRANSITION_MS = 550;
 
-// IMPORTANT: this component intentionally has no `hint` prop. Crew/
-// Players never see the AI-generated hint under the new role-info rule
-// -- they see the word and must invent their own clue from it. Omitting
-// the prop entirely (not just the render) keeps that guarantee even if
-// a future edit forgets to check the rule.
 export default function PlayerRevealCard({
   playerName,
   word,
@@ -30,32 +16,14 @@ export default function PlayerRevealCard({
   word: string;
   onHide: () => void;
 }) {
-  // Crew-only reveal delay. Local and isolated to this component -- it
-  // does not touch PassPhoneScreen's PassState, session/round logic, or
-  // the Imposter reveal card, which has no equivalent state at all.
-  // Starts false on every render (including the very first) so the real
-  // word is never present in the initial/SSR markup -- there is nothing
-  // to flash.
   const [wordVisible, setWordVisible] = useState(false);
 
   useEffect(() => {
-    // This effect re-runs on every mount. PassPhoneScreen only renders
-    // this card while passState === "revealed" and unmounts it for
-    // every other state (Hide & Pass, tab-hidden fallback, etc.), so a
-    // fresh reveal -- even for the same player re-revealing -- always
-    // restarts this 2-second delay rather than reusing stale state.
-    //
-    // The transition is triggered CREW_REVEAL_TRANSITION_MS early so its
-    // animation finishes right as CREW_REVEAL_DELAY_MS elapses, rather
-    // than holding the mask still for the full delay and then snapping
-    // to clear.
     const timer = setTimeout(() => {
       setWordVisible(true);
+      playSound("reveal-crew");
     }, CREW_REVEAL_DELAY_MS - CREW_REVEAL_TRANSITION_MS);
 
-    // Cleanup clears the pending timer on unmount, which also prevents
-    // any state update from firing after unmount (e.g. the player
-    // backgrounds the tab or taps Hide & Pass before the delay elapses).
     return () => clearTimeout(timer);
   }, []);
 
@@ -74,21 +42,6 @@ export default function PlayerRevealCard({
           Your secret word
         </p>
 
-        {/*
-          Single element, always the real word -- no placeholder swap, so
-          there's no layout jump between a differently-sized mask and the
-          final text (that swap was the "weird" part). Instead the word
-          itself sits blurred/scaled/dim and smoothly pulls into focus.
-
-          Not a flash risk: `wordVisible` starts false on every render
-          including the first/SSR pass, so the masked style is present
-          from the very first paint -- there's no frame where the word
-          is legible before the transition resolves it.
-
-          `aria-hidden` is tied to the same state, so screen readers get
-          nothing until the word is actually revealed, independent of
-          the visual blur.
-        */}
         <p
           className="mt-1 origin-center transform-gpu select-none font-display text-5xl font-bold text-iw-ink-100 break-words transition-all ease-out will-change-[filter,transform,opacity]"
           style={{
@@ -107,13 +60,6 @@ export default function PlayerRevealCard({
         </p>
       </div>
 
-      {/*
-        Disabled for the same CREW_REVEAL_DELAY_MS window the word is
-        masked for -- stops a quick tap from hiding/passing the phone
-        before the player has actually seen their word. `disabled` (not
-        just a style) also blocks Enter/Space activation via keyboard,
-        not only pointer taps.
-      */}
       <button
         type="button"
         onClick={onHide}

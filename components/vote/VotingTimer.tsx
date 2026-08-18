@@ -3,20 +3,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Timer } from "lucide-react";
+import { playSound, stopSound } from "@/lib/sound-engine";
 
-/**
- * Same self-contained countdown pattern as
- * components/game/DiscussionTimer.tsx, kept as its own component (not a
- * reused/relabeled import) so Screen 6 stays untouched -- per the spec's
- * implementation principle, this task only adds Screen 7, it doesn't
- * modify Screens 1-6 (see spec's "Do Not Do These Things").
- *
- * Mounted once for the whole voting phase in VoteScreen and never
- * remounted as the phone moves between voters, so its internal
- * `remaining` state is never reset when one voter's turn ends and the
- * next begins (spec section 49-50) -- only VoteScreen swapping
- * `durationSeconds` itself (i.e. a different round) restarts it.
- */
+const TICK_WINDOW_SECONDS = 10;
+
 export default function VotingTimer({
   durationSeconds,
   onExpire,
@@ -25,32 +15,47 @@ export default function VotingTimer({
   onExpire: () => void;
 }) {
   const [remaining, setRemaining] = useState(durationSeconds ?? 0);
-  // Guards against calling onExpire more than once if the "remaining
-  // reaches 0" effect below re-runs for any reason.
   const expiredRef = useRef(false);
+  const tickIdRef = useRef<number | null>(null);
+  const tickStartedRef = useRef(false);
 
   useEffect(() => {
     if (durationSeconds === null) return;
 
     setRemaining(durationSeconds);
     expiredRef.current = false;
+    tickStartedRef.current = false;
 
     const interval = setInterval(() => {
       setRemaining((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      stopSound("timer-tick", tickIdRef.current);
+      tickIdRef.current = null;
+    };
   }, [durationSeconds]);
 
   useEffect(() => {
     if (durationSeconds === null) return;
+
+    if (
+      remaining > 0 &&
+      remaining <= TICK_WINDOW_SECONDS &&
+      !tickStartedRef.current
+    ) {
+      tickStartedRef.current = true;
+      tickIdRef.current = playSound("timer-tick");
+    }
+
     if (remaining === 0 && !expiredRef.current) {
       expiredRef.current = true;
+      stopSound("timer-tick", tickIdRef.current);
+      tickIdRef.current = null;
+      playSound("timer-end");
       onExpire();
     }
-    // `onExpire` intentionally omitted -- VoteScreen passes a fresh
-    // inline function each render, and this should only re-run when
-    // `remaining` actually changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, durationSeconds]);
 

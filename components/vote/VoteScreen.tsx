@@ -31,65 +31,43 @@ import VoteRecordedCard from "./VoteRecordedCard";
 import AllVotesCastCard from "./AllVotesCastCard";
 import TimesUpCard from "./TimesUpCard";
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
+import { playSound } from "@/lib/sound-engine";
 
 export default function VoteScreen() {
   const router = useRouter();
 
-  // Same deterministic-null-then-hydrate pattern as PassPhoneScreen and
-  // DiscussionScreen -- this is a client component but still gets a
-  // server render on first load, where `sessionStorage` doesn't exist.
   const [session, setSession] = useState<RoundSession | null>(null);
   const [screenState, setScreenState] = useState<VoteScreenState>("pass-phone");
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [timeUp, setTimeUp] = useState(false);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
-  const advancingRef = useRef(false); // guards double-taps, same as PassPhoneScreen
+  const advancingRef = useRef(false);
+  const allCastSoundPlayedRef = useRef(false);
 
-  // Runs once, after hydration. Reading the stored session AND deciding
-  // whether/where to redirect both happen in this single effect, same
-  // reasoning as PassPhoneScreen and DiscussionScreen -- splitting them
-  // risks redirecting based on state from before the session was
-  // restored.
   useEffect(() => {
     const existing = getStoredRoundSession();
 
     if (existing === null) {
-      // Deep-linked straight to /voting with no prepared round -- send
-      // them to build one instead of rendering an empty ballot.
       router.replace("/round");
       return;
     }
 
     if (existing.status === "ready") {
-      // Pass-the-phone (Screen 5) hasn't finished yet -- route back
-      // through the real transition rather than starting voting on
-      // roles no one has seen.
       router.replace("/pass");
       return;
     }
 
     if (existing.status === "finished") {
-      // Nothing left to vote on, and there's no results screen to
-      // return to yet -- go to the safest known destination.
       router.replace("/");
       return;
     }
 
-    // status === "playing": Screen 6 is done and this round's voting
-    // may already be partway through (or fully done) from a previous
-    // visit. Recover the correct state purely from `existing.votes`
-    // (see game/vote-flow.ts) rather than always starting at
-    // "pass-phone" -- this is what makes a mid-voting refresh safe
-    // (spec sections 60-64).
     setSession(existing);
     setScreenState(isVotingComplete(existing) ? "all-cast" : "pass-phone");
     markActiveGameRoute("/voting");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Intercept back navigation, same guard as Screen 5/6 -- a
-  // hardware/browser back action must go through the leave-round
-  // confirmation, never bypass it straight back to discussion.
   useEffect(() => {
     function handlePopState() {
       openLeaveConfirmation();
@@ -100,9 +78,6 @@ export default function VoteScreen() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  // Tab-visibility protection, same as PassPhoneScreen -- if the tab is
-  // hidden mid-selection, drop back to the private hand-off gate rather
-  // than leaving a half-made selection visible when it's reopened.
   useEffect(() => {
     function handleVisibility() {
       if (
@@ -118,9 +93,16 @@ export default function VoteScreen() {
       document.removeEventListener("visibilitychange", handleVisibility);
   }, [screenState]);
 
-  // Stable per-seat avatar index, keyed by player ID -- VoteSelectionCard
-  // renders a filtered (self-excluded) list, but avatars must still
-  // match each player's actual seat color from the full roster.
+  // Fires the drumroll exactly once per round, the moment the last
+  // vote lands -- not re-fired on a refresh that recovers straight
+  // into "all-cast" from a previous visit.
+  useEffect(() => {
+    if (screenState === "all-cast" && !allCastSoundPlayedRef.current) {
+      allCastSoundPlayedRef.current = true;
+      playSound("results-buildup");
+    }
+  }, [screenState]);
+
   const playerIndexById = useMemo(() => {
     const map = new Map<string, number>();
     if (session) {
@@ -143,6 +125,7 @@ export default function VoteScreen() {
 
   function handleSelect(playerId: string) {
     setSelectedTargetId(playerId);
+    playSound("ui-tap");
   }
 
   function handleCastVote() {
@@ -155,7 +138,7 @@ export default function VoteScreen() {
   }
 
   function handleConfirmVote() {
-    if (advancingRef.current) return; // one submission per tap, never two
+    if (advancingRef.current) return;
     if (!currentVoter || !selectedTargetId) return;
     advancingRef.current = true;
 
@@ -170,6 +153,7 @@ export default function VoteScreen() {
     setSession(next);
     setSelectedTargetId(null);
     setScreenState(isVotingComplete(next) ? "all-cast" : "recorded");
+    playSound("ui-confirm");
 
     setTimeout(() => {
       advancingRef.current = false;
@@ -183,8 +167,6 @@ export default function VoteScreen() {
   }
 
   function handleRevealResults() {
-    // Results is a separate screen/phase -- this only navigates
-    // forward, it never computes or mutates round outcome data itself.
     router.push("/results");
   }
 

@@ -8,16 +8,11 @@ import {
   updateSettings,
   type GameSettings,
 } from "@/lib/settings-store";
-import { playToggleTone } from "@/lib/sound";
+import { playSound, setSoundEnabled } from "@/lib/sound-engine";
 import { triggerHaptic } from "@/lib/haptics";
 import SettingsToggleRow from "./SettingsToggleRow";
 
 export default function PreferencesCard() {
-  // null-then-hydrate: settings live in IndexedDB, which doesn't exist
-  // during SSR and isn't readable until after mount -- same convention
-  // as the rest of the codebase (e.g. RoundPreparationScreen's session
-  // restore). Rows render with sensible defaults and disabled toggles
-  // until this resolves, rather than blocking the whole screen.
   const [settings, setSettings] = useState<GameSettings | null>(null);
 
   useEffect(() => {
@@ -35,9 +30,11 @@ export default function PreferencesCard() {
     const next = !settings.sound;
     setSettings({ ...settings, sound: next });
     void updateSettings({ sound: next });
+    setSoundEnabled(next);
     // Only chirp when turning ON -- there's nothing useful to play as
-    // confirmation of turning sound off.
-    if (next) playToggleTone();
+    // confirmation of turning sound off. Engine is already enabled by
+    // the time this fires, so the toggle sound itself plays normally.
+    if (next) playSound("ui-confirm");
   }, [settings]);
 
   const handleToggleHaptics = useCallback(() => {

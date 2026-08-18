@@ -8,7 +8,6 @@ import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
 import LeaveRoundDialog from "@/components/pass/LeaveRoundDialog";
 import VoteResultsCard from "@/components/results/VoteResultsCard";
-import VerdictCard from "@/components/results/VerdictCard";
 import WinnerHero from "./WinnerHero";
 import SecretRevealCard from "./SecretRevealCard";
 import ImpostersRevealCard from "./ImpostersRevealCard";
@@ -20,56 +19,35 @@ import {
 } from "@/lib/round-session-store";
 import { recordFinalResult } from "@/lib/game-statistics-store";
 import { isVotingComplete } from "@/game/vote-flow";
-import {
-  getHighestVoteCount,
-  getTotalImposterCount,
-} from "@/game/results-flow";
+import { getHighestVoteCount } from "@/game/results-flow";
 import type { RoundSession } from "@/game/game-types";
 import {
   getFinalImposters,
   getFinalOutcome,
   getFinalPlayerResults,
-  getFinalVerdict,
   getFinalVoteTally,
   getRoundSummary,
   getWinReason,
 } from "@/game/final-results-flow";
+import { playSound } from "@/lib/sound-engine";
 
-/**
- * Screen 9 -- the FINAL RESULTS screen. Reached only from ResultsScreen's
- * (Screen 8) "SEE FINAL RESULTS" button once game/results-flow.ts's
- * getRoundOutcome() is no longer "continue". Every fact rendered here
- * (word, hint, imposters, verdict, vote tally, config) is read straight
- * off the persisted RoundSession via game/final-results-flow.ts -- this
- * screen makes no gameplay decisions of its own (spec's "GAME OUTCOME
- * LOGIC": do not create a second source of truth).
- *
- * Note on scope: this codebase has no "final guess" mechanic (only
- * vote-based elimination -- see game/game-types.ts and the comment atop
- * game/final-results-flow.ts), so there is deliberately no FINAL GUESS
- * card here. Adding one later only requires a new card fed by a new
- * field on RoundSession; nothing else on this screen would change.
- */
 export default function FinalResultsScreen() {
   const router = useRouter();
 
-  // Same deterministic-null-then-hydrate pattern as ResultsScreen --
-  // sessionStorage doesn't exist during the server render.
   const [session, setSession] = useState<RoundSession | null>(null);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
-  const recordedRef = useRef(false); // guards double-recording stats in Strict Mode
+  const recordedRef = useRef(false);
+  const outcomeSoundPlayedRef = useRef(false);
 
   useEffect(() => {
     const existing = getStoredRoundSession();
 
     if (existing === null) {
-      // Deep-linked straight to /final-results with no round in progress.
       router.replace("/round");
       return;
     }
 
     if (existing.status === "ready") {
-      // Voting hasn't even started -- nothing to show here yet.
       router.replace("/pass");
       return;
     }
@@ -80,10 +58,6 @@ export default function FinalResultsScreen() {
     }
 
     if (getFinalOutcome(existing) === null) {
-      // Voting for this round finished, but the game itself hasn't --
-      // Screen 8 owns "continue this round" navigation, not this screen
-      // (spec's "IMPORTANT NAVIGATION RULE": never render a false
-      // game-over for a deep link, stale tab, or back/forward race).
       router.replace("/results");
       return;
     }
@@ -92,9 +66,6 @@ export default function FinalResultsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Same hardware/browser-back guard as every other in-round screen --
-  // it must go through the leave-round confirmation, never silently
-  // discard the completed round (spec's HEADER section).
   useEffect(() => {
     function handlePopState() {
       openLeaveConfirmation();
@@ -108,27 +79,28 @@ export default function FinalResultsScreen() {
   if (!session) return null;
 
   const outcome = getFinalOutcome(session);
-  if (outcome === null) return null; // redirect above is already in flight
+  if (outcome === null) return null;
 
-  // Rolls this game into the lifetime stats exactly once. recordFinalResult
-  // is itself idempotent per session.id (see lib/game-statistics-store.ts),
-  // so this ref only avoids a redundant localStorage read/write on Strict
-  // Mode's double-invoke -- a refresh of this screen still can't double
-  // count (spec: "A refresh of Screen 9 must NOT increment statistics
-  // again").
   if (!recordedRef.current) {
     recordFinalResult(session, outcome);
     recordedRef.current = true;
   }
 
+  // Same once-per-mount guard as the stats recording just above --
+  // this only ever fires the first time this session's outcome is
+  // rendered, never again on a refresh of this same finished round.
+  if (!outcomeSoundPlayedRef.current) {
+    outcomeSoundPlayedRef.current = true;
+    playSound(
+      outcome === "crew-win" ? "result-crew-wins" : "result-imposter-wins",
+    );
+  }
+
   const reason = getWinReason(session, outcome);
   const playerResults = getFinalPlayerResults(session);
   const imposters = getFinalImposters(session);
-  const impostersCaught = imposters.filter((i) => i.eliminated).length;
-  const verdict = getFinalVerdict(session);
   const tally = getFinalVoteTally(session);
   const highestVotes = getHighestVoteCount(tally);
-  const totalImposters = getTotalImposterCount(session);
   const summary = getRoundSummary(session);
 
   function openLeaveConfirmation() {
@@ -141,14 +113,6 @@ export default function FinalResultsScreen() {
   }
 
   function handlePlayAgain() {
-    // Fresh game state next time -- never carry votes, eliminations,
-    // roles, word, hint, or currentPlayerIndex into the next round
-    // (spec's "ROUND DATA CLEANUP"). This only clears the sessionStorage
-    // round session; the IndexedDB AI word cache, fallback word list,
-    // user settings, and statistics all live in separate stores and are
-    // left untouched. Same roster/config screen ResultsScreen's own
-    // "leave round" action uses, so players don't have to re-enter names
-    // to start a new round.
     clearStoredRoundSession();
     router.push("/players");
   }
@@ -176,16 +140,6 @@ export default function FinalResultsScreen() {
           <ImpostersRevealCard imposters={imposters} />
 
           <PlayerResultsList results={playerResults} />
-
-          {/* {verdict.type !== "tie" && (
-            <VerdictCard
-              playerName={verdict.eliminated.name}
-              wasImposter={verdict.type === "imposter-caught"}
-              remainingImposterCount={
-                outcome === "crew-win" ? 0 : totalImposters - impostersCaught
-              }
-            />
-          )} */}
 
           <VoteResultsCard tally={tally} highestVotes={highestVotes} />
 
