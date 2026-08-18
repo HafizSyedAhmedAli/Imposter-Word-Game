@@ -19,6 +19,7 @@ import PreparationProgress from "./PreparationProgress";
 import PreparationStatus from "./PreparationStatus";
 import RoundSourceIndicator from "./RoundSourceIndicator";
 import RoundErrorRecovery from "./RoundErrorRecovery";
+import { markActiveGameRoute } from "@/lib/active-game-recovery";
 
 type ScreenPhase = "preparing" | "ready" | "no-players" | "error";
 
@@ -118,6 +119,7 @@ export default function RoundPreparationScreen() {
       if (controller.signal.aborted) return;
 
       storeRoundSession(prepared);
+      markActiveGameRoute("/round");
       setSession(prepared);
       setPhase("ready");
 
@@ -151,6 +153,7 @@ export default function RoundPreparationScreen() {
       setSession(existing);
       setStage("finalizing");
       setPhase("ready");
+      markActiveGameRoute("/round");
       // Nothing to regenerate -- just continue on to Screen 5 (see
       // Screen 4 spec, section 36).
       const timer = setTimeout(() => router.push("/pass"), 900);

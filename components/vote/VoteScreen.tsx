@@ -30,6 +30,7 @@ import ConfirmVoteCard from "./ConfirmVoteCard";
 import VoteRecordedCard from "./VoteRecordedCard";
 import AllVotesCastCard from "./AllVotesCastCard";
 import TimesUpCard from "./TimesUpCard";
+import { markActiveGameRoute } from "@/lib/active-game-recovery";
 
 export default function VoteScreen() {
   const router = useRouter();
@@ -82,6 +83,7 @@ export default function VoteScreen() {
     // (spec sections 60-64).
     setSession(existing);
     setScreenState(isVotingComplete(existing) ? "all-cast" : "pass-phone");
+    markActiveGameRoute("/voting");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

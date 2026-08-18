@@ -6,11 +6,13 @@ import PrimaryPlayButton from "./PrimaryPlayButton";
 import HomeMenuItem from "./HomeMenuItem";
 import OfflineAiCard from "./OfflineAiCard";
 import HomeFooter from "./HomeFooter";
+import GameRecoveryPrompt from "./GameRecoveryPrompt";
 
 export default function HomeScreen() {
   return (
     <div className="relative flex min-h-dvh w-full justify-center">
       <SpaceBackdrop />
+      <GameRecoveryPrompt />
 
       <div className="flex w-full max-w-md flex-col px-4 pl-safe pr-safe pt-safe pb-safe sm:px-6 sm:py-8">
         <HomeHeader />

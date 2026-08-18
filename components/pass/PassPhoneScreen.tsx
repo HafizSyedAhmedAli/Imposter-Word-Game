@@ -25,6 +25,7 @@ import PlayerRevealCard from "./PlayerRevealCard";
 import ImposterRevealCard from "./ImposterRevealCard";
 import AllPlayersReadyCard from "./AllPlayersReadyCard";
 import LeaveRoundDialog from "./LeaveRoundDialog";
+import { markActiveGameRoute } from "@/lib/active-game-recovery";
 
 export default function PassPhoneScreen() {
   const router = useRouter();
@@ -80,6 +81,7 @@ export default function PassPhoneScreen() {
         // hasn't started (or is still in progress).
         setSession(existing);
         setPassState("pass-phone");
+        markActiveGameRoute("/pass");
         return;
 
       case "playing":

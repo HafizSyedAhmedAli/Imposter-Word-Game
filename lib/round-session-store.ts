@@ -1,4 +1,8 @@
 import type { RoundSession } from "@/game/game-types";
+import {
+  clearActiveGameRecovery,
+  mirrorActiveGameSession,
+} from "./active-game-recovery";
 
 const STORAGE_KEY = "iw:round-session";
 
@@ -30,6 +34,11 @@ export function storeRoundSession(session: RoundSession): void {
     // Best-effort -- an in-memory session (component state) still works
     // for the current page's lifetime, it just won't survive a refresh.
   }
+  // Mirror into localStorage (lib/active-game-recovery.ts) so the game
+  // is still detectable after a full app close, not just a refresh --
+  // sessionStorage alone can't survive that. Runs even if the
+  // sessionStorage write above failed, so recovery still works.
+  mirrorActiveGameSession(session);
 }
 
 export function clearStoredRoundSession(): void {
@@ -39,4 +48,8 @@ export function clearStoredRoundSession(): void {
   } catch {
     // no-op
   }
+  // Whenever the live round session is discarded, the "resumable game"
+  // record must go with it -- otherwise a cleared/left round would keep
+  // showing "Game in Progress" on next launch.
+  clearActiveGameRecovery();
 }

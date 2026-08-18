@@ -19,6 +19,7 @@ import DiscussionPlayersCard from "./DiscussionPlayersCard";
 import DiscussionStatusCard from "./DiscussionStatusCard";
 import DiscussionTimer from "./DiscussionTimer";
 import DiscussionTipsCard from "./DiscussionTipsCard";
+import { markActiveGameRoute } from "@/lib/active-game-recovery";
 
 export default function DiscussionScreen() {
   const router = useRouter();
@@ -79,6 +80,7 @@ export default function DiscussionScreen() {
     // progress. beginDiscussion() is never called from here, and the
     // phone stays put -- there's no per-player state to restore.
     setSession(existing);
+    markActiveGameRoute("/game");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -127,7 +129,10 @@ export default function DiscussionScreen() {
             onExpire={() => setTimerExpired(true)}
           />
 
-          <DiscussionPlayersCard players={players} indexById={playerIndexById} />
+          <DiscussionPlayersCard
+            players={players}
+            indexById={playerIndexById}
+          />
 
           <DiscussionTipsCard />
 

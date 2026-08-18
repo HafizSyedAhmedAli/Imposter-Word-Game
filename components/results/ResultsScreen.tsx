@@ -28,6 +28,7 @@ import VoteResultsCard from "./VoteResultsCard";
 import MostVotedCard from "./MostVotedCard";
 import VerdictCard from "./VerdictCard";
 import TieCard from "./TieCard";
+import { markActiveGameRoute } from "@/lib/active-game-recovery";
 
 export default function ResultsScreen() {
   const router = useRouter();
@@ -81,6 +82,7 @@ export default function ResultsScreen() {
       storeRoundSession(withVerdictApplied);
     }
     setSession(withVerdictApplied);
+    markActiveGameRoute("/results");
     appliedRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
