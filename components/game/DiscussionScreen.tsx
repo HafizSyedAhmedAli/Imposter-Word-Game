@@ -20,6 +20,7 @@ import DiscussionStatusCard from "./DiscussionStatusCard";
 import DiscussionTimer from "./DiscussionTimer";
 import DiscussionTipsCard from "./DiscussionTipsCard";
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
+import { playSound } from "@/lib/sound-engine";
 
 export default function DiscussionScreen() {
   const router = useRouter();
@@ -103,9 +104,7 @@ export default function DiscussionScreen() {
   const discussionDuration = getDiscussionDuration(session);
 
   function handleStartVoting() {
-    // Voting is a separate screen/phase (see spec, "Discussion
-    // Controls") -- this only navigates forward, it never implements
-    // voting logic or mutates round/word/hint/roles itself.
+    playSound("ui-tap");
     router.push("/voting");
   }
 

@@ -50,6 +50,9 @@ export type SettingsRow = {
   id: string;
   sound: boolean;
   haptics: boolean;
+  // Optional: rows saved before this feature existed won't have it --
+  // getSettings() defaults it in, see lib/settings-store.ts.
+  music?: boolean;
 };
 
 class ImposterWordDB extends Dexie {

@@ -1,6 +1,6 @@
+// components/home/HomeScreen.tsx
 "use client";
 
-import { useEffect } from "react";
 import { BookOpenText, Users, BarChart3 } from "lucide-react";
 import SpaceBackdrop from "./SpaceBackdrop";
 import HomeHeader from "./HomeHeader";
@@ -10,14 +10,13 @@ import HomeMenuItem from "./HomeMenuItem";
 import OfflineAiCard from "./OfflineAiCard";
 import HomeFooter from "./HomeFooter";
 import GameRecoveryPrompt from "./GameRecoveryPrompt";
-import { playAmbient, stopAmbient } from "@/lib/sound-engine";
+
+// Ambient menu music is now owned app-wide by MenuMusicController
+// (components/pwa/MenuMusicController.tsx), which keeps it playing
+// continuously across Home, Settings, How to Play, Setup, and Players
+// without restarting on every navigation between them.
 
 export default function HomeScreen() {
-  useEffect(() => {
-    playAmbient();
-    return () => stopAmbient();
-  }, []);
-
   return (
     <div className="relative flex min-h-dvh w-full justify-center">
       <SpaceBackdrop />

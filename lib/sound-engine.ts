@@ -1,17 +1,4 @@
 // lib/sound-engine.ts
-/**
- * Real-audio-file sound layer, replacing the old synthesized-tone
- * approach in lib/sound.ts (deprecated -- see that file's note). Uses
- * Howler for playback because it handles iOS/Safari's autoplay-unlock
- * dance, simultaneous overlapping playback, and fade in/out far more
- * reliably than raw <audio> elements.
- *
- * Every file this module references lives in public/sounds/ and MUST
- * also be listed in public/sw-template.js's PRECACHE_URLS -- see the
- * comment there. If a file 404s or fails to decode at runtime, Howler's
- * `onloaderror` marks that key dead and playSound() silently no-ops for
- * it from then on -- it never throws.
- */
 import { Howl, Howler } from "howler";
 
 export type SoundKey =
@@ -45,16 +32,17 @@ const SRC: Record<SoundKey, string> = {
   "result-crew-wins": "/sounds/result-crew-wins.mp3",
 };
 
-// One-shot SFX only. Looping tracks (currently just "ambient-menu") are
-// handled separately by playAmbient()/stopAmbient() below and never go
-// through this map.
 const LOOPING: ReadonlySet<SoundKey> = new Set(["ambient-menu"]);
 
 const cache = new Map<SoundKey, Howl>();
 const failed = new Set<SoundKey>();
 
-let enabled = true; // mirrors GameSettings.sound, set once by SoundProvider
+let enabled = true; // mirrors GameSettings.sound (SFX only)
+let musicEnabled = true; // mirrors GameSettings.music (ambient bed only) -- deliberately independent of `enabled`
 let ambientHowl: Howl | null = null;
+let ambientWanted = false;
+let audioUnlocked = false;
+let unlockListenerAttached = false;
 
 function getHowl(key: SoundKey): Howl | null {
   if (failed.has(key)) return null;
@@ -67,9 +55,6 @@ function getHowl(key: SoundKey): Howl | null {
     preload: true,
     loop: LOOPING.has(key),
     onloaderror: () => {
-      // A 404/decode failure marks the key dead for the rest of the
-      // session -- never retried, never thrown, matches the
-      // best-effort philosophy of the old lib/sound.ts.
       failed.add(key);
       cache.delete(key);
       if (process.env.NODE_ENV !== "production") {
@@ -83,26 +68,38 @@ function getHowl(key: SoundKey): Howl | null {
 }
 
 /** Called once by SoundProvider on mount, and again whenever the user
- * flips the Sound toggle in Settings. */
+ * flips the Sound toggle in Settings. Only touches non-looping (SFX)
+ * Howls, so it can never affect the ambient bed -- Music has its own
+ * independent toggle, see setMusicEnabled below. */
 export function setSoundEnabled(value: boolean): void {
   enabled = value;
-  Howler.mute(!value);
-  if (!value) stopAmbient(0);
+  cache.forEach((howl, key) => {
+    if (!LOOPING.has(key)) howl.mute(!value);
+  });
 }
 
-/** Warms every known-available key's Howl instance up front so the
- * first play of each (e.g. the very first role reveal) isn't the
- * moment the file is fetched. Safe to call multiple times. */
+/** Called once by SoundProvider on mount, and again whenever the user
+ * flips the Music toggle in Settings. Independent of `enabled` -- SFX
+ * and the ambient menu bed can be toggled separately. */
+export function setMusicEnabled(value: boolean): void {
+  musicEnabled = value;
+  if (!value) {
+    stopAmbient(300);
+  } else {
+    // Re-attempt playback immediately -- if the current screen wants
+    // ambient playing (Settings is itself one of the menu screens),
+    // this starts it right away instead of waiting for the next
+    // navigation.
+    playAmbient();
+  }
+}
+
 export function preloadSounds(): void {
   (Object.keys(SRC) as SoundKey[]).forEach((key) => {
     if (!LOOPING.has(key)) getHowl(key);
   });
 }
 
-/**
- * Plays a one-shot sound effect. Always safe to call regardless of
- * `enabled`, missing file, or blocked audio context -- never throws.
- */
 export function playSound(
   key: SoundKey,
   opts?: { volume?: number },
@@ -119,8 +116,6 @@ export function playSound(
   }
 }
 
-/** Stops a specific previously-played instance (e.g. a long timer-tick
- * track started early and cut off once the timer actually hits 0). */
 export function stopSound(key: SoundKey, id: number | null): void {
   if (id === null) return;
   try {
@@ -130,10 +125,8 @@ export function stopSound(key: SoundKey, id: number | null): void {
   }
 }
 
-/** Starts the looping ambient bed at low volume with a short fade-in.
- * No-ops if sound is disabled or the file failed to load. */
-export function playAmbient(fadeMs = 600, targetVolume = 0.18): void {
-  if (!enabled) return;
+function startAmbientPlayback(fadeMs: number, targetVolume: number): void {
+  if (!musicEnabled || !ambientWanted) return;
   if (ambientHowl?.playing()) return;
 
   const howl = getHowl("ambient-menu");
@@ -145,9 +138,62 @@ export function playAmbient(fadeMs = 600, targetVolume = 0.18): void {
   ambientHowl = howl;
 }
 
+/**
+ * Call ONCE for the whole app's lifetime (from a root-level component,
+ * never from a single screen) so a gesture on *any* screen counts --
+ * including one that immediately navigates away. Without this, a
+ * screen-scoped listener loses the race: the tap that unlocks audio is
+ * often the same tap that navigates elsewhere a beat later, and
+ * ctx.resume() hasn't finished before the old screen's cleanup stops
+ * the Howl.
+ */
+export function primeAudioUnlock(): void {
+  if (unlockListenerAttached || typeof window === "undefined") return;
+  unlockListenerAttached = true;
+
+  const events: Array<keyof WindowEventMap> = [
+    "pointerdown",
+    "keydown",
+    "touchstart",
+  ];
+
+  const handleFirstInteraction = () => {
+    events.forEach((evt) =>
+      window.removeEventListener(evt, handleFirstInteraction),
+    );
+    audioUnlocked = true;
+    Howler.ctx?.resume?.();
+    startAmbientPlayback(600, 0.18);
+  };
+
+  events.forEach((evt) =>
+    window.addEventListener(evt, handleFirstInteraction, {
+      once: true,
+      capture: true,
+    }),
+  );
+}
+
+/** Starts the looping ambient bed at low volume with a short fade-in.
+ * Called by MenuMusicController whenever navigation enters the menu
+ * flow from outside it -- NOT on every menu-to-menu navigation, so the
+ * bed never restarts while the user is just browsing Home/Settings/
+ * How to Play/Setup/Players. No-ops if music is disabled, the file
+ * failed to load, or it's already playing. */
+export function playAmbient(fadeMs = 600, targetVolume = 0.18): void {
+  ambientWanted = true;
+  if (!musicEnabled) return;
+  if (audioUnlocked) {
+    startAmbientPlayback(fadeMs, targetVolume);
+  }
+}
+
 /** Fades out and stops the ambient bed. Safe to call even if it was
- * never started. */
+ * never started. Called by MenuMusicController with a longer fade when
+ * leaving the menu flow for the actual game, so the transition reads
+ * as an intentional fade rather than an abrupt cut. */
 export function stopAmbient(fadeMs = 400): void {
+  ambientWanted = false;
   const howl = ambientHowl;
   if (!howl) return;
   if (fadeMs <= 0) {

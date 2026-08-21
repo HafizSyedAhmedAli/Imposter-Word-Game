@@ -131,6 +131,7 @@ export default function VoteScreen() {
   function handleCastVote() {
     if (!selectedTargetId) return;
     setScreenState("confirm");
+    playSound("ui-tap");
   }
 
   function handleGoBack() {

@@ -1,15 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Volume2, VolumeX, Vibrate } from "lucide-react";
-import {
-  DEFAULT_SETTINGS,
-  getSettings,
-  updateSettings,
-  type GameSettings,
-} from "@/lib/settings-store";
-import { playSound, setSoundEnabled } from "@/lib/sound-engine";
 import { triggerHaptic } from "@/lib/haptics";
+import {
+    DEFAULT_SETTINGS,
+    getSettings,
+    updateSettings,
+    type GameSettings,
+} from "@/lib/settings-store";
+import {
+    playSound,
+    setMusicEnabled,
+    setSoundEnabled,
+} from "@/lib/sound-engine";
+import { HeadphoneOff, Headphones, Vibrate, Volume2, VolumeX } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import SettingsToggleRow from "./SettingsToggleRow";
 
 export default function PreferencesCard() {
@@ -31,10 +35,15 @@ export default function PreferencesCard() {
     setSettings({ ...settings, sound: next });
     void updateSettings({ sound: next });
     setSoundEnabled(next);
-    // Only chirp when turning ON -- there's nothing useful to play as
-    // confirmation of turning sound off. Engine is already enabled by
-    // the time this fires, so the toggle sound itself plays normally.
     if (next) playSound("ui-confirm");
+  }, [settings]);
+
+  const handleToggleMusic = useCallback(() => {
+    if (!settings) return;
+    const next = !settings.music;
+    setSettings({ ...settings, music: next });
+    void updateSettings({ music: next });
+    setMusicEnabled(next);
   }, [settings]);
 
   const handleToggleHaptics = useCallback(() => {
@@ -46,6 +55,7 @@ export default function PreferencesCard() {
   }, [settings]);
 
   const sound = settings?.sound ?? DEFAULT_SETTINGS.sound;
+  const music = settings?.music ?? DEFAULT_SETTINGS.music;
   const haptics = settings?.haptics ?? DEFAULT_SETTINGS.haptics;
   const loading = settings === null;
 
@@ -68,6 +78,14 @@ export default function PreferencesCard() {
           description="Play sound effects during the game"
           enabled={sound}
           onToggle={handleToggleSound}
+          disabled={loading}
+        />
+        <SettingsToggleRow
+          icon={music ? Headphones : HeadphoneOff}
+          title="Music"
+          description="Play menu music before the game starts"
+          enabled={music}
+          onToggle={handleToggleMusic}
           disabled={loading}
         />
         <SettingsToggleRow

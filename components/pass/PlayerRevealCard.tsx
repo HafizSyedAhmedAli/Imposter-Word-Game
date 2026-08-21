@@ -1,8 +1,8 @@
+// components/pass/PlayerRevealCard.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { EyeOff } from "lucide-react";
-import { playSound } from "@/lib/sound-engine";
 
 const CREW_REVEAL_DELAY_MS = 2000;
 const CREW_REVEAL_TRANSITION_MS = 550;
@@ -19,9 +19,15 @@ export default function PlayerRevealCard({
   const [wordVisible, setWordVisible] = useState(false);
 
   useEffect(() => {
+    // NOTE: deliberately no sound here. PassPhoneScreen's handleReveal()
+    // already plays "reveal-player" once, for every role, the moment
+    // the card first appears. Playing a second chime specifically when
+    // the word unblurs would mean crew members hear two sounds and the
+    // imposter (who has no word to reveal) hears only one -- an audible
+    // tell of who the imposter is to anyone within earshot of the
+    // phone. Keep this identical across roles.
     const timer = setTimeout(() => {
       setWordVisible(true);
-      playSound("reveal-player");
     }, CREW_REVEAL_DELAY_MS - CREW_REVEAL_TRANSITION_MS);
 
     return () => clearTimeout(timer);

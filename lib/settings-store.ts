@@ -13,11 +13,13 @@ import { getDb } from "./db";
 export type GameSettings = {
   sound: boolean;
   haptics: boolean;
+  music: boolean;
 };
 
 export const DEFAULT_SETTINGS: GameSettings = {
   sound: true,
   haptics: true,
+  music: true,
 };
 
 // Single fixed row -- this app has no concept of multiple local
@@ -35,7 +37,13 @@ export async function getSettings(): Promise<GameSettings> {
     const db = getDb();
     const row = await db.settings.get(SETTINGS_ID);
     if (!row) return DEFAULT_SETTINGS;
-    return { sound: row.sound, haptics: row.haptics };
+    return {
+      sound: row.sound,
+      haptics: row.haptics,
+      // Older saved rows predate the music setting -- default it in
+      // rather than letting a stale row silently disable music.
+      music: row.music ?? DEFAULT_SETTINGS.music,
+    };
   } catch {
     return DEFAULT_SETTINGS;
   }

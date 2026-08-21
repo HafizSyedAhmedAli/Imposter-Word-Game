@@ -115,6 +115,7 @@ export default function PassPhoneScreen() {
 
   function handleReady() {
     setPassState("private-reveal");
+    playSound("ui-tap");
   }
 
   function handleReveal() {
