@@ -59,7 +59,7 @@ export default function PassPromptCard({
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-iw-ink-500">
           Player order
         </p>
-        <div className="flex items-start gap-2 overflow-x-auto pb-1">
+        <div className="flex items-start gap-2 pb-1">
           {players.map((player, index) => (
             <div key={player.id} className="flex shrink-0 items-start gap-2">
               <div className="flex flex-col items-center gap-1">

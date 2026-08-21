@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { ChevronRight, type LucideIcon } from "lucide-react";
+import { playSound } from "@/lib/sound-engine";
 
 export default function HomeMenuItem({
   href,
@@ -15,6 +18,7 @@ export default function HomeMenuItem({
   return (
     <Link
       href={href}
+      onClick={() => playSound("ui-tap")}
       className="group flex items-center gap-4 rounded-2xl border border-iw-border bg-iw-surface/70 px-4 py-3.5 backdrop-blur-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-iw-border-strong hover:bg-iw-surface-2 active:translate-y-0 active:scale-[0.98]"
     >
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-iw-violet-500 to-iw-violet-600 text-iw-ink-100 shadow-[0_6px_14px_-4px_rgba(139,92,246,0.6)]">

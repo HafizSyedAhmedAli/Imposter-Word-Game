@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Settings, HelpCircle } from "lucide-react";
 import ConnectionStatus from "./ConnectionStatus";
+import { playSound } from "@/lib/sound-engine";
 
 function IconButton({
   href,
@@ -15,6 +16,7 @@ function IconButton({
     <Link
       href={href}
       aria-label={label}
+      onClick={() => playSound("ui-tap")}
       className="flex h-11 w-11 items-center justify-center rounded-full border border-iw-border bg-iw-surface/60 text-iw-ink-100 backdrop-blur-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-iw-border-strong hover:bg-iw-surface-2 active:translate-y-0 active:scale-95"
     >
       {children}

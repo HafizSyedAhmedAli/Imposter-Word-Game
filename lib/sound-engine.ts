@@ -42,6 +42,12 @@ let musicEnabled = true; // mirrors GameSettings.music (ambient bed only) -- del
 let ambientHowl: Howl | null = null;
 let ambientWanted = false;
 let audioUnlocked = false;
+// Bumped on every stopAmbientPlayback() call so its deferred `stop()`
+// (fired once the fade-out completes) can tell whether it's still the
+// most recent fade-out request. If playback resumes before the fade
+// finishes, the token no longer matches and the stale callback is a
+// no-op instead of stopping audio that was just restarted.
+let ambientFadeOutToken = 0;
 let unlockListenerAttached = false;
 
 function getHowl(key: SoundKey): Howl | null {
@@ -84,13 +90,21 @@ export function setSoundEnabled(value: boolean): void {
 export function setMusicEnabled(value: boolean): void {
   musicEnabled = value;
   if (!value) {
-    stopAmbient(300);
-  } else {
-    // Re-attempt playback immediately -- if the current screen wants
-    // ambient playing (Settings is itself one of the menu screens),
-    // this starts it right away instead of waiting for the next
-    // navigation.
-    playAmbient();
+    // Mute/stop playback only -- don't clear ambientWanted. Whether the
+    // menu bed *should* be playing is route intent owned exclusively by
+    // MenuMusicController; the Music toggle should only gate whether
+    // that intent is honored, not overwrite it. Otherwise a direct
+    // game route could pick up stale menu-music intent the next time
+    // settings load and flip this back on.
+    stopAmbientPlayback(300);
+  } else if (audioUnlocked) {
+    // Re-attempt playback immediately -- if the current screen already
+    // wants ambient playing (Settings is itself one of the menu
+    // screens), this starts it right away instead of waiting for the
+    // next navigation. Calls startAmbientPlayback directly (not
+    // playAmbient) so it still respects the existing ambientWanted
+    // flag instead of setting it.
+    startAmbientPlayback(600, 0.18);
   }
 }
 
@@ -127,15 +141,45 @@ export function stopSound(key: SoundKey, id: number | null): void {
 
 function startAmbientPlayback(fadeMs: number, targetVolume: number): void {
   if (!musicEnabled || !ambientWanted) return;
-  if (ambientHowl?.playing()) return;
 
   const howl = getHowl("ambient-menu");
   if (!howl) return;
+
+  // Invalidate any in-flight fade-out so its deferred stop() (queued
+  // below in stopAmbientPlayback) becomes a no-op instead of killing
+  // playback we're about to resume/keep alive.
+  ambientFadeOutToken += 1;
+
+  if (howl.playing()) {
+    // Re-entering the menu flow mid fade-out -- the Howl is still
+    // playing (just quiet), so fade it back up rather than restarting
+    // it from volume 0.
+    howl.fade(howl.volume(), targetVolume, fadeMs);
+    ambientHowl = howl;
+    return;
+  }
 
   howl.volume(0);
   howl.play();
   howl.fade(0, targetVolume, fadeMs);
   ambientHowl = howl;
+}
+
+function stopAmbientPlayback(fadeMs: number): void {
+  const howl = ambientHowl;
+  if (!howl) return;
+  if (fadeMs <= 0) {
+    howl.stop();
+    return;
+  }
+  const token = ++ambientFadeOutToken;
+  howl.fade(howl.volume(), 0, fadeMs);
+  howl.once("fade", () => {
+    // Playback was resumed (and the token bumped) before this fade-out
+    // finished -- don't stop audio the caller just asked to keep going.
+    if (token !== ambientFadeOutToken) return;
+    howl.stop();
+  });
 }
 
 /**
@@ -194,12 +238,5 @@ export function playAmbient(fadeMs = 600, targetVolume = 0.18): void {
  * as an intentional fade rather than an abrupt cut. */
 export function stopAmbient(fadeMs = 400): void {
   ambientWanted = false;
-  const howl = ambientHowl;
-  if (!howl) return;
-  if (fadeMs <= 0) {
-    howl.stop();
-    return;
-  }
-  howl.fade(howl.volume(), 0, fadeMs);
-  howl.once("fade", () => howl.stop());
+  stopAmbientPlayback(fadeMs);
 }

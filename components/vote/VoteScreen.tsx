@@ -42,7 +42,6 @@ export default function VoteScreen() {
   const [timeUp, setTimeUp] = useState(false);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const advancingRef = useRef(false);
-  const allCastSoundPlayedRef = useRef(false);
 
   useEffect(() => {
     const existing = getStoredRoundSession();
@@ -93,16 +92,6 @@ export default function VoteScreen() {
       document.removeEventListener("visibilitychange", handleVisibility);
   }, [screenState]);
 
-  // Fires the drumroll exactly once per round, the moment the last
-  // vote lands -- not re-fired on a refresh that recovers straight
-  // into "all-cast" from a previous visit.
-  useEffect(() => {
-    if (screenState === "all-cast" && !allCastSoundPlayedRef.current) {
-      allCastSoundPlayedRef.current = true;
-      playSound("results-lose");
-    }
-  }, [screenState]);
-
   const playerIndexById = useMemo(() => {
     const map = new Map<string, number>();
     if (session) {
@@ -121,6 +110,7 @@ export default function VoteScreen() {
 
   function handleReady() {
     setScreenState("voting");
+    playSound("ui-tap");
   }
 
   function handleSelect(playerId: string) {
@@ -136,6 +126,7 @@ export default function VoteScreen() {
 
   function handleGoBack() {
     setScreenState("voting");
+    playSound("ui-tap");
   }
 
   function handleConfirmVote() {
@@ -167,7 +158,12 @@ export default function VoteScreen() {
     }
   }
 
+  // The drumroll now fires on the user's own tap of "REVEAL RESULTS",
+  // not automatically the instant the last vote lands -- matches the
+  // same "reveal is always a deliberate action" spec as the screen
+  // transition itself (see AllVotesCastCard).
   function handleRevealResults() {
+    playSound("results-lose");
     router.push("/results");
   }
 

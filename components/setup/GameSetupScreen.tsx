@@ -13,6 +13,7 @@ import DifficultySelector from "./DifficultySelector";
 import GameOptions from "./GameOptions";
 import ContinueButton from "./ContinueButton";
 import PrivacyNotice from "./PrivacyNotice";
+import { playSound } from "@/lib/sound-engine";
 
 export default function GameSetupScreen() {
   const router = useRouter();
@@ -36,6 +37,7 @@ export default function GameSetupScreen() {
       return;
     }
     setError(null);
+    playSound("ui-tap");
     router.push("/players");
   }
 

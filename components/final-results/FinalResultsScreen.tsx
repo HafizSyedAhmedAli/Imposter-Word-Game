@@ -121,11 +121,13 @@ export default function FinalResultsScreen() {
   }
 
   function handlePlayAgain() {
+    playSound("ui-tap")
     clearStoredRoundSession();
     router.push("/players");
   }
 
   function handleBackToHome() {
+    playSound("ui-tap")
     clearStoredRoundSession();
     router.push("/");
   }
