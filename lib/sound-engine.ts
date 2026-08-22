@@ -182,18 +182,81 @@ function stopAmbientPlayback(fadeMs: number): void {
   });
 }
 
+/** Starts the looping ambient bed at low volume with a short fade-in.
+ * Called by MenuMusicController whenever navigation enters the menu
+ * flow from outside it -- NOT on every menu-to-menu navigation, so the
+ * bed never restarts while the user is just browsing Home/Settings/
+ * How to Play/Setup/Players. No-ops if music is disabled, the file
+ * failed to load, or it's already playing. */
+export function playAmbient(fadeMs = 600, targetVolume = 0.18): void {
+  ambientWanted = true;
+  if (!musicEnabled) return;
+  if (audioUnlocked) {
+    startAmbientPlayback(fadeMs, targetVolume);
+  }
+}
+
+/** Fades out and stops the ambient bed. Safe to call even if it was
+ * never started. Called by MenuMusicController with a longer fade when
+ * leaving the menu flow for the actual game, so the transition reads
+ * as an intentional fade rather than an abrupt cut. */
+export function stopAmbient(fadeMs = 400): void {
+  ambientWanted = false;
+  stopAmbientPlayback(fadeMs);
+}
+
+const AMBIENT_CONTINUITY_KEY = "iwg:ambient-continuity";
+
 /**
- * Call ONCE for the whole app's lifetime (from a root-level component,
- * never from a single screen) so a gesture on *any* screen counts --
- * including one that immediately navigates away. Without this, a
- * screen-scoped listener loses the race: the tap that unlocks audio is
- * often the same tap that navigates elsewhere a beat later, and
- * ctx.resume() hasn't finished before the old screen's cleanup stops
- * the Howl.
+ * Called via lib/offline-navigation.ts's onBeforeHardNavigate, right
+ * before an offline navigation forces a real document reload. A reload
+ * destroys this module's in-memory state (and the Howl/AudioContext
+ * with it), so this can't preserve actual playback -- only sessionStorage
+ * survives -- but it lets the next mount know the bed *was* playing, so
+ * it can resume as a continuation instead of a fresh start. See
+ * consumeAmbientContinuity, which reads this back.
  */
+export function persistAmbientContinuity(): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (ambientWanted) {
+      window.sessionStorage.setItem(AMBIENT_CONTINUITY_KEY, "1");
+    } else {
+      window.sessionStorage.removeItem(AMBIENT_CONTINUITY_KEY);
+    }
+  } catch {
+    // Best-effort -- ignore storage errors (private browsing, quota, etc).
+  }
+}
+
+/**
+ * Reads and clears the flag set by persistAmbientContinuity. Call once
+ * per mount, before deciding how to (re)start the ambient bed, so a
+ * stale flag never lingers into some unrelated later navigation.
+ */
+export function consumeAmbientContinuity(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const flag = window.sessionStorage.getItem(AMBIENT_CONTINUITY_KEY) === "1";
+    window.sessionStorage.removeItem(AMBIENT_CONTINUITY_KEY);
+    return flag;
+  } catch {
+    return false;
+  }
+}
+
 export function primeAudioUnlock(): void {
   if (unlockListenerAttached || typeof window === "undefined") return;
   unlockListenerAttached = true;
+
+  if (isRunningAsInstalledPwa()) {
+    audioUnlocked = true;
+    // Defense-in-depth for ordering; in practice MenuMusicController's
+    // own playAmbient() call right after this on mount is what
+    // actually starts it, now that audioUnlocked is already true.
+    startAmbientPlayback(600, 0.18);
+    return;
+  }
 
   const events: Array<keyof WindowEventMap> = [
     "pointerdown",
@@ -218,25 +281,17 @@ export function primeAudioUnlock(): void {
   );
 }
 
-/** Starts the looping ambient bed at low volume with a short fade-in.
- * Called by MenuMusicController whenever navigation enters the menu
- * flow from outside it -- NOT on every menu-to-menu navigation, so the
- * bed never restarts while the user is just browsing Home/Settings/
- * How to Play/Setup/Players. No-ops if music is disabled, the file
- * failed to load, or it's already playing. */
-export function playAmbient(fadeMs = 600, targetVolume = 0.18): void {
-  ambientWanted = true;
-  if (!musicEnabled) return;
-  if (audioUnlocked) {
-    startAmbientPlayback(fadeMs, targetVolume);
-  }
-}
+function isRunningAsInstalledPwa(): boolean {
+  if (typeof window === "undefined") return false;
 
-/** Fades out and stops the ambient bed. Safe to call even if it was
- * never started. Called by MenuMusicController with a longer fade when
- * leaving the menu flow for the actual game, so the transition reads
- * as an intentional fade rather than an abrupt cut. */
-export function stopAmbient(fadeMs = 400): void {
-  ambientWanted = false;
-  stopAmbientPlayback(fadeMs);
+  const standaloneDisplayMode =
+    window.matchMedia?.("(display-mode: standalone)").matches ?? false;
+
+  // iOS Safari doesn't support the standalone display-mode media query
+  // at all; it exposes this non-standard boolean on navigator instead.
+  const iosStandalone =
+    (window.navigator as Navigator & { standalone?: boolean }).standalone ===
+    true;
+
+  return standaloneDisplayMode || iosStandalone;
 }

@@ -19,6 +19,35 @@ function isOffline(): boolean {
   );
 }
 
+type HardNavigateListener = () => void;
+
+const hardNavigateListeners = new Set<HardNavigateListener>();
+
+/**
+ * Subscribe to be notified immediately before navigateInternal performs
+ * a *real* document navigation (the offline fallback path below). The
+ * page -- and every module-level variable in it, including anything
+ * Howler/AudioContext-related in lib/sound-engine.ts -- is about to be
+ * torn down, so this is the last chance for anything that needs to
+ * survive the reload to persist intent to sessionStorage.
+ *
+ * MenuMusicController uses this to record that the ambient menu bed was
+ * playing, so the freshly-reloaded page can resume it as a continuation
+ * instead of replaying its "entering the menu fresh" fade-in. Kept here
+ * (rather than importing sound-engine directly into this module) so
+ * navigation logic stays decoupled from audio.
+ *
+ * Returns an unsubscribe function.
+ */
+export function onBeforeHardNavigate(
+  listener: HardNavigateListener,
+): () => void {
+  hardNavigateListeners.add(listener);
+  return () => {
+    hardNavigateListeners.delete(listener);
+  };
+}
+
 /**
  * The core offline-navigation fix.
  *
@@ -46,6 +75,8 @@ function isOffline(): boolean {
  */
 export function navigateInternal(target: string, replace = false): boolean {
   if (!isOffline() || !isKnownAppRoute(target)) return false;
+
+  hardNavigateListeners.forEach((listener) => listener());
 
   if (replace) {
     window.location.replace(target);
