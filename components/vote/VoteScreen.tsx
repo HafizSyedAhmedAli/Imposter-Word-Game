@@ -1,37 +1,34 @@
-// components/vote/VoteScreen.tsx
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
-import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
 import LeaveRoundDialog from "@/components/pass/LeaveRoundDialog";
+import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
+import type { RoundSession } from "@/game/game-types";
+import {
+  getCurrentVoter,
+  getEligibleVoteTargets,
+  getVotingDuration,
+  getVotingOrder,
+  isVotingComplete,
+  skipVote,
+  submitVote,
+  type VoteScreenState,
+} from "@/game/vote-flow";
+import { markActiveGameRoute } from "@/lib/active-game-recovery";
 import {
   clearStoredRoundSession,
   getStoredRoundSession,
   storeRoundSession,
 } from "@/lib/round-session-store";
-import type { RoundSession } from "@/game/game-types";
-import {
-  getActiveVotingOrder,
-  getCurrentVoter,
-  getEligibleVoteTargets,
-  getVotesCastCount,
-  getVotingDuration,
-  getVotingOrder,
-  isVotingComplete,
-  submitVote,
-  type VoteScreenState,
-} from "@/game/vote-flow";
-import VotingTimer from "./VotingTimer";
-import VotingPassPromptCard from "./VotingPassPromptCard";
-import VoteSelectionCard from "./VoteSelectionCard";
+import { playSound } from "@/lib/sound-engine";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import AllVotesCastCard from "./AllVotesCastCard";
 import ConfirmVoteCard from "./ConfirmVoteCard";
 import VoteRecordedCard from "./VoteRecordedCard";
-import AllVotesCastCard from "./AllVotesCastCard";
-import TimesUpCard from "./TimesUpCard";
-import { markActiveGameRoute } from "@/lib/active-game-recovery";
-import { playSound } from "@/lib/sound-engine";
+import VoteSelectionCard from "./VoteSelectionCard";
+import VotingPassPromptCard from "./VotingPassPromptCard";
+import VotingTimer from "./VotingTimer";
 
 export default function VoteScreen() {
   const router = useRouter();
@@ -39,7 +36,6 @@ export default function VoteScreen() {
   const [session, setSession] = useState<RoundSession | null>(null);
   const [screenState, setScreenState] = useState<VoteScreenState>("pass-phone");
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
-  const [timeUp, setTimeUp] = useState(false);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const advancingRef = useRef(false);
 
@@ -92,6 +88,11 @@ export default function VoteScreen() {
       document.removeEventListener("visibilitychange", handleVisibility);
   }, [screenState]);
 
+  function handleRevealResults() {
+    playSound("results-lose");
+    router.push("/results");
+  }
+
   const playerIndexById = useMemo(() => {
     const map = new Map<string, number>();
     if (session) {
@@ -126,7 +127,6 @@ export default function VoteScreen() {
 
   function handleGoBack() {
     setScreenState("voting");
-    playSound("ui-tap");
   }
 
   function handleConfirmVote() {
@@ -152,19 +152,61 @@ export default function VoteScreen() {
     }, 0);
   }
 
-  function handleVotingTimerExpire() {
-    if (!isVotingComplete(activeSession)) {
-      setTimeUp(true);
+  /**
+   * Manual "Skip Vote" -- available straight from the voting screen, no
+   * confirm step needed since it isn't accusing anyone (lower stakes
+   * than a real vote, unlike submitVote's flow).
+   */
+  function handleSkipVote() {
+    if (advancingRef.current) return;
+    if (!currentVoter) return;
+    advancingRef.current = true;
+
+    const next = skipVote(activeSession, currentVoter.id);
+    if (next === activeSession) {
+      advancingRef.current = false;
+      return;
     }
+    storeRoundSession(next);
+    setSession(next);
+    setSelectedTargetId(null);
+    setScreenState(isVotingComplete(next) ? "all-cast" : "recorded");
+    playSound("ui-confirm");
+
+    setTimeout(() => {
+      advancingRef.current = false;
+    }, 0);
   }
 
-  // The drumroll now fires on the user's own tap of "REVEAL RESULTS",
-  // not automatically the instant the last vote lands -- matches the
-  // same "reveal is always a deliberate action" spec as the screen
-  // transition itself (see AllVotesCastCard).
-  function handleRevealResults() {
-    playSound("results-lose");
-    router.push("/results");
+  /**
+   * The voting timer is per-voter (see the `key={currentVoter?.id}` on
+   * <VotingTimer> below, which forces a full remount -- and therefore a
+   * full reset -- the instant it becomes a new player's turn). So if
+   * THIS voter's timer runs out, only THIS voter is skipped; everyone
+   * else still gets their own full duration. This replaces the old
+   * single whole-phase timer + group "Time's Up" summary entirely.
+   */
+  function handleVotingTimerExpire() {
+    if (advancingRef.current) return;
+    if (!currentVoter) return;
+    if (isVotingComplete(activeSession)) return;
+    advancingRef.current = true;
+
+    const next = skipVote(activeSession, currentVoter.id);
+    if (next === activeSession) {
+      advancingRef.current = false;
+      return;
+    }
+    storeRoundSession(next);
+    setSession(next);
+    setSelectedTargetId(null);
+    setScreenState(isVotingComplete(next) ? "all-cast" : "recorded");
+    // No extra sound here -- VotingTimer already plays "timer-end"
+    // itself the moment it hits zero, before calling onExpire.
+
+    setTimeout(() => {
+      advancingRef.current = false;
+    }, 0);
   }
 
   function openLeaveConfirmation() {
@@ -187,65 +229,55 @@ export default function VoteScreen() {
         <main className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center gap-6 py-6">
           {screenState !== "all-cast" && (
             <VotingTimer
+              key={currentVoter?.id ?? "no-voter"}
               durationSeconds={votingDuration}
               onExpire={handleVotingTimerExpire}
             />
           )}
 
-          {timeUp ? (
-            <TimesUpCard
-              votesCast={getVotesCastCount(activeSession)}
-              totalPlayers={getActiveVotingOrder(activeSession).length}
-              onContinue={() => setTimeUp(false)}
+          {screenState === "pass-phone" && currentVoter && (
+            <VotingPassPromptCard
+              voterName={currentVoter.name}
+              onReady={handleReady}
             />
-          ) : (
-            <>
-              {screenState === "pass-phone" && currentVoter && (
-                <VotingPassPromptCard
-                  voterName={currentVoter.name}
-                  onReady={handleReady}
-                />
-              )}
+          )}
 
-              {screenState === "voting" && currentVoter && (
-                <VoteSelectionCard
-                  voterName={currentVoter.name}
-                  eligibleTargets={getEligibleVoteTargets(
-                    activeSession,
-                    currentVoter.id,
-                  )}
-                  playerIndexById={playerIndexById}
-                  selectedTargetId={selectedTargetId}
-                  onSelect={handleSelect}
-                  onCastVote={handleCastVote}
-                />
+          {screenState === "voting" && currentVoter && (
+            <VoteSelectionCard
+              voterName={currentVoter.name}
+              eligibleTargets={getEligibleVoteTargets(
+                activeSession,
+                currentVoter.id,
               )}
+              playerIndexById={playerIndexById}
+              selectedTargetId={selectedTargetId}
+              onSelect={handleSelect}
+              onCastVote={handleCastVote}
+              onSkip={handleSkipVote}
+            />
+          )}
 
-              {screenState === "confirm" &&
-                currentVoter &&
-                selectedTargetId && (
-                  <ConfirmVoteCard
-                    targetName={
-                      getVotingOrder(activeSession).find(
-                        (player) => player.id === selectedTargetId,
-                      )?.name ?? ""
-                    }
-                    onConfirm={handleConfirmVote}
-                    onGoBack={handleGoBack}
-                  />
-                )}
+          {screenState === "confirm" && currentVoter && selectedTargetId && (
+            <ConfirmVoteCard
+              targetName={
+                getVotingOrder(activeSession).find(
+                  (player) => player.id === selectedTargetId,
+                )?.name ?? ""
+              }
+              onConfirm={handleConfirmVote}
+              onGoBack={handleGoBack}
+            />
+          )}
 
-              {screenState === "recorded" && currentVoter && (
-                <VoteRecordedCard
-                  nextVoterName={currentVoter.name}
-                  onReady={handleReady}
-                />
-              )}
+          {screenState === "recorded" && currentVoter && (
+            <VoteRecordedCard
+              nextVoterName={currentVoter.name}
+              onReady={handleReady}
+            />
+          )}
 
-              {screenState === "all-cast" && (
-                <AllVotesCastCard onRevealResults={handleRevealResults} />
-              )}
-            </>
+          {screenState === "all-cast" && (
+            <AllVotesCastCard onRevealResults={handleRevealResults} />
           )}
         </main>
       </div>

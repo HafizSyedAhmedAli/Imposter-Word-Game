@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, SkipForward } from "lucide-react";
 import type { Player } from "@/game/game-types";
 import PlayerAvatar from "@/components/players/PlayerAvatar";
 
@@ -54,6 +54,7 @@ export default function VoteSelectionCard({
   selectedTargetId,
   onSelect,
   onCastVote,
+  onSkip,
 }: {
   voterName: string;
   /**
@@ -68,6 +69,10 @@ export default function VoteSelectionCard({
   selectedTargetId: string | null;
   onSelect: (playerId: string) => void;
   onCastVote: () => void;
+  /** Skips straight to the next voter without accusing anyone -- no
+   * confirm step, unlike casting an actual vote, since there's nothing
+   * here that needs a second look before it's locked in. */
+  onSkip: () => void;
 }) {
   return (
     <section className="animate-iw-fade-up flex flex-col items-center gap-6 text-center">
@@ -103,6 +108,15 @@ export default function VoteSelectionCard({
         className="flex w-full items-center justify-center gap-2 rounded-2xl border border-iw-gold-600/40 bg-gradient-to-b from-iw-gold-100 via-iw-gold-400 to-iw-gold-500 px-6 py-4 font-display text-base font-bold text-iw-gold-ink shadow-[0_16px_32px_-14px_rgba(255,184,0,0.6)] transition-transform duration-150 ease-out enabled:cursor-pointer enabled:hover:-translate-y-0.5 enabled:active:translate-y-0 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
       >
         CAST VOTE
+      </button>
+
+      <button
+        type="button"
+        onClick={onSkip}
+        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border border-iw-border bg-iw-surface-2 px-6 py-3 font-display text-sm font-bold text-iw-ink-100 transition-colors hover:border-iw-border-strong"
+      >
+        <SkipForward className="h-4 w-4" aria-hidden="true" />
+        SKIP VOTE
       </button>
     </section>
   );

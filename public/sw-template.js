@@ -208,7 +208,15 @@ async function networkFirst(request) {
     }
     return response;
   } catch (err) {
-    // ...unchanged
+    const cached = await caches.match(request);
+    if (cached) return cached;
+
+    if (request.mode === "navigate") {
+      const offlineFallback = await caches.match("/offline.html");
+      if (offlineFallback) return offlineFallback;
+    }
+
+    throw err;
   }
 }
 

@@ -84,6 +84,38 @@ export function submitVote(
 }
 
 /**
+ * Sentinel stored in `session.votes[voterId]` for a player who chose
+ * not to accuse anyone, or whose personal voting timer ran out before
+ * they picked a target. Deliberately just a string in the same
+ * `Record<string, string>` shape as a real vote (not a separate
+ * `null`/optional field) -- every existing consumer of `session.votes`
+ * (getVoteTally, hasVoted, etc.) already treats "the value doesn't
+ * match a real player id" as "doesn't count toward anyone's tally",
+ * so a skip needs zero changes anywhere outside this file to be
+ * correctly ignored by results-flow.ts's vote counting.
+ */
+export const SKIP_VOTE = "__skip__";
+
+/**
+ * Records that the current voter is passing without accusing anyone --
+ * either tapped "Skip Vote" themselves, or their personal timer expired
+ * (see VoteScreen.tsx's handleVotingTimerExpire). Same guards as
+ * submitVote: only the actual current voter can skip, only once, and
+ * never for an eliminated player.
+ */
+export function skipVote(session: RoundSession, voterId: string): RoundSession {
+  const currentVoter = getCurrentVoter(session);
+  if (!currentVoter || currentVoter.id !== voterId) return session;
+  if (hasVoted(session, voterId)) return session;
+  if (isEliminated(session, voterId)) return session;
+
+  return {
+    ...session,
+    votes: { ...getVotes(session), [voterId]: SKIP_VOTE },
+  };
+}
+
+/**
  * Defensive accessor -- older/partial `RoundSession`s persisted before
  * this screen existed won't have a `votes` field at all. Every other
  * function in this module reads votes through this helper so "no votes
