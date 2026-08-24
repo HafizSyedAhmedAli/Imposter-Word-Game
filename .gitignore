@@ -10,3 +10,7 @@ out
 # Generated from public/sw-template.js by scripts/generate-sw.js on
 # every dev/build run -- do not edit or commit directly.
 public/sw.js
+
+# Playwright test artifacts and reports
+/test-results/
+/playwright-report/

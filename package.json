@@ -9,10 +9,11 @@
     "lint": "eslint",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
-    "test:ui": "playwright test --ui",
-    "test:headed": "playwright test --headed",
+    "test:e2e:local": "playwright test --project=chromium",
+    "test:e2e:ui": "playwright test --ui",
+    "test:headed": "playwright test  --project=chromium --headed",
     "test:debug": "playwright test --debug"
   },
   "dependencies": {
@@ -26,19 +27,20 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "^4",
     "@types/howler": "^2.2.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4.7.0",
+    "@vitest/ui": "^3.2.7",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
-    "tailwindcss": "^4",
-    "typescript": "^5",
-    "@playwright/test": "^1.56.1",
-    "@vitejs/plugin-react": "^4.7.0",
     "fake-indexeddb": "^6.2.2",
     "jsdom": "^25.0.1",
+    "tailwindcss": "^4",
+    "typescript": "^5",
     "vitest": "^3.2.4"
   }
 }

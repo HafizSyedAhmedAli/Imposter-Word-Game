@@ -34,35 +34,36 @@ import { playSound } from "@/lib/sound-engine";
 export default function FinalResultsScreen() {
   const router = useRouter();
 
-  const [session, setSession] = useState<RoundSession | null>(null);
+  // Read the stored round once, synchronously, as the initial state --
+  // the redirect checks below key off this same value and never call
+  // setSession themselves, so there's no extra render on mount.
+  const [session] = useState<RoundSession | null>(() =>
+    getStoredRoundSession(),
+  );
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const recordedRef = useRef<string | null>(null);
   const outcomeSoundPlayedRef = useRef(false);
 
   useEffect(() => {
-    const existing = getStoredRoundSession();
-
-    if (existing === null) {
+    if (session === null) {
       router.replace("/round");
       return;
     }
 
-    if (existing.status === "ready") {
+    if (session.status === "ready") {
       router.replace("/pass");
       return;
     }
 
-    if (!isVotingComplete(existing)) {
+    if (!isVotingComplete(session)) {
       router.replace("/voting");
       return;
     }
 
-    if (getFinalOutcome(existing) === null) {
+    if (getFinalOutcome(session) === null) {
       router.replace("/results");
       return;
     }
-
-    setSession(existing);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -75,8 +76,6 @@ export default function FinalResultsScreen() {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
-
-  // --- PASTE THIS NEW BLOCK HERE ---
 
   // Handle side-effects (stats and sound) safely inside a useEffect
   useEffect(() => {
@@ -121,13 +120,13 @@ export default function FinalResultsScreen() {
   }
 
   function handlePlayAgain() {
-    playSound("ui-tap")
+    playSound("ui-tap");
     clearStoredRoundSession();
     router.push("/players");
   }
 
   function handleBackToHome() {
-    playSound("ui-tap")
+    playSound("ui-tap");
     clearStoredRoundSession();
     router.push("/");
   }

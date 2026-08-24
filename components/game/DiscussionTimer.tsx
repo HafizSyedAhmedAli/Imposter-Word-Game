@@ -18,14 +18,30 @@ export default function DiscussionTimer({
   const expiredRef = useRef(false);
   const tickIdRef = useRef<number | null>(null);
   const tickStartedRef = useRef(false);
-  const resettingRef = useRef(false); // 1. Add resetting flag
 
-  // Effect 1: Handle duration resets and main interval loop
+  // Sync `remaining` to `durationSeconds` the instant the prop itself
+  // changes, using React's documented "adjust state during rendering"
+  // pattern. This replaces a setState call that used to live inside
+  // the effect below -- calling it here instead of in an effect means
+  // `remaining` is already correct in the very render that receives
+  // the new duration, with no extra cascading render or stale-state
+  // race for the effects further down to work around.
+  const [prevDurationSeconds, setPrevDurationSeconds] =
+    useState(durationSeconds);
+  if (durationSeconds !== prevDurationSeconds) {
+    setPrevDurationSeconds(durationSeconds);
+    if (durationSeconds !== null) {
+      setRemaining(durationSeconds);
+    }
+  }
+
+  // Effect 1: Own the interval loop and reset the one-shot sound
+  // guards -- a genuine external-system subscription (the browser's
+  // timer API) plus ref bookkeeping, both of which belong in an
+  // effect rather than in render.
   useEffect(() => {
     if (durationSeconds === null) return;
 
-    resettingRef.current = true; // Mark reset in progress
-    setRemaining(durationSeconds);
     expiredRef.current = false;
     tickStartedRef.current = false;
 
@@ -43,12 +59,6 @@ export default function DiscussionTimer({
   // Effect 2: Handle sound effects and expiration trigger
   useEffect(() => {
     if (durationSeconds === null) return;
-
-    // Gate execution until state update catches up with duration reset
-    if (resettingRef.current) {
-      if (remaining !== durationSeconds) return;
-      resettingRef.current = false;
-    }
 
     // Fire tick sound during final 10-second countdown
     if (

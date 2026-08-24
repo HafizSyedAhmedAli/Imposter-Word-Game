@@ -2,7 +2,7 @@
 "use client";
 
 import { isVotingComplete } from "@/game/vote-flow"; // add this import
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Sparkles, Trophy } from "lucide-react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
@@ -33,11 +33,20 @@ import { markActiveGameRoute } from "@/lib/active-game-recovery";
 export default function ResultsScreen() {
   const router = useRouter();
 
-  // Same deterministic-null-then-hydrate pattern as VoteScreen/PassPhoneScreen
-  // -- sessionStorage doesn't exist during the server render.
-  const [session, setSession] = useState<RoundSession | null>(null);
+  // Read the stored round once, synchronously, as the initial state,
+  // applying the verdict up front so `session` is already final by the
+  // time this component first renders. The effect below re-derives the
+  // same value to persist it and to decide where to redirect if the
+  // round isn't actually ready for this screen -- it never calls
+  // setSession itself.
+  const [session] = useState<RoundSession | null>(() => {
+    const existing = getStoredRoundSession();
+    if (existing === null) return null;
+    if (existing.status === "ready") return null;
+    if (!isVotingComplete(existing)) return null;
+    return applyVerdict(existing);
+  });
   const [confirmingLeave, setConfirmingLeave] = useState(false);
-  const appliedRef = useRef(false); // guards double-applying the verdict in Strict Mode
 
   function handlePrimaryAction() {
     if (outcome === "continue") {
@@ -81,9 +90,7 @@ export default function ResultsScreen() {
     if (withVerdictApplied !== existing) {
       storeRoundSession(withVerdictApplied);
     }
-    setSession(withVerdictApplied);
     markActiveGameRoute("/results");
-    appliedRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

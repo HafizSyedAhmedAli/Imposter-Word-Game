@@ -18,15 +18,38 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:3000",
     trace: "retain-on-failure",
-    // Every screen this app renders assumes touch/mobile-first layout
-    // (pass-the-phone gameplay) -- a small viewport is closer to how
-    // this app is actually used than the Playwright default.
-    viewport: { width: 420, height: 900 },
   },
   projects: [
+    // Desktop browsers forced into mobile viewports for pass-the-phone gameplay
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 420, height: 900 },
+      },
+    },
+    {
+      name: "firefox",
+      use: {
+        ...devices["Desktop Firefox"],
+        viewport: { width: 420, height: 900 },
+      },
+    },
+    {
+      name: "webkit",
+      use: {
+        ...devices["Desktop Safari"],
+        viewport: { width: 420, height: 900 },
+      },
+    },
+    // True mobile emulators (includes touch screen emulation)
+    {
+      name: "Mobile Chrome",
+      use: { ...devices["Pixel 5"] },
+    },
+    {
+      name: "Mobile Safari",
+      use: { ...devices["iPhone 12"] },
     },
   ],
   webServer: {

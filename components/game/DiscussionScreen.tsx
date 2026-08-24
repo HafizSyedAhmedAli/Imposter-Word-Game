@@ -26,7 +26,12 @@ import { playSound } from "@/lib/sound-engine";
 export default function DiscussionScreen() {
   const router = useRouter();
 
-  const [session, setSession] = useState<RoundSession | null>(null);
+  // Read the stored round once, synchronously, as the initial state --
+  // the redirect checks below key off this same value and never call
+  // setSession themselves, so there's no extra render on mount.
+  const [session] = useState<RoundSession | null>(() =>
+    getStoredRoundSession(),
+  );
   const [timerExpired, setTimerExpired] = useState(false);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
 
@@ -39,24 +44,21 @@ export default function DiscussionScreen() {
   }, [session]);
 
   useEffect(() => {
-    const existing = getStoredRoundSession();
-
-    if (existing === null) {
+    if (session === null) {
       router.replace("/round");
       return;
     }
 
-    if (existing.status === "ready") {
+    if (session.status === "ready") {
       router.replace("/pass");
       return;
     }
 
-    if (existing.status === "finished") {
+    if (session.status === "finished") {
       router.replace("/");
       return;
     }
 
-    setSession(existing);
     markActiveGameRoute("/game");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -33,8 +33,28 @@ import VotingTimer from "./VotingTimer";
 export default function VoteScreen() {
   const router = useRouter();
 
-  const [session, setSession] = useState<RoundSession | null>(null);
-  const [screenState, setScreenState] = useState<VoteScreenState>("pass-phone");
+  // Read the stored round once, synchronously, as the initial state --
+  // the redirect checks below key off this same value and never call
+  // setSession themselves, so there's no extra render on mount.
+  const [session, setSession] = useState<RoundSession | null>(() => {
+    const existing = getStoredRoundSession();
+    return existing &&
+      existing.status !== "ready" &&
+      existing.status !== "finished"
+      ? existing
+      : null;
+  });
+  const [screenState, setScreenState] = useState<VoteScreenState>(() => {
+    const existing = getStoredRoundSession();
+    if (
+      !existing ||
+      existing.status === "ready" ||
+      existing.status === "finished"
+    ) {
+      return "pass-phone";
+    }
+    return isVotingComplete(existing) ? "all-cast" : "pass-phone";
+  });
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const advancingRef = useRef(false);
@@ -57,8 +77,6 @@ export default function VoteScreen() {
       return;
     }
 
-    setSession(existing);
-    setScreenState(isVotingComplete(existing) ? "all-cast" : "pass-phone");
     markActiveGameRoute("/voting");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

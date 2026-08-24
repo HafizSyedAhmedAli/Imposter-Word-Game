@@ -17,13 +17,22 @@ export default function VotingTimer({
   const expiredRef = useRef(false);
   const tickIdRef = useRef<number | null>(null);
   const tickStartedRef = useRef(false);
-  const resettingRef = useRef(false);
+
+  // Sync `remaining` to `durationSeconds` the instant the prop itself
+  // changes, using React's documented "adjust state during rendering"
+  // pattern -- see the identical comment in DiscussionTimer.tsx.
+  const [prevDurationSeconds, setPrevDurationSeconds] =
+    useState(durationSeconds);
+  if (durationSeconds !== prevDurationSeconds) {
+    setPrevDurationSeconds(durationSeconds);
+    if (durationSeconds !== null) {
+      setRemaining(durationSeconds);
+    }
+  }
 
   useEffect(() => {
     if (durationSeconds === null) return;
 
-    resettingRef.current = true;
-    setRemaining(durationSeconds);
     expiredRef.current = false;
     tickStartedRef.current = false;
 
@@ -40,11 +49,6 @@ export default function VotingTimer({
 
   useEffect(() => {
     if (durationSeconds === null) return;
-
-    if (resettingRef.current) {
-      if (remaining !== durationSeconds) return;
-      resettingRef.current = false;
-    }
 
     if (
       remaining > 0 &&
