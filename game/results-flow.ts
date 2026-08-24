@@ -1,6 +1,6 @@
 // game/results-flow.ts
+import { getEliminatedPlayerIds, isEliminated } from "./elimination";
 import type { Player, RoundSession } from "./game-types";
-import { getActivePlayers, getEliminatedPlayerIds, isEliminated } from "./elimination";
 /**
  * Screen 8's pure decision layer. Nothing here touches the DOM or
  * sessionStorage directly -- ResultsScreen.tsx calls these functions and

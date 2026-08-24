@@ -1,15 +1,14 @@
-// components/home/HomeScreen.tsx
 "use client";
 
-import { BookOpenText, Users, BarChart3 } from "lucide-react";
-import SpaceBackdrop from "./SpaceBackdrop";
-import HomeHeader from "./HomeHeader";
+import { BookOpenText, Users } from "lucide-react";
 import GameLogo from "./GameLogo";
-import PrimaryPlayButton from "./PrimaryPlayButton";
+import GameRecoveryPrompt from "./GameRecoveryPrompt";
+import HomeFooter from "./HomeFooter";
+import HomeHeader from "./HomeHeader";
 import HomeMenuItem from "./HomeMenuItem";
 import OfflineAiCard from "./OfflineAiCard";
-import HomeFooter from "./HomeFooter";
-import GameRecoveryPrompt from "./GameRecoveryPrompt";
+import PrimaryPlayButton from "./PrimaryPlayButton";
+import SpaceBackdrop from "./SpaceBackdrop";
 
 // Ambient menu music is now owned app-wide by MenuMusicController
 // (components/pwa/MenuMusicController.tsx), which keeps it playing
