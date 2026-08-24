@@ -8,7 +8,9 @@ test.describe("Home -> Setup", () => {
 
   test("clicking Play navigates to Setup", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: /play game/i }).click();
+    const playLink = page.getByRole("link", { name: /play game/i });
+    await playLink.waitFor({ state: "visible" });
+    await playLink.click();
     await page.waitForURL("**/setup");
     await expect(page).toHaveURL(/\/setup$/);
   });

@@ -1,3 +1,4 @@
+// e2e/voting-and-results.spec.ts
 import { test, expect } from "@playwright/test";
 import {
   startGameWithPlayers,
@@ -32,9 +33,7 @@ test.describe("Voting", () => {
     // Either "VOTE RECORDED" (more voters remain) or straight to
     // "ALL VOTES CAST" if Alice happened to be the last voter -- both
     // are valid, deterministic outcomes of a successfully-cast vote.
-    await expect(
-      page.getByText(/vote recorded|all votes cast/i),
-    ).toBeVisible();
+    await expect(page.getByText(/vote recorded|all votes cast/i)).toBeVisible();
   });
 
   test("results/elimination screen appears once every player has voted", async ({
@@ -55,8 +54,18 @@ test.describe("Voting", () => {
     await page.getByRole("button", { name: /reveal results/i }).click();
     await page.waitForURL("**/results");
 
-    await expect(page.getByText("THE RESULTS ARE IN!")).toBeVisible();
-    // Bob was the deterministic 2-vote majority target.
-    await expect(page.getByText(/^bob$/i)).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "THE RESULTS ARE IN!" }),
+    ).toBeVisible();
+    // Bob was the deterministic 2-vote majority target. Scoped to the
+    // "Most Voted" card specifically (components/results/MostVotedCard.tsx)
+    // rather than a bare page-wide text match: the results screen
+    // legitimately shows "Bob" twice -- once in the vote-tally list
+    // (VoteResultsCard) and again as the prominent most-voted callout --
+    // so an unscoped getByText("Bob") is ambiguous by design, not a bug.
+    const mostVotedCard = page
+      .locator("section")
+      .filter({ hasText: "Most Voted" });
+    await expect(mostVotedCard.getByText("Bob", { exact: true })).toBeVisible();
   });
 });

@@ -1,5 +1,6 @@
+// e2e/multi-imposter.spec.ts
 import { test, expect } from "@playwright/test";
-import { mockAiRoundGeneration } from "./fixtures";
+import { mockAiRoundGeneration, addPlayers } from "./fixtures";
 
 const NAMES = ["Ann", "Ben", "Cid", "Dee", "Eve", "Fay", "Gus", "Hal"];
 
@@ -14,14 +15,20 @@ test.describe("Multi-imposter mode", () => {
     await page.getByRole("button", { name: /continue/i }).click();
     await page.waitForURL("**/players");
 
-    for (const name of NAMES) {
-      await page.getByLabel("Player name").fill(name);
-      await page.getByRole("button", { name: /add player/i }).click();
-    }
+    await addPlayers(
+      page,
+      NAMES.map((name) => ({ name })),
+    );
 
-    await page
-      .getByRole("button", { name: /continue to round preparation/i })
-      .click();
+    // The prerequisite Continue needs: the roster (confirmed above, one
+    // by one) must actually satisfy Double Trouble's 5-player minimum
+    // (game/game-rules.ts's isPlayerCountValid) before the button's
+    // aria-disabled flips to "false" -- never force-click past it.
+    const roundPrepContinue = page.getByRole("button", {
+      name: /continue to round preparation/i,
+    });
+    await expect(roundPrepContinue).toHaveAttribute("aria-disabled", "false");
+    await roundPrepContinue.click();
     await page.waitForURL("**/pass", { timeout: 15_000 });
 
     // Every named player is reachable in the pass-the-phone order --
@@ -44,13 +51,22 @@ test.describe("Multi-imposter mode", () => {
     await page.waitForURL("**/players");
 
     const players = NAMES.slice(0, 7); // Triple Threat requires 7+
-    for (const name of players) {
-      await page.getByLabel("Player name").fill(name);
-      await page.getByRole("button", { name: /add player/i }).click();
-    }
-    await page
-      .getByRole("button", { name: /continue to round preparation/i })
-      .click();
+    await addPlayers(
+      page,
+      players.map((name) => ({ name })),
+    );
+
+    // Same prerequisite as above: Triple Threat's minimum is exactly 7
+    // (game/game-rules.ts's GAME_MODE_RULES.triple.minPlayers), so this
+    // is the one mode/count combination in the suite that sits right on
+    // the boundary -- confirm the roster really holds all 7 (via
+    // addPlayers' per-name visibility check) and that Continue has
+    // actually become enabled before clicking it.
+    const roundPrepContinue = page.getByRole("button", {
+      name: /continue to round preparation/i,
+    });
+    await expect(roundPrepContinue).toHaveAttribute("aria-disabled", "false");
+    await roundPrepContinue.click();
     await page.waitForURL("**/pass", { timeout: 15_000 });
 
     let crewSeen = 0;

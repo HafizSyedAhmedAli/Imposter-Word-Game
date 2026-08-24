@@ -1,3 +1,4 @@
+// e2e/fixtures.ts
 import { expect, type Page } from "@playwright/test";
 
 /**
@@ -41,6 +42,25 @@ export const DEFAULT_TEST_PLAYERS: SeatedPlayer[] = [
 ];
 
 /**
+ * Adds each player via the real Players screen UI, waiting for the
+ * roster to actually show the name (not just for the click to resolve)
+ * before moving on to the next one. This is the "prerequisite action"
+ * the Continue button needs: PlayersContinueButton is enabled purely
+ * off `players.length` (see game/game-rules.ts's isPlayerCountValid via
+ * PlayersScreen.tsx), so if any single add is still in flight when the
+ * loop moves on, the roster can silently end up one short of whatever
+ * the selected mode requires -- which is exactly what a disabled
+ * Continue button with the right-looking player count actually means.
+ */
+export async function addPlayers(page: Page, players: SeatedPlayer[]) {
+  for (const player of players) {
+    await page.getByLabel("Player name").fill(player.name);
+    await page.getByRole("button", { name: /add player/i }).click();
+    await expect(page.getByText(player.name, { exact: true })).toBeVisible();
+  }
+}
+
+/**
  * Drives Home -> Setup -> Players using the default config (Classic
  * mode is already valid at 3 players -- see game/game-rules.ts), adding
  * the given players, then pressing Continue. Leaves the browser on
@@ -53,20 +73,23 @@ export async function startGameWithPlayers(
   await mockAiRoundGeneration(page);
 
   await page.goto("/");
-  await page.getByRole("link", { name: /play game/i }).click();
+  const playLink = page.getByRole("link", { name: /play game/i });
+  await playLink.waitFor({ state: "visible" });
+  await playLink.click();
   await page.waitForURL("**/setup");
 
-  await page.getByRole("button", { name: /continue/i }).click();
+  const setupContinue = page.getByRole("button", { name: /continue/i });
+  await setupContinue.waitFor({ state: "visible" });
+  await setupContinue.click();
   await page.waitForURL("**/players");
 
-  for (const player of players) {
-    await page.getByLabel("Player name").fill(player.name);
-    await page.getByRole("button", { name: /add player/i }).click();
-  }
+  await addPlayers(page, players);
 
-  await page
-    .getByRole("button", { name: /continue to round preparation/i })
-    .click();
+  const roundPrepContinue = page.getByRole("button", {
+    name: /continue to round preparation/i,
+  });
+  await expect(roundPrepContinue).toHaveAttribute("aria-disabled", "false");
+  await roundPrepContinue.click();
   await page.waitForURL("**/pass", { timeout: 15_000 });
 }
 
