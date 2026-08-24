@@ -2,14 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { RefreshCw, X } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 
-/**
- * Registers /sw.js on mount and, if a new version finishes installing
- * while an old one is still controlling the page, shows a small
- * dismissible banner instead of forcing a reload -- so we never yank
- * the app out from under an active round (see sw-template.js for the
- * matching "don't skipWaiting automatically" behavior).
- */
 export default function ServiceWorkerRegister() {
   const [updateReady, setUpdateReady] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(
@@ -18,9 +12,12 @@ export default function ServiceWorkerRegister() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // Running as the native app (Android/iOS) -- assets are already
+    // bundled locally by Capacitor, so there's nothing for a service
+    // worker to usefully cache, and update delivery goes through the
+    // app store instead of this banner.
+    if (Capacitor.isNativePlatform()) return;
     if (!("serviceWorker" in navigator)) return;
-    // Service workers require a secure context; localhost is exempt, so
-    // this still works in plain `next dev`.
     if (!window.isSecureContext) return;
 
     let cancelled = false;
@@ -29,32 +26,22 @@ export default function ServiceWorkerRegister() {
       .register("/sw.js")
       .then((registration) => {
         if (cancelled) return;
-
-        // A worker may already be waiting from a previous visit.
         if (registration.waiting && registration.active) {
           setWaitingWorker(registration.waiting);
           setUpdateReady(true);
         }
-
         registration.addEventListener("updatefound", () => {
           const installing = registration.installing;
           if (!installing) return;
-
           installing.addEventListener("statechange", () => {
-            if (
-              installing.state === "installed" &&
-              registration.active // an update, not the very first install
-            ) {
+            if (installing.state === "installed" && registration.active) {
               setWaitingWorker(installing);
               setUpdateReady(true);
             }
           });
         });
       })
-      .catch(() => {
-        // Registration failing (e.g. unsupported browser, blocked by
-        // extension) should never break the app itself.
-      });
+      .catch(() => {});
 
     let refreshing = false;
     const onControllerChange = () => {

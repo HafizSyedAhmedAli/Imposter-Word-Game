@@ -8,11 +8,18 @@ import type { WordProvider } from "./word-provider";
 
 const AI_TIMEOUT_MS = 10_000;
 
+// On web, "/api/round/generate" is same-origin and this stays empty.
+// In the Capacitor build there is no same-origin server to hit -- the
+// request has to go out to wherever the real Next server (with the
+// GEMINI_API_KEY) is actually deployed. See next.config.ts /
+// scripts/build-mobile.mjs for how this gets set at build time.
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+
 /**
  * Calls the server-side round-generation route (app/api/round/generate)
  * so the AI provider's API key never touches the browser. This is the
  * ONLY place client code talks to that route -- the game engine never
- * calls fetch("/api/round/generate") directly.
+ * calls fetch(...) directly.
  *
  * Any failure (timeout, network error, bad status, failed validation)
  * throws, and the caller (game/game-engine.ts) is responsible for
@@ -28,14 +35,11 @@ export class AiWordProvider implements WordProvider {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
-    // Let an external (caller-provided) signal abort this request too,
-    // e.g. when the player presses Back mid-generation (see
-    // components/round/RoundPreparationScreen.tsx).
     const onExternalAbort = () => controller.abort();
     options?.signal?.addEventListener("abort", onExternalAbort);
 
     try {
-      const response = await fetch("/api/round/generate", {
+      const response = await fetch(`${API_BASE_URL}/api/round/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

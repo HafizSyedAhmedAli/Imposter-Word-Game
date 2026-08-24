@@ -1,34 +1,32 @@
-// components/results/ResultsScreen.tsx
 "use client";
 
-import { isVotingComplete } from "@/game/vote-flow"; // add this import
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowRight, Sparkles, Trophy } from "lucide-react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
-import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
 import LeaveRoundDialog from "@/components/pass/LeaveRoundDialog";
-import {
-  clearStoredRoundSession,
-  getStoredRoundSession,
-  storeRoundSession,
-} from "@/lib/round-session-store";
+import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
 import type { RoundSession } from "@/game/game-types";
 import {
-  applyVerdict,
-  continueRound,
-  getEliminatedPlayerIds,
-  getHighestVoteCount,
-  getRoundOutcome,
-  getTotalImposterCount,
-  getVerdict,
-  getVoteTally,
+    applyVerdict,
+    continueRound,
+    getEliminatedPlayerIds,
+    getHighestVoteCount,
+    getRoundOutcome,
+    getVerdict,
+    getVoteTally
 } from "@/game/results-flow";
-import VoteResultsCard from "./VoteResultsCard";
-import MostVotedCard from "./MostVotedCard";
-import VerdictCard from "./VerdictCard";
-import TieCard from "./TieCard";
+import { isVotingComplete } from "@/game/vote-flow"; // add this import
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
+import {
+    clearStoredRoundSession,
+    getStoredRoundSession,
+    storeRoundSession,
+} from "@/lib/round-session-store";
+import { ArrowRight, Sparkles, Trophy } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import MostVotedCard from "./MostVotedCard";
+import TieCard from "./TieCard";
+import VerdictCard from "./VerdictCard";
+import VoteResultsCard from "./VoteResultsCard";
 
 export default function ResultsScreen() {
   const router = useRouter();

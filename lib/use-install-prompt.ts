@@ -55,6 +55,7 @@ export function useInstallPrompt() {
   const [outcome, setOutcome] = useState<"accepted" | "dismissed" | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setInstalled(isStandalone());
 
     const onBeforeInstallPrompt = (event: Event) => {

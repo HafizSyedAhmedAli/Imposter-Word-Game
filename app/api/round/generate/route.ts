@@ -13,6 +13,24 @@ const DIFFICULTY_GUIDANCE: Record<Difficulty, string> = {
   hard: "Use a less obvious, more specific concept. The hint should be subtle, without being unfair.",
 };
 
+// Add near the top, after the existing DIFFICULTY_GUIDANCE etc.:
+
+// The Capacitor build calls this route cross-origin (from
+// capacitor://localhost or https://localhost, not this route's own
+// domain -- see providers/ai-word-provider.ts). The response never
+// contains anything secret or user-specific (just { word, hint }), so
+// a wildcard origin is safe here, unlike an endpoint that reads
+// cookies or returns per-user data.
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
 function buildPrompt(
   category: Category,
   difficulty: Difficulty,
@@ -119,7 +137,7 @@ export async function POST(request: Request) {
     // back to the local word collection either way.
     return NextResponse.json(
       { error: "AI provider not configured." },
-      { status: 503 },
+      { status: 503, headers: CORS_HEADERS },
     );
   }
 
@@ -133,7 +151,7 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json(
       { error: "Invalid request body." },
-      { status: 400 },
+      { status: 400, headers: CORS_HEADERS },
     );
   }
 
@@ -179,15 +197,18 @@ export async function POST(request: Request) {
     if (!result) {
       return NextResponse.json(
         { error: "Round generation failed." },
-        { status: 502 },
+        { status: 502, headers: CORS_HEADERS },
       );
     }
 
-    return NextResponse.json({ word: result.word, hint: result.hint });
+    return NextResponse.json(
+      { word: result.word, hint: result.hint },
+      { headers: CORS_HEADERS },
+    );
   } catch {
     return NextResponse.json(
       { error: "Round generation failed." },
-      { status: 502 },
+      { status: 502, headers: CORS_HEADERS },
     );
   }
 }
