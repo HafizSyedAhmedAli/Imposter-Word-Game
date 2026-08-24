@@ -1,0 +1,20 @@
+workflows:
+  capacitor-ios:
+    name: Imposter Word iOS Build
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    environment:
+      node: 20
+    scripts:
+      - name: Install NPM dependencies
+        script: npm install
+      - name: Build Next.js Web App
+        script: npm run build:mobile
+      - name: Sync Web Assets to iOS
+        script: npx cap sync ios
+      - name: Build iOS App (Unsigned for testing)
+        script: |
+          cd ios/App
+          xcodebuild build -workspace App.xcworkspace -scheme App -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+    artifacts:
+      - /tmp/xcodebuild_logs/*.log
