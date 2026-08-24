@@ -24,19 +24,21 @@ import {
  */
 export default function GameRecoveryPrompt() {
   const router = useRouter();
+  // Compute the initial value synchronously via a lazy initializer
+  // instead of setting it from inside an effect -- avoids an extra
+  // render on mount for what is otherwise a pure read of two storage
+  // APIs.
   const [record, setRecord] = useState<ReturnType<
     typeof getRecoverableActiveGame
-  > | null>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
+  > | null>(() => {
     // If sessionStorage still has a live round, this tab never actually
     // lost it (e.g. a deep link to "/" mid-game) -- nothing to recover,
     // the existing in-round screens already handle that case.
-    if (getStoredRoundSession() !== null) return;
+    if (getStoredRoundSession() !== null) return null;
 
-    setRecord(getRecoverableActiveGame());
-  }, []);
+    return getRecoverableActiveGame();
+  });
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     const dialog = dialogRef.current;

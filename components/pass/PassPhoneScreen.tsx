@@ -31,7 +31,14 @@ import { playSound } from "@/lib/sound-engine";
 export default function PassPhoneScreen() {
   const router = useRouter();
 
-  const [session, setSession] = useState<RoundSession | null>(null);
+  // Read the stored round once, synchronously, as the initial state --
+  // the switch below keys off this same value and only calls
+  // setSession later on, from real user actions (handleHideAndPass),
+  // never on mount.
+  const [session, setSession] = useState<RoundSession | null>(() => {
+    const existing = getStoredRoundSession();
+    return existing?.status === "ready" ? existing : null;
+  });
   const [passState, setPassState] = useState<PassState>("pass-phone");
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const advancingRef = useRef(false);
@@ -50,8 +57,6 @@ export default function PassPhoneScreen() {
         return;
 
       case "ready":
-        setSession(existing);
-        setPassState("pass-phone");
         markActiveGameRoute("/pass");
         return;
 

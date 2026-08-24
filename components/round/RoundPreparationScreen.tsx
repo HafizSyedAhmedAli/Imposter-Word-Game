@@ -73,13 +73,23 @@ export default function RoundPreparationScreen() {
   // on `isHydrated`) is what corrects `phase` once that lands -- it
   // must not be removed just because this initializer "looks" correct
   // in isolation.
-  const [session, setSession] = useState<RoundSession | null>(null);
-  const [phase, setPhase] = useState<ScreenPhase>(() =>
-    isPlayerCountValid(config.mode, players.length)
-      ? "preparing"
-      : "no-players",
+  // Read the stored round once, synchronously, as the initial state for
+  // all three -- `phase`/`stage` derive from whether a session was
+  // already recovered, so nothing needs to be set from inside the
+  // mount effect below. A recovered session always takes priority over
+  // the player-count check, matching the original recovery behavior.
+  const [session, setSession] = useState<RoundSession | null>(() =>
+    getStoredRoundSession(),
   );
-  const [stage, setStage] = useState<PreparationStage>("word");
+  const [phase, setPhase] = useState<ScreenPhase>(() => {
+    if (session) return "ready";
+    return isPlayerCountValid(config.mode, players.length)
+      ? "preparing"
+      : "no-players";
+  });
+  const [stage, setStage] = useState<PreparationStage>(() =>
+    session ? "finalizing" : "word",
+  );
   const [wasOnlineAtStart, setWasOnlineAtStart] = useState(true);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
 
@@ -140,19 +150,13 @@ export default function RoundPreparationScreen() {
     if (startedRef.current) return;
     startedRef.current = true;
 
-    // Reading sessionStorage here -- not in a useState initializer --
-    // keeps this component's first client render identical to its
-    // server render (see the note on session/phase/stage above). A
-    // recovered session always takes priority over the player-count
-    // check below, matching the original recovery behavior: if a round
-    // was already prepared before a refresh, it's reused rather than
-    // regenerated, regardless of what the current player list looks
-    // like.
-    const existing = getStoredRoundSession();
-    if (existing) {
-      setSession(existing);
-      setStage("finalizing");
-      setPhase("ready");
+    // `session`/`phase`/`stage` were already derived from a recovered
+    // round (if any) in their lazy initializers above -- a recovered
+    // session always takes priority over the player-count check below,
+    // matching the original recovery behavior: if a round was already
+    // prepared before a refresh, it's reused rather than regenerated,
+    // regardless of what the current player list looks like.
+    if (session) {
       markActiveGameRoute("/round");
       // Nothing to regenerate -- just continue on to Screen 5 (see
       // Screen 4 spec, section 36).
@@ -177,10 +181,10 @@ export default function RoundPreparationScreen() {
   }, []);
 
   useEffect(() => {
-  return () => {
-    abortRef.current?.abort();
-  };
-}, []);
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   // Recovers from a false "no-players" reading. `phase` was decided
   // synchronously above, before GameSetupProvider's own sessionStorage

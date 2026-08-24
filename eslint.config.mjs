@@ -13,6 +13,16 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    // scripts/generate-sw.js is a standalone, zero-dependency Node CJS
+    // script (see its own header comment) run directly via `node`, not
+    // bundled by Next.js -- require() is the correct import style here,
+    // not a mistake the TypeScript rule should flag.
+    files: ["scripts/**/*.js"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
