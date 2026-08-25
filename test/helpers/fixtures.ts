@@ -10,10 +10,10 @@ export function baseSession(
   overrides: Partial<RoundSession> = {},
 ): RoundSession {
   const players: Player[] = [
-    { id: "p1", name: "Alice" },
-    { id: "p2", name: "Bob" },
-    { id: "p3", name: "Cara" },
-    { id: "p4", name: "Dev" },
+    { id: "p1", name: "Ahmed" },
+    { id: "p2", name: "Asmed" },
+    { id: "p3", name: "Mali" },
+    { id: "p4", name: "Hafsa" },
   ];
 
   const roles: PlayerRole[] = [
@@ -47,9 +47,20 @@ export function baseSession(
 export function multiImposterSession(
   overrides: Partial<RoundSession> = {},
 ): RoundSession {
-  const players: Player[] = Array.from({ length: 9 }, (_, i) => ({
+  const names = [
+    "Ahmed",
+    "Asmed",
+    "Mali",
+    "Hafsa",
+    "Bareera",
+    "Hamza",
+    "Fatima",
+    "Ayan",
+    "Muniza",
+  ];
+  const players: Player[] = names.map((name, i) => ({
     id: `p${i + 1}`,
-    name: `Player ${i + 1}`,
+    name,
   }));
 
   const roles: PlayerRole[] = players.map((p, i) => ({

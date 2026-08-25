@@ -72,7 +72,7 @@ describe("getVerdict", () => {
     const verdict = getVerdict(session);
     expect(verdict).toEqual({
       type: "imposter-caught",
-      eliminated: { id: "p1", name: "Alice" },
+      eliminated: { id: "p1", name: "Ahmed" },
     });
   });
 
@@ -81,7 +81,7 @@ describe("getVerdict", () => {
     const verdict = getVerdict(session);
     expect(verdict).toEqual({
       type: "wrong-player",
-      eliminated: { id: "p2", name: "Bob" },
+      eliminated: { id: "p2", name: "Asmed" },
     });
   });
 });
@@ -157,7 +157,10 @@ describe("getRoundOutcome", () => {
 
 describe("continueRound", () => {
   it("increments the round number and resets votes", () => {
-    const session = baseSession({ votes: { p2: "p1" }, round: { ...baseSession().round, number: 1 } });
+    const session = baseSession({
+      votes: { p2: "p1" },
+      round: { ...baseSession().round, number: 1 },
+    });
     const next = continueRound(session);
     expect(next.round.number).toBe(2);
     expect(next.votes).toEqual({});

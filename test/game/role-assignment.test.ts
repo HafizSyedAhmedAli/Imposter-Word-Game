@@ -3,10 +3,25 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { assignRoles } from "@/game/role-assignment";
 import type { Player } from "@/game/game-types";
 
+const PLAYER_NAMES = [
+  "Ahmed",
+  "Asmed",
+  "Mali",
+  "Hafsa",
+  "Bareera",
+  "Hamza",
+  "Fatima",
+  "Ayan",
+  "Muniza",
+  "Arham",
+  "Emaan",
+  "Sania",
+];
+
 function makePlayers(count: number): Player[] {
-  return Array.from({ length: count }, (_, i) => ({
+  return PLAYER_NAMES.slice(0, count).map((name, i) => ({
     id: `p${i + 1}`,
-    name: `Player ${i + 1}`,
+    name,
   }));
 }
 

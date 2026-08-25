@@ -4,10 +4,25 @@ import { getDb, cacheAiWord } from "@/lib/db";
 import type { Player } from "@/game/game-types";
 import { DEFAULT_GAME_CONFIG } from "@/game/game-rules";
 
+const PLAYER_NAMES = [
+  "Ahmed",
+  "Asmed",
+  "Mali",
+  "Hafsa",
+  "Bareera",
+  "Hamza",
+  "Fatima",
+  "Ayan",
+  "Muniza",
+  "Arham",
+  "Emaan",
+  "Sania",
+];
+
 function makePlayers(count: number): Player[] {
-  return Array.from({ length: count }, (_, i) => ({
+  return PLAYER_NAMES.slice(0, count).map((name, i) => ({
     id: `p${i + 1}`,
-    name: `Player ${i + 1}`,
+    name,
   }));
 }
 
@@ -63,8 +78,16 @@ describe("prepareGameRound -- the 3-tier fallback chain", () => {
   });
 
   it("falls back to the IndexedDB cache when the AI call fails (tier 2)", async () => {
-    await cacheAiWord({ word: "Comet", hint: "Icy traveler.", category: "random", difficulty: "medium" });
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    await cacheAiWord({
+      word: "Comet",
+      hint: "Icy traveler.",
+      category: "random",
+      difficulty: "medium",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("network down")),
+    );
 
     const session = await prepareGameRound(DEFAULT_GAME_CONFIG, makePlayers(5));
 
@@ -73,7 +96,10 @@ describe("prepareGameRound -- the 3-tier fallback chain", () => {
   });
 
   it("falls back to the static word list when AI fails and the cache is empty (tier 3)", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("network down")),
+    );
 
     const session = await prepareGameRound(DEFAULT_GAME_CONFIG, makePlayers(5));
 
@@ -83,7 +109,12 @@ describe("prepareGameRound -- the 3-tier fallback chain", () => {
 
   it("skips the AI call entirely when the device is offline, going straight to cache", async () => {
     setOnline(false);
-    await cacheAiWord({ word: "Comet", hint: "Icy traveler.", category: "random", difficulty: "medium" });
+    await cacheAiWord({
+      word: "Comet",
+      hint: "Icy traveler.",
+      category: "random",
+      difficulty: "medium",
+    });
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
@@ -108,7 +139,12 @@ describe("prepareGameRound -- the 3-tier fallback chain", () => {
   it("never crashes the round when the AI response is invalid (fails validation, falls through)", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ word: "", hint: "" }) }),
+      vi
+        .fn()
+        .mockResolvedValue({
+          ok: true,
+          json: async () => ({ word: "", hint: "" }),
+        }),
     );
 
     const session = await prepareGameRound(DEFAULT_GAME_CONFIG, makePlayers(5));
@@ -119,7 +155,10 @@ describe("prepareGameRound -- the 3-tier fallback chain", () => {
 
 describe("prepareGameRound -- role assignment integration", () => {
   beforeEach(() => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline in test")));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("offline in test")),
+    );
   });
 
   it("assigns the correct imposter/crew split for classic mode", async () => {
@@ -128,7 +167,9 @@ describe("prepareGameRound -- role assignment integration", () => {
       makePlayers(6),
     );
     expect(session.round.imposterCount).toBe(1);
-    expect(session.round.roles.filter((r) => r.role === "imposter")).toHaveLength(1);
+    expect(
+      session.round.roles.filter((r) => r.role === "imposter"),
+    ).toHaveLength(1);
   });
 
   it("10 players / triple mode -> 3 imposters, 7 crew", async () => {
@@ -137,8 +178,12 @@ describe("prepareGameRound -- role assignment integration", () => {
       makePlayers(10),
     );
     expect(session.round.imposterCount).toBe(3);
-    expect(session.round.roles.filter((r) => r.role === "imposter")).toHaveLength(3);
-    expect(session.round.roles.filter((r) => r.role === "player")).toHaveLength(7);
+    expect(
+      session.round.roles.filter((r) => r.role === "imposter"),
+    ).toHaveLength(3);
+    expect(session.round.roles.filter((r) => r.role === "player")).toHaveLength(
+      7,
+    );
   });
 
   it("rejects an imposter count that would consume the entire player list", async () => {
@@ -146,7 +191,10 @@ describe("prepareGameRound -- role assignment integration", () => {
     // mode forced to "triple", imposterCount (3) >= players.length (3)
     // must be rejected before any word/hint work happens.
     await expect(
-      prepareGameRound({ ...DEFAULT_GAME_CONFIG, mode: "triple" }, makePlayers(3)),
+      prepareGameRound(
+        { ...DEFAULT_GAME_CONFIG, mode: "triple" },
+        makePlayers(3),
+      ),
     ).rejects.toThrow(/imposter count is not valid/i);
   });
 

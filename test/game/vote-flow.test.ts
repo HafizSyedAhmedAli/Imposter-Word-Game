@@ -1,161 +1,180 @@
 import { describe, it, expect } from "vitest";
 import {
-  getVotingOrder,
-  getCurrentVoter,
-  getActiveVotingOrder,
-  getVotesCastCount,
-  getEligibleVoteTargets,
-  submitVote,
-  skipVote,
-  hasVoted,
-  isVotingComplete,
-  getVotingDuration,
-  SKIP_VOTE,
-} from "@/game/vote-flow";
-import { baseSession } from "../helpers/fixtures";
+  getVoteTally,
+  getHighestVoteCount,
+  getMostVotedPlayers,
+  getVerdict,
+  getTotalImposterCount,
+  applyVerdict,
+  getRoundOutcome,
+  continueRound,
+} from "@/game/results-flow";
+import { SKIP_VOTE } from "@/game/vote-flow";
+import { baseSession, multiImposterSession } from "../helpers/fixtures";
 
-describe("getVotingOrder", () => {
-  it("matches session.players order exactly", () => {
-    const session = baseSession();
-    expect(getVotingOrder(session)).toBe(session.players);
+describe("getVoteTally / getHighestVoteCount / getMostVotedPlayers", () => {
+  it("tallies votes per target in stable player order", () => {
+    const session = baseSession({
+      votes: { p2: "p1", p3: "p1", p4: "p2" },
+    });
+    const tally = getVoteTally(session);
+    expect(tally.map((t) => t.player.id)).toEqual(["p1", "p2", "p3", "p4"]);
+    expect(tally.find((t) => t.player.id === "p1")?.votes).toBe(2);
+    expect(tally.find((t) => t.player.id === "p2")?.votes).toBe(1);
+  });
+
+  it("skip votes don't count toward anyone's tally", () => {
+    const session = baseSession({
+      votes: { p2: "p1", p3: SKIP_VOTE, p4: SKIP_VOTE },
+    });
+    const tally = getVoteTally(session);
+    const total = tally.reduce((sum, t) => sum + t.votes, 0);
+    expect(total).toBe(1);
+  });
+
+  it("getHighestVoteCount is 0 when there are no votes", () => {
+    const session = baseSession({ votes: {} });
+    expect(getHighestVoteCount(getVoteTally(session))).toBe(0);
+  });
+
+  it("getMostVotedPlayers returns every player tied for first place", () => {
+    const session = baseSession({
+      votes: { p2: "p1", p3: "p4", p4: "p1" },
+    });
+    // p1 has 2 votes (from p2, p4); no one else does -- not a tie here.
+    const most = getMostVotedPlayers(session);
+    expect(most.map((t) => t.player.id)).toEqual(["p1"]);
+  });
+
+  it("getMostVotedPlayers detects a genuine tie", () => {
+    const session = baseSession({
+      votes: { p1: "p2", p2: "p1" }, // p1 <-1 vote, p2 <-1 vote
+    });
+    const most = getMostVotedPlayers(session);
+    expect(most.map((t) => t.player.id).sort()).toEqual(["p1", "p2"]);
+  });
+
+  it("getMostVotedPlayers is empty when there are zero votes", () => {
+    const session = baseSession({ votes: {} });
+    expect(getMostVotedPlayers(session)).toEqual([]);
   });
 });
 
-describe("getCurrentVoter", () => {
-  it("returns the first active player who hasn't voted yet", () => {
-    const session = baseSession({ votes: { p1: "p2" } });
-    expect(getCurrentVoter(session)?.id).toBe("p2");
+describe("getVerdict", () => {
+  it("returns a tie verdict when votes are split evenly", () => {
+    const session = baseSession({ votes: { p3: "p2", p4: "p1" } });
+    const verdict = getVerdict(session);
+    expect(verdict.type).toBe("tie");
   });
 
-  it("skips eliminated players", () => {
+  it("returns 'imposter-caught' when the imposter gets the most votes", () => {
+    const session = baseSession({ votes: { p2: "p1", p3: "p1", p4: "p1" } });
+    const verdict = getVerdict(session);
+    expect(verdict).toEqual({
+      type: "imposter-caught",
+      eliminated: { id: "p1", name: "Ahmed" },
+    });
+  });
+
+  it("returns 'wrong-player' when a crew member gets the most votes", () => {
+    const session = baseSession({ votes: { p1: "p2", p3: "p2", p4: "p2" } });
+    const verdict = getVerdict(session);
+    expect(verdict).toEqual({
+      type: "wrong-player",
+      eliminated: { id: "p2", name: "Asmed" },
+    });
+  });
+});
+
+describe("getTotalImposterCount", () => {
+  it("counts imposters directly from session.round.roles", () => {
+    expect(getTotalImposterCount(baseSession())).toBe(1);
+    expect(getTotalImposterCount(multiImposterSession())).toBe(2);
+  });
+});
+
+describe("applyVerdict", () => {
+  it("eliminates the correctly-voted player", () => {
+    const session = baseSession({ votes: { p2: "p1", p3: "p1", p4: "p1" } });
+    const next = applyVerdict(session);
+    expect(next.eliminatedPlayerIds).toEqual(["p1"]);
+  });
+
+  it("eliminates no one on a tie", () => {
+    const session = baseSession({ votes: { p3: "p2", p4: "p1" } });
+    const next = applyVerdict(session);
+    expect(next.eliminatedPlayerIds ?? []).toEqual([]);
+  });
+
+  it("is idempotent -- reapplying the same verdict does not double-add", () => {
+    const session = baseSession({
+      votes: { p2: "p1", p3: "p1", p4: "p1" },
+      eliminatedPlayerIds: ["p1"],
+    });
+    const next = applyVerdict(session);
+    expect(next.eliminatedPlayerIds).toEqual(["p1"]);
+  });
+
+  it("accumulates eliminations across rounds instead of replacing the list", () => {
+    const session = baseSession({
+      votes: { p2: "p3", p1: "p3", p4: "p3" },
+      eliminatedPlayerIds: ["p1"],
+    });
+    const next = applyVerdict(session);
+    expect(next.eliminatedPlayerIds).toEqual(["p1", "p3"]);
+  });
+});
+
+describe("getRoundOutcome", () => {
+  it("is 'crew-win' once every imposter is eliminated", () => {
     const session = baseSession({ eliminatedPlayerIds: ["p1"] });
-    expect(getCurrentVoter(session)?.id).toBe("p2");
+    expect(getRoundOutcome(session)).toBe("crew-win");
   });
 
-  it("returns null once everyone active has voted", () => {
-    const session = baseSession({
-      votes: { p1: "p2", p2: "p1", p3: "p1", p4: "p1" },
-    });
-    expect(getCurrentVoter(session)).toBeNull();
+  it("is 'continue' while imposters remain outnumbered and alive", () => {
+    const session = baseSession(); // no eliminations yet
+    expect(getRoundOutcome(session)).toBe("continue");
   });
-});
 
-describe("getActiveVotingOrder / getVotesCastCount", () => {
-  it("counts only active, voted players", () => {
-    const session = baseSession({
-      eliminatedPlayerIds: ["p4"],
-      votes: { p1: "p2", p2: "p1" },
-    });
-    expect(getActiveVotingOrder(session)).toHaveLength(3);
-    expect(getVotesCastCount(session)).toBe(2);
+  it("is 'imposter-win' once imposters are no longer outnumbered", () => {
+    // 4 players, 1 imposter: eliminate 2 crew -> 1 imposter vs 1 crew,
+    // imposters no longer outnumbered.
+    const session = baseSession({ eliminatedPlayerIds: ["p2", "p3"] });
+    expect(getRoundOutcome(session)).toBe("imposter-win");
   });
-});
 
-describe("getEligibleVoteTargets", () => {
-  it("excludes the voter themselves and eliminated players", () => {
-    const session = baseSession({ eliminatedPlayerIds: ["p3"] });
-    const targets = getEligibleVoteTargets(session, "p1").map((p) => p.id);
-    expect(targets).toEqual(["p2", "p4"]);
+  it("works identically for multiple imposters", () => {
+    // 9 players / 2 imposters: eliminate both imposters -> crew-win.
+    const session = multiImposterSession({ eliminatedPlayerIds: ["p1", "p2"] });
+    expect(getRoundOutcome(session)).toBe("crew-win");
+  });
+
+  it("multi-imposter game continues while any imposter is alive and outnumbered", () => {
+    const session = multiImposterSession({ eliminatedPlayerIds: ["p3"] }); // a crew member
+    expect(getRoundOutcome(session)).toBe("continue");
   });
 });
 
-describe("submitVote", () => {
-  it("records a vote from the current voter", () => {
+describe("continueRound", () => {
+  it("increments the round number and resets votes", () => {
+    const session = baseSession({ votes: { p2: "p1" }, round: { ...baseSession().round, number: 1 } });
+    const next = continueRound(session);
+    expect(next.round.number).toBe(2);
+    expect(next.votes).toEqual({});
+    expect(next.status).toBe("playing");
+  });
+
+  it("preserves the word, hint, and role assignments across the continuation", () => {
     const session = baseSession();
-    const next = submitVote(session, "p1", "p2");
-    expect(next.votes).toEqual({ p1: "p2" });
+    const next = continueRound(session);
+    expect(next.round.word).toBe(session.round.word);
+    expect(next.round.hint).toBe(session.round.hint);
+    expect(next.round.roles).toEqual(session.round.roles);
   });
 
-  it("is a no-op if the voter isn't the current voter", () => {
-    const session = baseSession();
-    // p2 tries to vote before p1 (the actual current voter) has.
-    const next = submitVote(session, "p2", "p1");
-    expect(next).toBe(session);
-  });
-
-  it("rejects self-voting", () => {
-    const session = baseSession();
-    const next = submitVote(session, "p1", "p1");
-    expect(next).toBe(session);
-  });
-
-  it("rejects a duplicate vote from the same voter", () => {
-    const session = baseSession({ votes: { p1: "p2" } });
-    // p1 already voted; even though getCurrentVoter now resolves to p2,
-    // an attempt to vote again "as p1" must be rejected.
-    const next = submitVote(session, "p1", "p3");
-    expect(next).toBe(session);
-  });
-
-  it("rejects a vote targeting an eliminated player", () => {
+  it("carries eliminatedPlayerIds over untouched", () => {
     const session = baseSession({ eliminatedPlayerIds: ["p2"] });
-    const next = submitVote(session, "p1", "p2");
-    expect(next).toBe(session);
-  });
-
-  it("does not mutate the original session", () => {
-    const session = baseSession();
-    const before = JSON.stringify(session);
-    submitVote(session, "p1", "p2");
-    expect(JSON.stringify(session)).toBe(before);
-  });
-});
-
-describe("skipVote", () => {
-  it("records the skip sentinel for the current voter", () => {
-    const session = baseSession();
-    const next = skipVote(session, "p1");
-    expect(next.votes?.p1).toBe(SKIP_VOTE);
-  });
-
-  it("is a no-op for a player who isn't the current voter", () => {
-    const session = baseSession();
-    const next = skipVote(session, "p2");
-    expect(next).toBe(session);
-  });
-
-  it("is a no-op for an eliminated player", () => {
-    const session = baseSession({ eliminatedPlayerIds: ["p1"] });
-    const next = skipVote(session, "p1");
-    expect(next).toBe(session);
-  });
-
-  it("a skip vote does not count toward any player's tally (see results-flow)", () => {
-    const session = baseSession();
-    const next = skipVote(session, "p1");
-    expect(Object.values(next.votes ?? {})).toContain(SKIP_VOTE);
-    // getEligibleVoteTargets never includes the sentinel as a real player,
-    // and results-flow's tally only counts values matching real player ids.
-    expect(session.players.some((p) => p.id === SKIP_VOTE)).toBe(false);
-  });
-});
-
-describe("hasVoted / isVotingComplete", () => {
-  it("hasVoted is false for a missing votes field entirely", () => {
-    const session = baseSession();
-    delete session.votes;
-    expect(hasVoted(session, "p1")).toBe(false);
-    expect(isVotingComplete(session)).toBe(false);
-  });
-
-  it("isVotingComplete is true once every active player has voted or skipped", () => {
-    const session = baseSession({
-      votes: { p1: "p2", p2: SKIP_VOTE, p3: "p1", p4: "p1" },
-    });
-    expect(isVotingComplete(session)).toBe(true);
-  });
-});
-
-describe("getVotingDuration", () => {
-  it("returns the configured duration when the voting timer is enabled", () => {
-    const session = baseSession();
-    session.config.options.votingTimer = { enabled: true, duration: 45 };
-    expect(getVotingDuration(session)).toBe(45);
-  });
-
-  it("returns null when the voting timer is disabled", () => {
-    const session = baseSession();
-    session.config.options.votingTimer = { enabled: false, duration: 45 };
-    expect(getVotingDuration(session)).toBeNull();
+    const next = continueRound(session);
+    expect(next.eliminatedPlayerIds).toEqual(["p2"]);
   });
 });
