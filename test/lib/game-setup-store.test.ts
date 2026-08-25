@@ -14,7 +14,7 @@ describe("game-setup-store", () => {
   it("round-trips config + players through sessionStorage", () => {
     const setup = {
       config: DEFAULT_GAME_CONFIG,
-      players: [{ id: "p1", name: "Alice" }],
+      players: [{ id: "p1", name: "Ahmed" }],
     };
     storeGameSetup(setup);
     expect(getStoredGameSetup()).toEqual(setup);

@@ -175,13 +175,13 @@ describe("validateGameConfig", () => {
 
 describe("validatePlayerName", () => {
   const existing: Player[] = [
-    { id: "p1", name: "Alice" },
-    { id: "p2", name: "Bob" },
+    { id: "p1", name: "Ahmed" },
+    { id: "p2", name: "Asmed" },
   ];
 
   it("accepts a unique, trimmed name", () => {
-    const result = validatePlayerName("  Charlie  ", existing);
-    expect(result).toEqual({ valid: true, value: "Charlie" });
+    const result = validatePlayerName("  Mali  ", existing);
+    expect(result).toEqual({ valid: true, value: "Mali" });
   });
 
   it("rejects an empty/whitespace-only name", () => {
@@ -196,7 +196,7 @@ describe("validatePlayerName", () => {
   });
 
   it("rejects a case-insensitive duplicate name", () => {
-    const result = validatePlayerName("alice", existing);
+    const result = validatePlayerName("ahmed", existing);
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.error).toMatch(/unique/i);
@@ -204,7 +204,7 @@ describe("validatePlayerName", () => {
   });
 
   it("allows editing a player's own name without flagging it as a duplicate", () => {
-    const result = validatePlayerName("Alice", existing, "p1");
+    const result = validatePlayerName("Ahmed", existing, "p1");
     expect(result.valid).toBe(true);
   });
 });
