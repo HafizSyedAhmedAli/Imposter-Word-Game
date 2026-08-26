@@ -1,4 +1,5 @@
 // lib/sound-engine.ts
+import { Capacitor } from "@capacitor/core";
 import { Howl, Howler } from "howler";
 
 export type SoundKey =
@@ -249,7 +250,13 @@ export function primeAudioUnlock(): void {
   if (unlockListenerAttached || typeof window === "undefined") return;
   unlockListenerAttached = true;
 
-  if (isRunningAsInstalledPwa()) {
+  if (isRunningAsInstalledPwa() || Capacitor.isNativePlatform()) {
+    // Installed PWA and the Capacitor Android/iOS shell both run
+    // outside a browser tab, so the tab-autoplay policy that gates
+    // <audio>/WebAudio behind a user gesture doesn't apply -- without
+    // this branch, `ambient-menu` silently waited for the first
+    // pointerdown/keydown/touchstart, which is the exact "music
+    // doesn't play until I tap once" bug on a physical Android build.
     audioUnlocked = true;
     // Defense-in-depth for ordering; in practice MenuMusicController's
     // own playAmbient() call right after this on mount is what
