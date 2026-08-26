@@ -5,6 +5,7 @@ import { useState } from "react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import { useGameSetup } from "@/lib/game-setup-context";
 import { isPlayerCountValid, MAX_PLAYERS } from "@/game/game-rules";
+import { error, light } from "@/lib/haptics";
 import { playSound } from "@/lib/sound-engine";
 import PlayersHeader from "./PlayersHeader";
 import GameConfigSummary from "./GameConfigSummary";
@@ -46,9 +47,11 @@ export default function PlayersScreen() {
     // screen (Round Preparation), not here.
     if (!canContinue) {
       playSound("ui-error");
+      error();
       return;
     }
     playSound("ui-tap");
+    light();
     router.push("/round");
   }
 

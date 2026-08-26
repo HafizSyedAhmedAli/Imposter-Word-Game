@@ -1,6 +1,6 @@
 "use client";
 
-import { triggerHaptic } from "@/lib/haptics";
+import { light, setHapticsEnabled } from "@/lib/haptics";
 import {
     DEFAULT_SETTINGS,
     getSettings,
@@ -51,7 +51,8 @@ export default function PreferencesCard() {
     const next = !settings.haptics;
     setSettings({ ...settings, haptics: next });
     void updateSettings({ haptics: next });
-    if (next) triggerHaptic();
+    setHapticsEnabled(next);
+    if (next) light();
   }, [settings]);
 
   const sound = settings?.sound ?? DEFAULT_SETTINGS.sound;

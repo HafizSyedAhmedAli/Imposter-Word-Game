@@ -26,6 +26,7 @@ import ImposterRevealCard from "./ImposterRevealCard";
 import AllPlayersReadyCard from "./AllPlayersReadyCard";
 import LeaveRoundDialog from "./LeaveRoundDialog";
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
+import { light } from "@/lib/haptics";
 import { playSound } from "@/lib/sound-engine";
 import { useLeaveRoundBackGuard } from "@/lib/use-leave-round-back-guard";
 
@@ -114,6 +115,7 @@ export default function PassPhoneScreen() {
   function handleReady() {
     setPassState("private-reveal");
     playSound("ui-tap");
+    light();
   }
 
   function handleReveal() {
@@ -121,8 +123,12 @@ export default function PassPhoneScreen() {
     // The role-reveal moment itself -- the single biggest emotional
     // beat in the round, so it gets a distinct sting per role. The
     // Crew word's own reveal (the ~2s unblur inside PlayerRevealCard)
-    // has its own separate sound, fired from that component.
+    // has its own separate sound, fired from that component. Deliberately
+    // just a light tap haptic (not stronger) -- see haptics task spec:
+    // the 1s Crew reveal animation itself gets no special haptic beyond
+    // this, and role-tell parity across Crew/Imposter paths matters here.
     playSound("reveal-player");
+    light();
   }
 
   function handleHideAndPass() {
@@ -130,6 +136,13 @@ export default function PassPhoneScreen() {
     advancingRef.current = true;
 
     setPassState("pass-phone");
+    // Fired unconditionally, before the branch below, so both the
+    // "advance to next player" and "everyone's done" paths get the same
+    // haptic at the same moment relative to the tap -- keeping this
+    // outside the branch avoids a Crew-vs-Imposter (or last-player)
+    // timing tell, the same concern that already applies to the sounds
+    // in this screen.
+    light();
 
     if (isFinalPlayer(activeSession)) {
       setPassState("all-ready");
@@ -149,6 +162,7 @@ export default function PassPhoneScreen() {
     const next = beginDiscussion(activeSession);
     storeRoundSession(next);
     playSound("phase-discussion");
+    light();
     router.push("/game");
   }
 

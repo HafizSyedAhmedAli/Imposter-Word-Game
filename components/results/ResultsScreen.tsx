@@ -5,20 +5,21 @@ import LeaveRoundDialog from "@/components/pass/LeaveRoundDialog";
 import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
 import type { RoundSession } from "@/game/game-types";
 import {
-    applyVerdict,
-    continueRound,
-    getEliminatedPlayerIds,
-    getHighestVoteCount,
-    getRoundOutcome,
-    getVerdict,
-    getVoteTally
+  applyVerdict,
+  continueRound,
+  getEliminatedPlayerIds,
+  getHighestVoteCount,
+  getRoundOutcome,
+  getVerdict,
+  getVoteTally,
 } from "@/game/results-flow";
 import { isVotingComplete } from "@/game/vote-flow"; // add this import
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
+import { medium } from "@/lib/haptics";
 import {
-    clearStoredRoundSession,
-    getStoredRoundSession,
-    storeRoundSession,
+  clearStoredRoundSession,
+  getStoredRoundSession,
+  storeRoundSession,
 } from "@/lib/round-session-store";
 import { ArrowRight, Sparkles, Trophy } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -87,7 +88,12 @@ export default function ResultsScreen() {
 
     const withVerdictApplied = applyVerdict(existing);
     if (withVerdictApplied !== existing) {
+      // applyVerdict only returns a new object when this vote actually
+      // eliminated someone (a tie, or an already-applied verdict on
+      // refresh, returns `existing` unchanged) -- so this branch is the
+      // single, idempotent moment a player is newly eliminated.
       storeRoundSession(withVerdictApplied);
+      medium();
     }
     markActiveGameRoute("/results");
     // eslint-disable-next-line react-hooks/exhaustive-deps

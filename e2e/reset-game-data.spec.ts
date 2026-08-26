@@ -19,6 +19,11 @@ test.describe("Reset Game Data", () => {
     await soundToggle.click();
     await expect(soundToggle).toHaveAttribute("aria-checked", "false");
 
+    const hapticsToggle = page.getByRole("switch", { name: /haptics/i });
+    await expect(hapticsToggle).toHaveAttribute("aria-checked", "true");
+    await hapticsToggle.click();
+    await expect(hapticsToggle).toHaveAttribute("aria-checked", "false");
+
     await page.getByRole("button", { name: /reset game data/i }).click();
     await expect(page.getByText(/permanently delete/i)).toBeVisible();
     await page.getByRole("button", { name: /^reset data$/i }).click();
@@ -39,6 +44,7 @@ test.describe("Reset Game Data", () => {
     // reset really took effect.
     await page.reload();
     await expect(soundToggle).toHaveAttribute("aria-checked", "true");
+    await expect(hapticsToggle).toHaveAttribute("aria-checked", "true");
 
     // The app still works normally afterward: Home -> Play still works.
     await page.goto("/");

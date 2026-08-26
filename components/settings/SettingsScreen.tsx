@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
+import { warning } from "@/lib/haptics";
 import { resetGameData } from "@/lib/reset-game-data";
 import SettingsHeader from "./SettingsHeader";
 import PreferencesCard from "./PreferencesCard";
@@ -34,6 +35,7 @@ export default function SettingsScreen() {
     setDialogOpen(false);
     setStatus("resetting");
     setErrorMessage(null);
+    warning();
 
     resetGameData()
       .then(() => {

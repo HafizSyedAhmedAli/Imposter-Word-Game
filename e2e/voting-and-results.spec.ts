@@ -46,9 +46,9 @@ test.describe("Voting", () => {
     // Everyone but Bob votes for Bob; Bob votes for Cara. Bob ends up
     // with 2 votes (a deterministic majority) regardless of which
     // player was secretly assigned the imposter role.
-    await castVoteFor(page, "Bob"); // Alice -> Bob
-    await castVoteFor(page, "Cara"); // Bob -> Cara
-    await castVoteFor(page, "Bob"); // Cara -> Bob
+    await castVoteFor(page, "Asmed"); // Alice -> Bob
+    await castVoteFor(page, "Mali"); // Bob -> Cara
+    await castVoteFor(page, "Asmed"); // Cara -> Bob
 
     await expect(page.getByText("ALL VOTES CAST")).toBeVisible();
     await page.getByRole("button", { name: /reveal results/i }).click();

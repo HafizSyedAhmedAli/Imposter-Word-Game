@@ -13,6 +13,7 @@ import DifficultySelector from "./DifficultySelector";
 import GameOptions from "./GameOptions";
 import ContinueButton from "./ContinueButton";
 import PrivacyNotice from "./PrivacyNotice";
+import { light } from "@/lib/haptics";
 import { playSound } from "@/lib/sound-engine";
 
 export default function GameSetupScreen() {
@@ -38,6 +39,7 @@ export default function GameSetupScreen() {
     }
     setError(null);
     playSound("ui-tap");
+    light();
     router.push("/players");
   }
 

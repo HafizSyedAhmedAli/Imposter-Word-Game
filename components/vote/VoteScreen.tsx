@@ -15,6 +15,7 @@ import {
   type VoteScreenState,
 } from "@/game/vote-flow";
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
+import { light, medium } from "@/lib/haptics";
 import {
   clearStoredRoundSession,
   getStoredRoundSession,
@@ -123,17 +124,20 @@ export default function VoteScreen() {
   function handleReady() {
     setScreenState("voting");
     playSound("ui-tap");
+    light();
   }
 
   function handleSelect(playerId: string) {
     setSelectedTargetId(playerId);
     playSound("ui-tap");
+    light();
   }
 
   function handleCastVote() {
     if (!selectedTargetId) return;
     setScreenState("confirm");
     playSound("ui-tap");
+    light();
   }
 
   function handleGoBack() {
@@ -157,6 +161,7 @@ export default function VoteScreen() {
     setSelectedTargetId(null);
     setScreenState(isVotingComplete(next) ? "all-cast" : "recorded");
     playSound("ui-confirm");
+    medium();
 
     setTimeout(() => {
       advancingRef.current = false;
@@ -183,6 +188,7 @@ export default function VoteScreen() {
     setSelectedTargetId(null);
     setScreenState(isVotingComplete(next) ? "all-cast" : "recorded");
     playSound("ui-confirm");
+    medium();
 
     setTimeout(() => {
       advancingRef.current = false;

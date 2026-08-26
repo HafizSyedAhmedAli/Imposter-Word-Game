@@ -29,6 +29,7 @@ import {
   getRoundSummary,
   getWinReason,
 } from "@/game/final-results-flow";
+import { light, success } from "@/lib/haptics";
 import { playSound } from "@/lib/sound-engine";
 import { useLeaveRoundBackGuard } from "@/lib/use-leave-round-back-guard";
 
@@ -82,12 +83,17 @@ export default function FinalResultsScreen() {
       recordFinalResult(session, outcome);
     }
 
-    // 2. Play Outcome Sound
+    // 2. Play Outcome Sound (+ matching Success haptic for either win --
+    // Crew victory and Imposter victory are visually/audibly distinct,
+    // but both are a "success" from the haptic vocabulary's point of
+    // view). Gated on the same ref as the sound so this can never
+    // double-fire across re-renders.
     if (!outcomeSoundPlayedRef.current) {
       outcomeSoundPlayedRef.current = true;
       playSound(
         outcome === "crew-win" ? "result-crew-wins" : "result-imposter-wins",
       );
+      success();
     }
   }, [session]);
 
@@ -114,6 +120,7 @@ export default function FinalResultsScreen() {
 
   function handlePlayAgain() {
     playSound("ui-tap");
+    light();
     clearStoredRoundSession();
     router.push("/players");
   }
