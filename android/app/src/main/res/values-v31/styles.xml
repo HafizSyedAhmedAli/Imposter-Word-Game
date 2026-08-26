@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<resources>
+<!--     
+      Android 12+ (API 31) draws the cold-start splash using the platform
+      SplashScreen API, not the legacy `android:background` drawable below.
+      That API attribute (windowSplashScreenBackground) was never set here,
+      so on API 31+ devices it fell back to the framework default (black)
+      for the moment before Capacitor's own splash/drawable took over
+      exactly the "correct logo, black background" symptom seen on device.
+
+      Only the background color is set here; the logo/icon shown by the
+      platform splash is left as the existing app launcher icon, unchanged.
+    -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="android:background">@drawable/splash</item>
+        <item name="android:windowBackground">@color/splashBackground</item>
+        <item name="android:colorBackground">@color/splashBackground</item>
+        <item name="android:windowSplashScreenBackground">@color/splashBackground</item>
+    </style>
+</resources>

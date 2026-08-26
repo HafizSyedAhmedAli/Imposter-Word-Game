@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches iw-void in app/globals.css and the SplashScreen.backgroundColor
+         value in capacitor.config.ts. Do not invent a new color here — keep this
+         in sync with those two sources of truth. -->
+    <color name="splashBackground">#05051A</color>
+</resources>
