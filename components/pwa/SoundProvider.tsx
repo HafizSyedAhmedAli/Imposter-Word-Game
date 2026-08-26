@@ -15,10 +15,9 @@ export default function SoundProvider() {
     let cancelled = false;
     primeAudioUnlock();
     getSettings().then((settings) => {
-      if (cancelled) return;
       setSoundEnabled(settings.sound);
       setMusicEnabled(settings.music);
-      setHapticsEnabled(settings.haptics);
+      setHapticsEnabled(settings.haptics); // ← wires stored preference in on load
       preloadSounds();
     });
     return () => {

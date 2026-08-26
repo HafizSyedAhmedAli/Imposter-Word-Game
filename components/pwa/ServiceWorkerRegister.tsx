@@ -22,6 +22,8 @@ export default function ServiceWorkerRegister() {
 
     let cancelled = false;
 
+    const hadControllerOnLoad = Boolean(navigator.serviceWorker.controller);
+
     navigator.serviceWorker
       .register("/sw.js")
       .then((registration) => {
@@ -45,6 +47,7 @@ export default function ServiceWorkerRegister() {
 
     let refreshing = false;
     const onControllerChange = () => {
+      if (!hadControllerOnLoad) return;
       if (refreshing) return;
       refreshing = true;
       window.location.reload();

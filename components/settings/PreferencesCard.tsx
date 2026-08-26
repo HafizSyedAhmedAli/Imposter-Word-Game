@@ -2,17 +2,23 @@
 
 import { light, setHapticsEnabled } from "@/lib/haptics";
 import {
-    DEFAULT_SETTINGS,
-    getSettings,
-    updateSettings,
-    type GameSettings,
+  DEFAULT_SETTINGS,
+  getSettings,
+  updateSettings,
+  type GameSettings,
 } from "@/lib/settings-store";
 import {
-    playSound,
-    setMusicEnabled,
-    setSoundEnabled,
+  playSound,
+  setMusicEnabled,
+  setSoundEnabled,
 } from "@/lib/sound-engine";
-import { HeadphoneOff, Headphones, Vibrate, Volume2, VolumeX } from "lucide-react";
+import {
+  HeadphoneOff,
+  Headphones,
+  Vibrate,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import SettingsToggleRow from "./SettingsToggleRow";
 
@@ -50,9 +56,9 @@ export default function PreferencesCard() {
     if (!settings) return;
     const next = !settings.haptics;
     setSettings({ ...settings, haptics: next });
-    void updateSettings({ haptics: next });
+    void updateSettings({ haptics: next }); // same Dexie table, no new store
     setHapticsEnabled(next);
-    if (next) light();
+    if (next) light(); // confirmation buzz only when turning ON
   }, [settings]);
 
   const sound = settings?.sound ?? DEFAULT_SETTINGS.sound;
