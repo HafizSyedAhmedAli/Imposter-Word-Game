@@ -36,9 +36,9 @@ export async function mockAiRoundGenerationFailure(page: Page) {
 export type SeatedPlayer = { name: string };
 
 export const DEFAULT_TEST_PLAYERS: SeatedPlayer[] = [
-  { name: "Ahmed" },
-  { name: "Asmed" },
-  { name: "Mali" },
+  { name: "Alice" },
+  { name: "Bob" },
+  { name: "Cara" },
 ];
 
 /**

@@ -17,7 +17,7 @@ test.describe("Offline / AI-unavailable fallback", () => {
     await page.getByRole("button", { name: /continue/i }).click();
     await page.waitForURL("**/players");
 
-    for (const name of ["Ahmed", "Asmed", "Mali"]) {
+    for (const name of ["Alice", "Bob", "Cara"]) {
       await page.getByLabel("Player name").fill(name);
       await page.getByRole("button", { name: /add player/i }).click();
     }
