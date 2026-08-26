@@ -29,6 +29,7 @@ import VoteRecordedCard from "./VoteRecordedCard";
 import VoteSelectionCard from "./VoteSelectionCard";
 import VotingPassPromptCard from "./VotingPassPromptCard";
 import VotingTimer from "./VotingTimer";
+import { useLeaveRoundBackGuard } from "@/lib/use-leave-round-back-guard";
 
 export default function VoteScreen() {
   const router = useRouter();
@@ -81,15 +82,7 @@ export default function VoteScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    function handlePopState() {
-      openLeaveConfirmation();
-      window.history.pushState(null, "", window.location.href);
-    }
-    window.history.pushState(null, "", window.location.href);
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  useLeaveRoundBackGuard(openLeaveConfirmation);
 
   useEffect(() => {
     function handleVisibility() {

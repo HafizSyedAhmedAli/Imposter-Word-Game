@@ -27,6 +27,7 @@ import MostVotedCard from "./MostVotedCard";
 import TieCard from "./TieCard";
 import VerdictCard from "./VerdictCard";
 import VoteResultsCard from "./VoteResultsCard";
+import { useLeaveRoundBackGuard } from "@/lib/use-leave-round-back-guard";
 
 export default function ResultsScreen() {
   const router = useRouter();
@@ -92,18 +93,7 @@ export default function ResultsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Same hardware/browser-back guard as every other in-round screen --
-  // it must go through the leave-round confirmation, never silently
-  // fall back into the voting flow (spec's HEADER section).
-  useEffect(() => {
-    function handlePopState() {
-      openLeaveConfirmation();
-      window.history.pushState(null, "", window.location.href);
-    }
-    window.history.pushState(null, "", window.location.href);
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  useLeaveRoundBackGuard(openLeaveConfirmation);
 
   if (!session) return null;
 

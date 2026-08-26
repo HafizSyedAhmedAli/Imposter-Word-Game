@@ -22,6 +22,7 @@ export default function ConnectionStatus() {
           : "border-iw-offline/30 bg-iw-offline/10 text-iw-offline"
       }`}
       role="status"
+      title={online ? undefined : "Using local game data"}
     >
       {online ? (
         <Wifi className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />

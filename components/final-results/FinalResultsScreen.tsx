@@ -30,6 +30,7 @@ import {
   getWinReason,
 } from "@/game/final-results-flow";
 import { playSound } from "@/lib/sound-engine";
+import { useLeaveRoundBackGuard } from "@/lib/use-leave-round-back-guard";
 
 export default function FinalResultsScreen() {
   const router = useRouter();
@@ -67,15 +68,7 @@ export default function FinalResultsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    function handlePopState() {
-      openLeaveConfirmation();
-      window.history.pushState(null, "", window.location.href);
-    }
-    window.history.pushState(null, "", window.location.href);
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  useLeaveRoundBackGuard(openLeaveConfirmation);
 
   // Handle side-effects (stats and sound) safely inside a useEffect
   useEffect(() => {

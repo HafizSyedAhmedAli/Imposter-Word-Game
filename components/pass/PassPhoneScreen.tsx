@@ -27,6 +27,7 @@ import AllPlayersReadyCard from "./AllPlayersReadyCard";
 import LeaveRoundDialog from "./LeaveRoundDialog";
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
 import { playSound } from "@/lib/sound-engine";
+import { useLeaveRoundBackGuard } from "@/lib/use-leave-round-back-guard";
 
 export default function PassPhoneScreen() {
   const router = useRouter();
@@ -82,15 +83,7 @@ export default function PassPhoneScreen() {
       document.removeEventListener("visibilitychange", handleVisibility);
   }, [passState]);
 
-  useEffect(() => {
-    function handlePopState() {
-      openLeaveConfirmation();
-      window.history.pushState(null, "", window.location.href);
-    }
-    window.history.pushState(null, "", window.location.href);
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  useLeaveRoundBackGuard(openLeaveConfirmation);
 
   if (!session) return null;
 
