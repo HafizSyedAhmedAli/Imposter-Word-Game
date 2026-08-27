@@ -14,3 +14,7 @@ public/sw.js
 # Playwright test artifacts and reports
 /test-results/
 /playwright-report/
+
+# Signing keys - never commit
+android/app/*.jks
+android/keystore.properties
