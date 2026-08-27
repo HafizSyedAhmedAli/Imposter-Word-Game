@@ -14,8 +14,3 @@ public/sw.js
 # Playwright test artifacts and reports
 /test-results/
 /playwright-report/
-
-# Android signing — never commit keystores or their credentials
-*.jks
-*.keystore
-android/keystore.properties
