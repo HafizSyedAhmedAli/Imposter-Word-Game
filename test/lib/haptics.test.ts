@@ -1,9 +1,19 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock @capacitor/haptics itself rather than relying on jsdom's (missing)
-// navigator.vibrate -- this keeps the assertions about *which* style/type
-// was requested independent of whatever the real web fallback happens to
-// do in this environment, and lets us simulate a native-call failure
+// Mock @capacitor/core so we can flip isNativePlatform() per test and
+// exercise both the web path (navigator.vibrate, no plugin involved)
+// and the native path (real Haptics plugin, no navigator.vibrate
+// involved) deterministically.
+let isNative = false;
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    isNativePlatform: () => isNative,
+  },
+}));
+
+// Mock @capacitor/haptics itself for the native-path assertions --
+// independent of whatever the real web fallback happens to do in this
+// environment, and lets us simulate a native-call failure
 // deterministically.
 const impactMock = vi.fn().mockResolvedValue(undefined);
 const notificationMock = vi.fn().mockResolvedValue(undefined);
@@ -17,12 +27,27 @@ vi.mock("@capacitor/haptics", () => ({
   NotificationType: { Success: "SUCCESS", Warning: "WARNING", Error: "ERROR" },
 }));
 
-// Imported after the mock so every call in these tests hits the fakes
+// Imported after the mocks so every call in these tests hits the fakes
 // above instead of the real plugin.
 const { setHapticsEnabled, light, medium, success, error, warning } =
   await import("@/lib/haptics");
 
+const vibrateMock = vi.fn();
+
+beforeEach(() => {
+  // jsdom has no real Vibration API -- stub one so the web path (the
+  // one every button actually hits in the browser/PWA) has something
+  // to call.
+  Object.defineProperty(navigator, "vibrate", {
+    value: vibrateMock,
+    configurable: true,
+    writable: true,
+  });
+});
+
 afterEach(() => {
+  isNative = false;
+  vibrateMock.mockClear();
   impactMock.mockClear();
   notificationMock.mockClear();
   impactMock.mockResolvedValue(undefined);
@@ -32,11 +57,87 @@ afterEach(() => {
   setHapticsEnabled(true);
 });
 
-describe("haptics enabled (default / after setHapticsEnabled(true))", () => {
-  it("light() triggers a Light impact", async () => {
+describe("web platform (browser / installed PWA -- no Capacitor native shell)", () => {
+  it("light() calls navigator.vibrate synchronously, with no plugin involved", () => {
+    light();
+    // No await here on purpose: this is the whole point of the fix --
+    // the call must land in the same tick as the tap, with no promise
+    // hop in between, or the browser can drop the user gesture's
+    // "transient activation" and silently ignore the vibration.
+    expect(vibrateMock).toHaveBeenCalledWith([20]);
+    expect(impactMock).not.toHaveBeenCalled();
+  });
+
+  it("medium() calls navigator.vibrate with a distinct pattern", () => {
+    medium();
+    expect(vibrateMock).toHaveBeenCalledWith([43]);
+  });
+
+  it("success() calls navigator.vibrate with its pattern", () => {
+    success();
+    expect(vibrateMock).toHaveBeenCalledWith([35, 65, 21]);
+    expect(notificationMock).not.toHaveBeenCalled();
+  });
+
+  it("error() calls navigator.vibrate with its pattern", () => {
+    error();
+    expect(vibrateMock).toHaveBeenCalledWith([27, 45, 50]);
+  });
+
+  it("warning() calls navigator.vibrate with its pattern", () => {
+    warning();
+    expect(vibrateMock).toHaveBeenCalledWith([30, 40, 30, 50, 60]);
+  });
+
+  it("suppresses every haptic call while disabled", () => {
+    setHapticsEnabled(false);
+
+    light();
+    medium();
+    success();
+    error();
+    warning();
+
+    expect(vibrateMock).not.toHaveBeenCalled();
+  });
+
+  it("resumes producing haptics once re-enabled", () => {
+    setHapticsEnabled(false);
+    light();
+    expect(vibrateMock).not.toHaveBeenCalled();
+
+    setHapticsEnabled(true);
+    light();
+    expect(vibrateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not throw when navigator.vibrate itself throws", () => {
+    vibrateMock.mockImplementationOnce(() => {
+      throw new Error("Browser does not support the vibrate API");
+    });
+    expect(() => light()).not.toThrow();
+  });
+
+  it("does not throw when navigator.vibrate is unavailable", () => {
+    Object.defineProperty(navigator, "vibrate", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    });
+    expect(() => light()).not.toThrow();
+  });
+});
+
+describe("native platform (Capacitor native shell)", () => {
+  beforeEach(() => {
+    isNative = true;
+  });
+
+  it("light() triggers a Light impact via the native plugin, not navigator.vibrate", async () => {
     light();
     await Promise.resolve();
     expect(impactMock).toHaveBeenCalledWith({ style: "LIGHT" });
+    expect(vibrateMock).not.toHaveBeenCalled();
   });
 
   it("medium() triggers a Medium impact", async () => {
@@ -62,9 +163,7 @@ describe("haptics enabled (default / after setHapticsEnabled(true))", () => {
     await Promise.resolve();
     expect(notificationMock).toHaveBeenCalledWith({ type: "WARNING" });
   });
-});
 
-describe("haptics disabled (setHapticsEnabled(false))", () => {
   it("suppresses every haptic call while disabled", async () => {
     setHapticsEnabled(false);
 
@@ -79,34 +178,9 @@ describe("haptics disabled (setHapticsEnabled(false))", () => {
     expect(notificationMock).not.toHaveBeenCalled();
   });
 
-  it("resumes producing haptics once re-enabled", async () => {
-    setHapticsEnabled(false);
-    light();
-    await Promise.resolve();
-    expect(impactMock).not.toHaveBeenCalled();
-
-    setHapticsEnabled(true);
-    light();
-    await Promise.resolve();
-    expect(impactMock).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("haptic failures never throw", () => {
-  it("light() does not throw when the native/web call rejects", async () => {
-    impactMock.mockRejectedValueOnce(
-      new Error("Browser does not support the vibrate API"),
-    );
+  it("does not throw when the native call rejects", async () => {
+    impactMock.mockRejectedValueOnce(new Error("native failure"));
     expect(() => light()).not.toThrow();
-    // Let the rejected promise settle inside the fire-and-forget call so
-    // an unhandled rejection would surface here if the catch were missing.
-    await Promise.resolve();
-    await Promise.resolve();
-  });
-
-  it("warning() does not throw when the native/web call rejects", async () => {
-    notificationMock.mockRejectedValueOnce(new Error("native failure"));
-    expect(() => warning()).not.toThrow();
     await Promise.resolve();
     await Promise.resolve();
   });

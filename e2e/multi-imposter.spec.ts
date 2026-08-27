@@ -43,6 +43,16 @@ test.describe("Multi-imposter mode", () => {
   test("every seat resolves to exactly one role, and voting still works afterward", async ({
     page,
   }) => {
+    // 7 players each carry a deliberate ~2s reveal-hold on Pass Phone
+    // (see PlayerRevealCard/ImposterRevealCard's CREW_REVEAL_DELAY_MS /
+    // REVEAL_HOLD_MS) before adding roster entry, navigation, and
+    // Discussion/Voting on top -- comfortably past the suite's default
+    // 30s budget on a production `next start` server, especially under
+    // load. This is real, intentional UX time, not something to shrink
+    // in app code -- tripling the timeout (test.slow()) is the correct
+    // fix for a test that's inherently heavier than the default case.
+    test.slow();
+
     await mockAiRoundGeneration(page);
 
     await page.goto("/setup");

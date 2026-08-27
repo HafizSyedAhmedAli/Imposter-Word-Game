@@ -39,6 +39,15 @@ test.describe("Voting", () => {
   test("results/elimination screen appears once every player has voted", async ({
     page,
   }) => {
+    // Full pass-the-phone (with its ~2s reveal-hold per player -- see
+    // PlayerRevealCard/ImposterRevealCard) *plus* a full 3-vote cycle
+    // *plus* the Results screen render is comfortably heavier than the
+    // suite's default 30s budget on a production `next start` server,
+    // especially under load -- see multi-imposter.spec.ts's identical
+    // note. Not an app bug: the failure trace shows the Results screen
+    // already fully, correctly rendered when the timeout hit.
+    test.slow();
+
     await startGameWithPlayers(page);
     await passAllPlayersAndReachDiscussion(page, DEFAULT_TEST_PLAYERS.length);
     await startVoting(page);
