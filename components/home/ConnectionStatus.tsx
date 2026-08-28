@@ -29,11 +29,6 @@ export default function ConnectionStatus() {
       ) : (
         <WifiOff className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
       )}
-      <span>{online ? "Online" : "Offline"}</span>
-      <span
-        className={`ml-0.5 h-1.5 w-1.5 rounded-full ${online ? "bg-iw-online" : "bg-iw-offline"}`}
-        aria-hidden="true"
-      />
     </div>
   );
 }

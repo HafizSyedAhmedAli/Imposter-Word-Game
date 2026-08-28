@@ -1,4 +1,6 @@
-import { Info } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, Info, ShieldCheck } from "lucide-react";
+import { playSound } from "@/lib/sound-engine";
 
 // Injected at build time from package.json (see next.config.ts) so this
 // never hardcodes a version number that could drift from the real one.
@@ -28,6 +30,33 @@ export default function AboutCard() {
           </span>
         </span>
       </div>
+
+      <Link
+        href="/privacy"
+        onClick={() => playSound("ui-tap")}
+        className="mt-3 flex items-center gap-4 rounded-2xl border border-iw-border bg-iw-surface-2/60 px-4 py-3.5 transition-colors duration-150 hover:border-iw-border-strong hover:bg-iw-surface-2 active:scale-[0.99]"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-iw-violet-500/15 text-iw-violet-300">
+          <ShieldCheck
+            className="h-5 w-5"
+            strokeWidth={2.25}
+            aria-hidden="true"
+          />
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="font-display text-base font-semibold tracking-wide text-iw-ink-100">
+            PRIVACY POLICY
+          </span>
+          <span className="text-sm text-iw-ink-500">
+            What we collect and what stays on your device
+          </span>
+        </span>
+        <ChevronRight
+          className="h-5 w-5 shrink-0 text-iw-ink-500"
+          strokeWidth={2.25}
+          aria-hidden="true"
+        />
+      </Link>
     </section>
   );
 }

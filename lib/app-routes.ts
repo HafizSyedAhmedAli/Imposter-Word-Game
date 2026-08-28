@@ -25,6 +25,7 @@ export const APP_ROUTES = [
   "/results",
   "/final-results",
   "/how-to-play",
+  "/privacy",
   "/settings",
   "/statistics",
 ] as const;

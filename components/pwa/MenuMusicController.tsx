@@ -16,6 +16,7 @@ const MENU_ROUTES = new Set<string>([
   "/",
   "/settings",
   "/how-to-play",
+  "/privacy",
   "/setup",
   "/players",
   "/round",
