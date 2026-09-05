@@ -1,9 +1,15 @@
-import type {
-  Category,
-  Difficulty,
-  GeneratedRoundContent,
+import {
+  ENGLISH,
+  ROMAN_URDU,
+  type Category,
+  type Difficulty,
+  type GameLanguage,
+  type GeneratedRoundContent,
 } from "@/game/game-types";
-import { validateRoundContent } from "@/game/round-validation";
+import {
+  validateRomanUrduHint,
+  validateRoundContent,
+} from "@/game/round-validation";
 import type { WordProvider } from "./word-provider";
 
 const AI_TIMEOUT_MS = 10_000;
@@ -30,8 +36,13 @@ export class AiWordProvider implements WordProvider {
   async generateRoundContent(
     category: Category,
     difficulty: Difficulty,
-    options?: { signal?: AbortSignal; excludeWords?: string[] },
+    options?: {
+      signal?: AbortSignal;
+      excludeWords?: string[];
+      language?: GameLanguage;
+    },
   ): Promise<GeneratedRoundContent> {
+    const language = options?.language ?? ENGLISH;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
@@ -46,6 +57,7 @@ export class AiWordProvider implements WordProvider {
           category,
           difficulty,
           excludeWords: options?.excludeWords ?? [],
+          language,
         }),
         signal: controller.signal,
       });
@@ -65,7 +77,29 @@ export class AiWordProvider implements WordProvider {
         throw new Error(`AI content failed validation: ${validated.reason}`);
       }
 
-      return { word: validated.word, hint: validated.hint, source: "ai" };
+      // Defense in depth, on top of the server-side check in
+      // app/api/round/generate/route.ts: never let a hint containing
+      // Urdu/Arabic/Devanagari script reach the game in Roman Urdu mode,
+      // even if the server-side check were ever bypassed or out of sync.
+      // Throwing here (rather than silently accepting it) lets the
+      // caller (game/game-engine.ts) fall through to tier 2/3, matching
+      // "never silently display Urdu/Arabic-script text in Roman Urdu
+      // mode."
+      if (language === ROMAN_URDU) {
+        const scriptCheck = validateRomanUrduHint(validated.hint);
+        if (!scriptCheck.valid) {
+          throw new Error(
+            `AI content failed validation: ${scriptCheck.reason}`,
+          );
+        }
+      }
+
+      return {
+        word: validated.word,
+        hint: validated.hint,
+        source: "ai",
+        language,
+      };
     } finally {
       clearTimeout(timeout);
       options?.signal?.removeEventListener("abort", onExternalAbort);

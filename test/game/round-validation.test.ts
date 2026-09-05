@@ -87,4 +87,53 @@ describe("validateRoundContent", () => {
     });
     expect(result.valid).toBe(true);
   });
+
+  describe("language: roman-urdu", () => {
+    it("accepts a natural Roman Urdu hint written in Latin letters", () => {
+      const result = validateRoundContent(
+        {
+          word: "Pizza",
+          hint: "Iske slice bana kar khate hain.",
+        },
+        "roman-urdu",
+      );
+      expect(result.valid).toBe(true);
+    });
+
+    it("rejects a hint containing Urdu/Arabic script", () => {
+      const result = validateRoundContent(
+        {
+          word: "Pizza",
+          hint: "اس کے سلائس بنا کر کھاتے ہیں۔",
+        },
+        "roman-urdu",
+      );
+      expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.reason).toMatch(/latin letters only/i);
+      }
+    });
+
+    it("rejects a word containing Devanagari script", () => {
+      const result = validateRoundContent(
+        {
+          word: "पिज़्ज़ा",
+          hint: "Iske slice bana kar khate hain.",
+        },
+        "roman-urdu",
+      );
+      expect(result.valid).toBe(false);
+    });
+
+    it("does not apply the Latin-script check when language is english (default)", () => {
+      // Same non-Latin text -- but without language: "roman-urdu", the
+      // extra script check must never fire, so pre-existing English
+      // validation behavior is completely unchanged.
+      const result = validateRoundContent({
+        word: "Pizza",
+        hint: "A round shared dish.",
+      });
+      expect(result.valid).toBe(true);
+    });
+  });
 });

@@ -23,7 +23,31 @@ describe("IndexedDbCacheProvider (tier 2)", () => {
       word: "Comet",
       hint: "Icy traveler.",
       source: "cache",
+      language: "english",
     });
+  });
+
+  it("returns a roman-urdu cached round when roman-urdu was requested, never an english one", async () => {
+    await cacheAiWord({
+      word: "Pizza",
+      hint: "Iske slice bana kar khate hain.",
+      category: "food",
+      difficulty: "easy",
+      language: "roman-urdu",
+    });
+    await cacheAiWord({
+      word: "Burger",
+      hint: "A common fast-food item.",
+      category: "food",
+      difficulty: "easy",
+      language: "english",
+    });
+
+    const result = await provider.generateRoundContent("food", "easy", {
+      language: "roman-urdu",
+    });
+    expect(result.language).toBe("roman-urdu");
+    expect(result.word).toBe("Pizza");
   });
 
   it("throws when the cache has nothing suitable (empty cache)", async () => {
@@ -59,5 +83,13 @@ describe("FallbackWordProvider (tier 3)", () => {
     await expect(
       provider.generateRoundContent("random", "hard"),
     ).resolves.toBeDefined();
+  });
+
+  it("resolves with roman-urdu content, using latin letters only, when roman-urdu is requested", async () => {
+    const result = await provider.generateRoundContent("food", "easy", {
+      language: "roman-urdu",
+    });
+    expect(result.language).toBe("roman-urdu");
+    expect(result.hint).not.toMatch(/[\u0600-\u06FF\u0900-\u097F]/);
   });
 });

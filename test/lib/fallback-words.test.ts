@@ -55,7 +55,10 @@ describe("getRandomFallbackWord", () => {
 
   it("avoids a word marked recently-used when a non-recent alternative exists", () => {
     const pool = FALLBACK_WORDS.filter(
-      (w) => w.category === "food" && w.difficulty === "easy",
+      (w) =>
+        w.category === "food" &&
+        w.difficulty === "easy" &&
+        w.language === "english",
     );
     // Mark every food/easy entry except the last as recently used, so the
     // function is forced to either pick the sole non-recent entry or (if
@@ -69,7 +72,10 @@ describe("getRandomFallbackWord", () => {
 
   it("falls back to reusing a recent word rather than throwing when the pool is exhausted", () => {
     const pool = FALLBACK_WORDS.filter(
-      (w) => w.category === "food" && w.difficulty === "easy",
+      (w) =>
+        w.category === "food" &&
+        w.difficulty === "easy" &&
+        w.language === "english",
     );
     for (const entry of pool) {
       rememberWordId(entry.id);

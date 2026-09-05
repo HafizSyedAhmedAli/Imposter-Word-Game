@@ -8,16 +8,26 @@ import { expect, type Page } from "@playwright/test";
  * E2E suite deterministic and independent of the real Gemini API key /
  * network access (Step 8 + Step 7 of the task brief) -- every round in
  * these tests resolves via tier 1 with known, fixed content.
+ *
+ * Inspects the request body's `language` field and responds with a
+ * matching fixed pair, so language-selection tests (see
+ * language.spec.ts) get real Roman Urdu content back rather than the
+ * English default -- every other existing spec never selects a
+ * non-English language, so this is purely additive and doesn't change
+ * their fixed "Pizza" / English hint response at all.
  */
 export async function mockAiRoundGeneration(page: Page) {
   await page.route("**/api/round/generate", async (route) => {
+    const body = route.request().postDataJSON() as { language?: string };
+    const isRomanUrdu = body?.language === "roman-urdu";
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        word: "Pizza",
-        hint: "A round dish often shared in slices.",
-      }),
+      body: JSON.stringify(
+        isRomanUrdu
+          ? { word: "Pizza", hint: "Iske slice bana kar khate hain." }
+          : { word: "Pizza", hint: "A round dish often shared in slices." },
+      ),
     });
   });
 }

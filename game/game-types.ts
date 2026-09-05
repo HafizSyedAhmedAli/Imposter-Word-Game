@@ -1,3 +1,4 @@
+// game/game-types.ts
 /**
  * Shared types for game configuration.
  *
@@ -8,6 +9,26 @@
  */
 
 export type GameMode = "classic" | "double" | "triple" | "random";
+
+/**
+ * The content language for a round's word/hint (and its fallback/cache
+ * data). This is deliberately separate from any UI-localization concept
+ * -- see lib/settings-store.ts for where the player's preference lives,
+ * and game/game-engine.ts for how it gets fixed onto a RoundSession once
+ * a round starts. Centralized here (rather than sprinkling raw string
+ * literals across the codebase) so every layer -- settings, AI prompt,
+ * Dexie schema, fallback data, round state -- shares one definition.
+ */
+export const ENGLISH = "english" as const;
+export const ROMAN_URDU = "roman-urdu" as const;
+
+export type GameLanguage = typeof ENGLISH | typeof ROMAN_URDU;
+
+export const GAME_LANGUAGES: GameLanguage[] = [ENGLISH, ROMAN_URDU];
+
+export function isGameLanguage(value: unknown): value is GameLanguage {
+  return value === ENGLISH || value === ROMAN_URDU;
+}
 
 // Category is deliberately kept open-ended (`| string`) so that additional
 // categories added later via the "More" sheet, or loaded from a local
@@ -89,6 +110,14 @@ export type GeneratedRoundContent = {
   word: string;
   hint: string;
   source: RoundContentSource;
+  /**
+   * Which language this specific word/hint pair is in. Always set
+   * explicitly by whichever provider produced the content (AI, cache, or
+   * static fallback) -- never inferred later from the hint text itself,
+   * since that would be unreliable (an English word like "Pizza" reads
+   * the same regardless of which language its hint is in).
+   */
+  language: GameLanguage;
 };
 
 export type PlayerRole =
@@ -102,6 +131,15 @@ export type RoundData = {
   imposterCount: number;
   roles: PlayerRole[];
   contentSource: RoundContentSource;
+  /**
+   * Fixed at round-creation time (see game/game-engine.ts) from the
+   * player's Settings selection at that moment. Deliberately part of
+   * `RoundData` (not re-read from Settings on every render) so that
+   * changing the Settings language mid-round -- or refreshing the page
+   * during Secret Reveal/Voting/Results -- never changes an
+   * already-started round's language out from under the players.
+   */
+  language: GameLanguage;
 };
 
 export type RoundStatus = "preparing" | "ready" | "playing" | "finished";

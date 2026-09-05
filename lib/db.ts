@@ -1,6 +1,10 @@
-// lib/db.ts
 import Dexie, { type Table } from "dexie";
-import type { Category, Difficulty } from "@/game/game-types";
+import {
+  ENGLISH,
+  type Category,
+  type Difficulty,
+  type GameLanguage,
+} from "@/game/game-types";
 import { generateId } from "./id";
 import { getRecentWordIds, rememberWordId } from "./recent-words";
 
@@ -28,6 +32,16 @@ export type WordEntry = {
   hint: string;
   category: Category;
   difficulty: Difficulty;
+  /**
+   * Which language this cached round's word/hint pair is in. Added in
+   * v5 (see migration below) -- kept alongside the content itself so
+   * language-aware selection (getRandomCachedWord) never has to guess
+   * from the text. Rows written before v5 are backfilled to "english"
+   * by the migration; getRandomCachedWord/cacheAiWord also treat a
+   * missing value as "english" defensively, in case a partially-applied
+   * migration ever leaves a row without it.
+   */
+  language: GameLanguage;
   source: "ai";
   createdAt: number;
   /** Epoch ms this entry was last handed to a game, or `null` if it has
@@ -53,6 +67,10 @@ export type SettingsRow = {
   // Optional: rows saved before this feature existed won't have it --
   // getSettings() defaults it in, see lib/settings-store.ts.
   music?: boolean;
+  // Optional for the same reason as `music` above -- rows saved before
+  // the Language setting existed won't have it. getSettings() defaults
+  // it to English, never trusting an unrecognized stored value either.
+  language?: string;
 };
 
 class ImposterWordDB extends Dexie {
@@ -119,6 +137,34 @@ class ImposterWordDB extends Dexie {
         "id, category, difficulty, [category+difficulty], createdAt, normalizedWord, lastUsedAt",
       settings: "id",
     });
+
+    // v5: adds `language` to the AI-cache table for the Roman Urdu
+    // language feature. NON-DESTRUCTIVE, same spirit as v3: every row
+    // written before this version is genuine AI content generated back
+    // when the app only ever produced English, so it's backfilled to
+    // "english" in place rather than cleared. `settings` needs no
+    // schema change -- `language` there is an optional field read with
+    // a default (see lib/settings-store.ts), the same pattern already
+    // used for `music` in v4.
+    this.version(5)
+      .stores({
+        words:
+          "id, category, difficulty, [category+difficulty], createdAt, normalizedWord, lastUsedAt, language, [category+difficulty+language]",
+        settings: "id",
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table<WordEntry, string>("words")
+          .toCollection()
+          .modify((entry) => {
+            // Defensive, idempotent backfill -- same reasoning as v3's
+            // upgrade above: only touch rows that are actually missing
+            // the field.
+            if (typeof entry.language !== "string") {
+              entry.language = ENGLISH;
+            }
+          });
+      });
   }
 }
 
@@ -162,25 +208,36 @@ export async function cacheAiWord(entry: {
   hint: string;
   category: Category;
   difficulty: Difficulty;
+  /** Defaults to English -- see WordEntry.language's doc comment. */
+  language?: GameLanguage;
 }): Promise<void> {
   try {
     const db = getDb();
+    const language = entry.language ?? ENGLISH;
     const normalizedWord = entry.word.trim().toLowerCase();
 
     // Skip if this exact word is already cached for this
-    // category/difficulty. Without this, the AI returning the same word
-    // twice (which it does -- there's no cross-call dedupe on that side)
-    // creates multiple rows with different `id`s. Since
+    // category/difficulty/language. Without this, the AI returning the
+    // same word twice (which it does -- there's no cross-call dedupe on
+    // that side) creates multiple rows with different `id`s. Since
     // getRandomCachedWord's recent-word filter keys on `id`, duplicate
     // rows for the same word defeat repeat-word protection: the "recent"
     // copy gets filtered out, but an identical un-tracked copy is still
     // in the pool. Uses the `normalizedWord` field/index (v3) rather than
     // a per-row `.toLowerCase()` call so the check stays cheap as the
-    // cache grows.
+    // cache grows. `language` is part of the duplicate key -- an
+    // English "Pizza" and a Roman Urdu "Pizza" (same word, different
+    // hint) are deliberately allowed to coexist as separate rows (spec
+    // section 14: cross-language entries must never be filtered against
+    // each other).
     const duplicate = await db.words
       .where("[category+difficulty]")
       .equals([entry.category, entry.difficulty])
-      .filter((w) => w.normalizedWord === normalizedWord)
+      .filter(
+        (w) =>
+          w.normalizedWord === normalizedWord &&
+          (w.language ?? ENGLISH) === language,
+      )
       .first();
     if (duplicate) return;
 
@@ -191,6 +248,7 @@ export async function cacheAiWord(entry: {
       hint: entry.hint,
       category: entry.category,
       difficulty: entry.difficulty,
+      language,
       source: "ai",
       createdAt: Date.now(),
       lastUsedAt: null,
@@ -274,6 +332,8 @@ export async function markRoundUsed(id: string): Promise<void> {
 export async function getRandomCachedWord(
   category: Category,
   difficulty: Difficulty,
+  /** Defaults to English -- see WordEntry.language's doc comment. */
+  language: GameLanguage = ENGLISH,
 ): Promise<WordEntry | null> {
   const db = getDb();
   const all = await db.words.toArray();
@@ -283,7 +343,11 @@ export async function getRandomCachedWord(
   const matching = all.filter(
     (w) =>
       (isRandomCategory || w.category === category) &&
-      w.difficulty === difficulty,
+      w.difficulty === difficulty &&
+      // Rows cached before v5 have no `language` field -- treat them as
+      // English (the only language that existed then), never silently
+      // match them against a Roman Urdu request.
+      (w.language ?? ENGLISH) === language,
   );
   if (matching.length === 0) return null;
 

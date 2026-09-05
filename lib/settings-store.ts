@@ -1,4 +1,6 @@
 import { getDb } from "./db";
+import type { GameLanguage } from "@/game/game-types";
+import { DEFAULT_LANGUAGE, LANGUAGES } from "@/game/game-rules";
 
 /**
  * Device-local preferences shown on the Settings screen. Backed by the
@@ -14,13 +16,38 @@ export type GameSettings = {
   sound: boolean;
   haptics: boolean;
   music: boolean;
+  /**
+   * The content language for future rounds (Settings: Language). Read
+   * once by game/game-engine.ts when a round is prepared and then frozen
+   * onto that round -- changing this mid-round never affects the round
+   * already in progress. Defaults to "english" for backward
+   * compatibility: every install/save that predates this feature must
+   * keep behaving exactly as it did before (see getSettings() below).
+   */
+  language: GameLanguage;
 };
 
 export const DEFAULT_SETTINGS: GameSettings = {
   sound: true,
   haptics: true,
   music: true,
+  language: DEFAULT_LANGUAGE,
 };
+
+const VALID_LANGUAGES = new Set(LANGUAGES.map((l) => l.id));
+
+/**
+ * Narrows an arbitrary stored value down to a known `GameLanguage`,
+ * defaulting to English for anything else (missing field on an old row,
+ * a future/unknown value, corrupted data, etc.) -- language is never
+ * trusted blindly from storage, same principle as the server route never
+ * trusting it blindly from the client (see app/api/round/generate/route.ts).
+ */
+function normalizeLanguage(value: unknown): GameLanguage {
+  return typeof value === "string" && VALID_LANGUAGES.has(value as GameLanguage)
+    ? (value as GameLanguage)
+    : DEFAULT_LANGUAGE;
+}
 
 // Single fixed row -- this app has no concept of multiple local
 // profiles, so there's nothing to key preferences by.
@@ -43,6 +70,9 @@ export async function getSettings(): Promise<GameSettings> {
       // Older saved rows predate the music setting -- default it in
       // rather than letting a stale row silently disable music.
       music: row.music ?? DEFAULT_SETTINGS.music,
+      // Same treatment for language -- rows saved before this feature
+      // existed (or with an invalid value) always resolve to English.
+      language: normalizeLanguage(row.language),
     };
   } catch {
     return DEFAULT_SETTINGS;
@@ -64,6 +94,12 @@ export async function updateSettings(
       ...DEFAULT_SETTINGS,
       ...current,
       ...patch,
+      // `current`/`patch` may carry a raw/unnormalized `language` (e.g.
+      // `current` comes straight off a SettingsRow, whose `language` is
+      // typed as a defensive `string | undefined`) -- normalize it last
+      // so `next` is always a genuine `GameLanguage`, never a bare
+      // `string` that happens to satisfy the spread.
+      language: normalizeLanguage(patch.language ?? current?.language),
     };
     await db.settings.put({ id: SETTINGS_ID, ...next });
     return next;

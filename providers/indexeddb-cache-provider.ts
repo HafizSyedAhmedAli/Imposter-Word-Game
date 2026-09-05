@@ -1,7 +1,9 @@
-import type {
-  Category,
-  Difficulty,
-  GeneratedRoundContent,
+import {
+  ENGLISH,
+  type Category,
+  type Difficulty,
+  type GameLanguage,
+  type GeneratedRoundContent,
 } from "@/game/game-types";
 import { getRandomCachedWord } from "@/lib/db";
 import type { WordProvider } from "./word-provider";
@@ -21,11 +23,18 @@ export class IndexedDbCacheProvider implements WordProvider {
   async generateRoundContent(
     category: Category,
     difficulty: Difficulty,
+    options?: { language?: GameLanguage },
   ): Promise<GeneratedRoundContent> {
-    const cached = await getRandomCachedWord(category, difficulty);
+    const language = options?.language ?? ENGLISH;
+    const cached = await getRandomCachedWord(category, difficulty, language);
     if (!cached) {
       throw new Error("No suitable cached round available.");
     }
-    return { word: cached.word, hint: cached.hint, source: "cache" };
+    return {
+      word: cached.word,
+      hint: cached.hint,
+      source: "cache",
+      language: cached.language ?? ENGLISH,
+    };
   }
 }

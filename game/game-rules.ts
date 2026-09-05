@@ -2,6 +2,7 @@ import type {
   Category,
   Difficulty,
   GameConfig,
+  GameLanguage,
   GameMode,
   Player,
 } from "./game-types";
@@ -55,9 +56,37 @@ export const DIFFICULTIES: {
   description: string;
 }[] = [
   { id: "easy", title: "EASY", description: "Common words & clearer hints" },
-  { id: "medium", title: "MEDIUM", description: "Balanced words & indirect hints" },
+  {
+    id: "medium",
+    title: "MEDIUM",
+    description: "Balanced words & indirect hints",
+  },
   { id: "hard", title: "HARD", description: "Harder words & subtle hints" },
 ];
+
+// Settings screen catalog (Language). Mirrors the CATEGORIES/DIFFICULTIES
+// pattern above -- the UI reads labels from here instead of hardcoding
+// them, and this is the single source of truth for which languages the
+// game actually supports (see lib/settings-store.ts's DEFAULT_SETTINGS
+// and app/api/round/generate/route.ts's server-side allow-list).
+export const LANGUAGES: {
+  id: GameLanguage;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: "english",
+    label: "English",
+    description: "Words and hints in English",
+  },
+  {
+    id: "roman-urdu",
+    label: "Roman Urdu",
+    description: "Hints in Roman Urdu, written with English letters",
+  },
+];
+
+export const DEFAULT_LANGUAGE: GameLanguage = "english";
 
 export const DISCUSSION_TIMER_OPTIONS = [30, 45, 60, 90, 120] as const;
 export const VOTING_TIMER_OPTIONS = [15, 30, 45, 60, 90] as const;
@@ -102,7 +131,8 @@ export function validateGameConfig(config: GameConfig): {
   if (
     config.options.discussionTimer.enabled &&
     !DISCUSSION_TIMER_OPTIONS.includes(
-      config.options.discussionTimer.duration as (typeof DISCUSSION_TIMER_OPTIONS)[number]
+      config.options.discussionTimer
+        .duration as (typeof DISCUSSION_TIMER_OPTIONS)[number],
     )
   ) {
     errors.push("Please choose a valid discussion timer duration.");
@@ -111,7 +141,8 @@ export function validateGameConfig(config: GameConfig): {
   if (
     config.options.votingTimer.enabled &&
     !VOTING_TIMER_OPTIONS.includes(
-      config.options.votingTimer.duration as (typeof VOTING_TIMER_OPTIONS)[number]
+      config.options.votingTimer
+        .duration as (typeof VOTING_TIMER_OPTIONS)[number],
     )
   ) {
     errors.push("Please choose a valid voting timer duration.");
@@ -156,7 +187,10 @@ export function getMinimumPlayersForMode(mode: GameMode): number {
   return GAME_MODE_RULES[mode].minPlayers;
 }
 
-export function isPlayerCountValid(mode: GameMode, playerCount: number): boolean {
+export function isPlayerCountValid(
+  mode: GameMode,
+  playerCount: number,
+): boolean {
   const rules = GAME_MODE_RULES[mode];
   return playerCount >= rules.minPlayers && playerCount <= rules.maxPlayers;
 }
@@ -187,7 +221,10 @@ export function getPlayerCountStatus(
  * UI components can use `getPlayerCountStatus` directly when they need to
  * branch on more than just the text (e.g. picking an icon or color).
  */
-export function getPlayerCountMessage(mode: GameMode, playerCount: number): string {
+export function getPlayerCountMessage(
+  mode: GameMode,
+  playerCount: number,
+): string {
   const status = getPlayerCountStatus(mode, playerCount);
   switch (status) {
     case "empty":
@@ -196,7 +233,9 @@ export function getPlayerCountMessage(mode: GameMode, playerCount: number): stri
       return "At least 3 players are required.";
     case "mode-requirement": {
       const minForMode = getMinimumPlayersForMode(mode);
-      return `${getModeDisplayName(mode)} needs at least ${minForMode} players.`;
+      return `${getModeDisplayName(
+        mode,
+      )} needs at least ${minForMode} players.`;
     }
     case "ready":
       return `${playerCount} players — ready to play!`;
@@ -260,7 +299,11 @@ export function validatePlayerName(
     (p) => p.id !== editingId && p.name.toLowerCase() === trimmed.toLowerCase(),
   );
   if (isDuplicate) {
-    return { valid: false, error: "Each player needs a unique name.", value: trimmed };
+    return {
+      valid: false,
+      error: "Each player needs a unique name.",
+      value: trimmed,
+    };
   }
 
   return { valid: true, value: trimmed };

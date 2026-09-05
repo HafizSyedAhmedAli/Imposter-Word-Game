@@ -32,10 +32,11 @@ describe("AiWordProvider", () => {
       word: "Nebula",
       hint: "A cloud in space.",
       source: "ai",
+      language: "english",
     });
   });
 
-  it("posts to /api/round/generate with category, difficulty, and excludeWords", async () => {
+  it("posts to /api/round/generate with category, difficulty, excludeWords, and language", async () => {
     const fetchMock = mockFetchOnce({
       json: async () => ({ word: "Nebula", hint: "A cloud in space." }),
     });
@@ -52,6 +53,33 @@ describe("AiWordProvider", () => {
           category: "movies",
           difficulty: "hard",
           excludeWords: ["comet"],
+          language: "english",
+        }),
+      }),
+    );
+  });
+
+  it("posts the given language when one is provided", async () => {
+    const fetchMock = mockFetchOnce({
+      json: async () => ({
+        word: "Pizza",
+        hint: "Iske slice bana kar khate hain.",
+      }),
+    });
+
+    const result = await provider.generateRoundContent("food", "easy", {
+      language: "roman-urdu",
+    });
+
+    expect(result.language).toBe("roman-urdu");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/round/generate",
+      expect.objectContaining({
+        body: JSON.stringify({
+          category: "food",
+          difficulty: "easy",
+          excludeWords: [],
+          language: "roman-urdu",
         }),
       }),
     );
@@ -69,6 +97,15 @@ describe("AiWordProvider", () => {
     await expect(provider.generateRoundContent("food", "easy")).rejects.toThrow(
       /failed validation/i,
     );
+  });
+
+  it("throws when a roman-urdu response contains non-Latin script", async () => {
+    mockFetchOnce({
+      json: async () => ({ word: "Pizza", hint: "اردو رسم الخط میں اشارہ" }),
+    });
+    await expect(
+      provider.generateRoundContent("food", "easy", { language: "roman-urdu" }),
+    ).rejects.toThrow(/failed validation/i);
   });
 
   it("throws when fetch itself rejects (network failure)", async () => {

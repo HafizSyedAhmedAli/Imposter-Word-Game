@@ -1,7 +1,9 @@
-import type {
-  Category,
-  Difficulty,
-  GeneratedRoundContent,
+import {
+  ENGLISH,
+  type Category,
+  type Difficulty,
+  type GameLanguage,
+  type GeneratedRoundContent,
 } from "@/game/game-types";
 import { getRandomFallbackWord } from "@/lib/fallback-words";
 import type { WordProvider } from "./word-provider";
@@ -20,8 +22,15 @@ export class FallbackWordProvider implements WordProvider {
   async generateRoundContent(
     category: Category,
     difficulty: Difficulty,
+    options?: { language?: GameLanguage },
   ): Promise<GeneratedRoundContent> {
-    const entry = getRandomFallbackWord(category, difficulty);
-    return { word: entry.word, hint: entry.hint, source: "fallback" };
+    const language = options?.language ?? ENGLISH;
+    const entry = getRandomFallbackWord(category, difficulty, language);
+    return {
+      word: entry.word,
+      hint: entry.hint,
+      source: "fallback",
+      language: entry.language,
+    };
   }
 }

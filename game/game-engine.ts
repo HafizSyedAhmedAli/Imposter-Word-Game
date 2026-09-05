@@ -1,10 +1,13 @@
-import type {
-  Category,
-  Difficulty,
-  GameConfig,
-  GeneratedRoundContent,
-  Player,
-  RoundSession,
+// game/game-engine.ts
+import {
+  ENGLISH,
+  type Category,
+  type Difficulty,
+  type GameConfig,
+  type GameLanguage,
+  type GeneratedRoundContent,
+  type Player,
+  type RoundSession,
 } from "./game-types";
 import { getImposterCount } from "./game-rules";
 import { assignRoles } from "./role-assignment";
@@ -14,12 +17,22 @@ import { getRecentWordText, rememberWordText } from "@/lib/recent-words";
 import { AiWordProvider } from "@/providers/ai-word-provider";
 import { IndexedDbCacheProvider } from "@/providers/indexeddb-cache-provider";
 import { FallbackWordProvider } from "@/providers/fallback-word-provider";
+import { getSettings } from "@/lib/settings-store";
 
 export type PreparationStage = "word" | "hint" | "roles" | "finalizing";
 
 export type PrepareRoundOptions = {
   /** Aborts an in-flight AI request and stops the pipeline early. */
   signal?: AbortSignal;
+  /**
+   * The content language for this round's word/hint. Defaults to
+   * English for backward compatibility with any caller that doesn't
+   * pass it. The caller (components/round/RoundPreparationScreen.tsx)
+   * is expected to read this once from Settings right before starting
+   * preparation -- once passed in here, it's fixed for the entire
+   * round (see RoundData.language's doc comment for why).
+   */
+  language?: GameLanguage;
   /**
    * Called as each stage begins, so the UI can update its status text /
    * progress meter. May return a promise -- the engine awaits it, which
@@ -49,6 +62,7 @@ const fallbackProvider = new FallbackWordProvider();
 async function getRoundContent(
   category: Category,
   difficulty: Difficulty,
+  language: GameLanguage,
   signal?: AbortSignal,
 ): Promise<GeneratedRoundContent> {
   // Skipping a guaranteed-to-fail AI attempt when the device is clearly
@@ -70,6 +84,7 @@ async function getRoundContent(
         {
           signal,
           excludeWords: getRecentWordText(),
+          language,
         },
       );
 
@@ -82,6 +97,7 @@ async function getRoundContent(
         hint: content.hint,
         category,
         difficulty,
+        language: content.language,
       });
 
       rememberWordText(content.word);
@@ -96,6 +112,7 @@ async function getRoundContent(
     const content = await cacheProvider.generateRoundContent(
       category,
       difficulty,
+      { language },
     );
     rememberWordText(content.word);
     return content;
@@ -107,6 +124,7 @@ async function getRoundContent(
   const content = await fallbackProvider.generateRoundContent(
     category,
     difficulty,
+    { language },
   );
   rememberWordText(content.word);
   return content;
@@ -137,10 +155,13 @@ export async function prepareGameRound(
     throw new Error("Imposter count is not valid for this player count.");
   }
 
+  const language = options.language ?? (await getSettings()).language;
+
   await onStage?.("word");
   const content = await getRoundContent(
     config.category,
     config.difficulty,
+    language,
     signal,
   );
   if (signal?.aborted) throw new Error("Round preparation cancelled.");
@@ -165,6 +186,7 @@ export async function prepareGameRound(
       imposterCount,
       roles,
       contentSource: content.source,
+      language: content.language,
     },
     status: "ready",
     currentPlayerIndex: 0,

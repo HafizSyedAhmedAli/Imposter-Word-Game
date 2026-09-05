@@ -22,7 +22,12 @@ afterEach(async () => {
 
 describe("cacheAiWord / getRandomCachedWord", () => {
   it("persists an AI-generated word so it can be retrieved afterward", async () => {
-    await cacheAiWord({ word: "Nebula", hint: "A cloud of gas in space.", category: "movies", difficulty: "hard" });
+    await cacheAiWord({
+      word: "Nebula",
+      hint: "A cloud of gas in space.",
+      category: "movies",
+      difficulty: "hard",
+    });
     const cached = await getRandomCachedWord("movies", "hard");
     expect(cached?.word).toBe("Nebula");
     expect(cached?.source).toBe("ai");
@@ -34,28 +39,60 @@ describe("cacheAiWord / getRandomCachedWord", () => {
   });
 
   it("returns null when the cache has entries but none match category+difficulty", async () => {
-    await cacheAiWord({ word: "Nebula", hint: "Space cloud.", category: "movies", difficulty: "hard" });
+    await cacheAiWord({
+      word: "Nebula",
+      hint: "Space cloud.",
+      category: "movies",
+      difficulty: "hard",
+    });
     const cached = await getRandomCachedWord("food", "easy");
     expect(cached).toBeNull();
   });
 
   it("'random' category matches any cached category", async () => {
-    await cacheAiWord({ word: "Comet", hint: "Icy space traveler.", category: "movies", difficulty: "medium" });
+    await cacheAiWord({
+      word: "Comet",
+      hint: "Icy space traveler.",
+      category: "movies",
+      difficulty: "medium",
+    });
     const cached = await getRandomCachedWord("random", "medium");
     expect(cached?.word).toBe("Comet");
   });
 
   it("does not create a duplicate row for the same normalized word in the same category/difficulty", async () => {
-    await cacheAiWord({ word: "Pizza", hint: "Sliced dish.", category: "food", difficulty: "easy" });
-    await cacheAiWord({ word: "PIZZA", hint: "Different hint.", category: "food", difficulty: "easy" });
+    await cacheAiWord({
+      word: "Pizza",
+      hint: "Sliced dish.",
+      category: "food",
+      difficulty: "easy",
+    });
+    await cacheAiWord({
+      word: "PIZZA",
+      hint: "Different hint.",
+      category: "food",
+      difficulty: "easy",
+    });
     const db = getDb();
-    const rows = await db.words.where({ category: "food", difficulty: "easy" }).toArray();
+    const rows = await db.words
+      .where({ category: "food", difficulty: "easy" })
+      .toArray();
     expect(rows).toHaveLength(1);
   });
 
   it("prefers a word not in the session's recent-word history", async () => {
-    await cacheAiWord({ word: "Alpha", hint: "First letter, sort of.", category: "food", difficulty: "easy" });
-    await cacheAiWord({ word: "Beta", hint: "Second letter, sort of.", category: "food", difficulty: "easy" });
+    await cacheAiWord({
+      word: "Alpha",
+      hint: "First letter, sort of.",
+      category: "food",
+      difficulty: "easy",
+    });
+    await cacheAiWord({
+      word: "Beta",
+      hint: "Second letter, sort of.",
+      category: "food",
+      difficulty: "easy",
+    });
 
     const db = getDb();
     const alpha = await db.words.where({ normalizedWord: "alpha" }).first();
@@ -66,8 +103,18 @@ describe("cacheAiWord / getRandomCachedWord", () => {
   });
 
   it("prefers never-used entries over previously-used ones", async () => {
-    await cacheAiWord({ word: "Used", hint: "Already picked before.", category: "sports", difficulty: "medium" });
-    await cacheAiWord({ word: "Fresh", hint: "Never picked yet.", category: "sports", difficulty: "medium" });
+    await cacheAiWord({
+      word: "Used",
+      hint: "Already picked before.",
+      category: "sports",
+      difficulty: "medium",
+    });
+    await cacheAiWord({
+      word: "Fresh",
+      hint: "Never picked yet.",
+      category: "sports",
+      difficulty: "medium",
+    });
 
     const db = getDb();
     const used = await db.words.where({ normalizedWord: "used" }).first();
@@ -78,7 +125,12 @@ describe("cacheAiWord / getRandomCachedWord", () => {
   });
 
   it("markRoundUsed increments usageCount and stamps lastUsedAt", async () => {
-    await cacheAiWord({ word: "Comet", hint: "Icy traveler.", category: "food", difficulty: "hard" });
+    await cacheAiWord({
+      word: "Comet",
+      hint: "Icy traveler.",
+      category: "food",
+      difficulty: "hard",
+    });
     const db = getDb();
     const entry = await db.words.where({ normalizedWord: "comet" }).first();
     await markRoundUsed(entry!.id);
@@ -88,8 +140,18 @@ describe("cacheAiWord / getRandomCachedWord", () => {
   });
 
   it("recycles least-recently-used entries once every entry has been used at least once", async () => {
-    await cacheAiWord({ word: "One", hint: "First.", category: "countries", difficulty: "easy" });
-    await cacheAiWord({ word: "Two", hint: "Second.", category: "countries", difficulty: "easy" });
+    await cacheAiWord({
+      word: "One",
+      hint: "First.",
+      category: "countries",
+      difficulty: "easy",
+    });
+    await cacheAiWord({
+      word: "Two",
+      hint: "Second.",
+      category: "countries",
+      difficulty: "easy",
+    });
 
     const db = getDb();
     const one = await db.words.where({ normalizedWord: "one" }).first();
@@ -109,7 +171,12 @@ describe("cacheAiWord / getRandomCachedWord", () => {
 
 describe("resetUserData", () => {
   it("clears every cached word", async () => {
-    await cacheAiWord({ word: "Nebula", hint: "Space cloud.", category: "movies", difficulty: "hard" });
+    await cacheAiWord({
+      word: "Nebula",
+      hint: "Space cloud.",
+      category: "movies",
+      difficulty: "hard",
+    });
     await resetUserData();
     const cached = await getRandomCachedWord("movies", "hard");
     expect(cached).toBeNull();
@@ -117,7 +184,12 @@ describe("resetUserData", () => {
 
   it("leaves the database usable immediately afterward", async () => {
     await resetUserData();
-    await cacheAiWord({ word: "Taco", hint: "Folded dish.", category: "food", difficulty: "medium" });
+    await cacheAiWord({
+      word: "Taco",
+      hint: "Folded dish.",
+      category: "food",
+      difficulty: "medium",
+    });
     const cached = await getRandomCachedWord("food", "medium");
     expect(cached?.word).toBe("Taco");
   });
@@ -138,6 +210,7 @@ describe("MAX_CACHED_WORDS eviction", () => {
         hint: "hint",
         category: "food",
         difficulty: "easy",
+        language: "english",
         source: "ai",
         createdAt: i,
         lastUsedAt: null,

@@ -6,6 +6,7 @@ import { warning } from "@/lib/haptics";
 import { resetGameData } from "@/lib/reset-game-data";
 import SettingsHeader from "./SettingsHeader";
 import PreferencesCard from "./PreferencesCard";
+import LanguageCard from "./LanguageCard";
 import InstallAppCard from "./InstallAppCard";
 import ResetGameDataCard from "./ResetGameDataCard";
 import ResetGameDataDialog from "./ResetGameDataDialog";
@@ -60,6 +61,7 @@ export default function SettingsScreen() {
 
         <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 py-6 lg:max-w-4xl">
           <PreferencesCard />
+          <LanguageCard />
           <InstallAppCard />
           <ResetGameDataCard
             status={status}

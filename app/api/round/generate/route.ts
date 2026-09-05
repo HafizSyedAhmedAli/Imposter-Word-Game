@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
-import type { Category, Difficulty } from "@/game/game-types";
-import { validateRoundContent } from "@/game/round-validation";
+import {
+  ENGLISH,
+  ROMAN_URDU,
+  isGameLanguage,
+  type Category,
+  type Difficulty,
+  type GameLanguage,
+} from "@/game/game-types";
+import {
+  validateRomanUrduHint,
+  validateRoundContent,
+} from "@/game/round-validation";
 
 // Node runtime (not edge) -- keeps this close to a normal server
 // environment for the outbound fetch to the AI provider.
@@ -31,15 +41,38 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
 }
 
+// Roman Urdu-specific prompt addendum (spec section 7). Only the HINT
+// is meant to be Roman Urdu -- the word itself should generally stay a
+// common English term, since that's what's natural for a Pakistani/
+// Roman-Urdu-speaking player (spec section 5). Kept as a separate block
+// appended to the shared prompt, rather than a second prompt template,
+// so the two languages never drift on the actual game rules above.
+const ROMAN_URDU_INSTRUCTIONS = `
+Language: Roman Urdu
+
+You are generating a word-game hint for Pakistani players.
+- The word itself should usually stay a common, everyday English word (e.g. Pizza, Football, Umbrella, Laptop) -- do not translate the word into Urdu.
+- Generate the hint in natural Roman Urdu using ONLY Latin/English letters.
+- Do NOT use Urdu, Arabic, or Devanagari script anywhere in the hint.
+- Keep the wording simple, conversational, and easy to understand -- not overly formal.
+- Do not translate an English hint mechanically. Think about the word first and write the hint naturally in Roman Urdu, the way a Pakistani player would actually say it out loud.
+- The hint should help players identify the concept without directly saying the word.`;
+
 function buildPrompt(
   category: Category,
   difficulty: Difficulty,
   excludeWords: string[],
+  language: GameLanguage,
 ): string {
   const exclusionRule =
     excludeWords.length > 0
-      ? `\n- Do not use any of these words -- they were used in recent rounds and must be avoided: ${excludeWords.join(", ")}.`
+      ? `\n- Do not use any of these words -- they were used in recent rounds and must be avoided: ${excludeWords.join(
+          ", ",
+        )}.`
       : "";
+
+  const languageBlock =
+    language === ROMAN_URDU ? `\n${ROMAN_URDU_INSTRUCTIONS}\n` : "";
 
   return `Generate exactly one secret word and one hint for a social party game called "Imposter Word", where most players know a secret word and one "imposter" does not.
 
@@ -53,7 +86,7 @@ Rules:
 - The hint must relate to the word but must NEVER contain the word itself (or an obvious variant of it).
 - Do not use real people, brands, or copyrighted characters as the word.
 - Vary your answer -- avoid defaulting to the single most obvious or stereotypical example for this category every time.${exclusionRule}
-
+${languageBlock}
 Respond with ONLY a JSON object in this exact shape:
 {"word": "...", "hint": "..."}`;
 }
@@ -68,6 +101,7 @@ async function requestRoundContent(
   category: Category,
   difficulty: Difficulty,
   excludeWords: string[],
+  language: GameLanguage,
 ): Promise<{ word: string; hint: string } | null> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
 
@@ -79,7 +113,9 @@ async function requestRoundContent(
     body: JSON.stringify({
       contents: [
         {
-          parts: [{ text: buildPrompt(category, difficulty, excludeWords) }],
+          parts: [
+            { text: buildPrompt(category, difficulty, excludeWords, language) },
+          ],
         },
       ],
       generationConfig: {
@@ -117,11 +153,20 @@ async function requestRoundContent(
   const validated = validateRoundContent(candidate);
   if (!validated.valid) return null;
 
+  // Roman Urdu hints must be Latin-script only -- a model that ignores
+  // the prompt instruction and slips into Urdu/Arabic script is treated
+  // as a failed generation here (the caller's retry loop below gets one
+  // more attempt at it), never returned to the client as-is.
+  if (language === ROMAN_URDU) {
+    const scriptCheck = validateRomanUrduHint(validated.hint);
+    if (!scriptCheck.valid) return null;
+  }
+
   return { word: validated.word, hint: validated.hint };
 }
 
 /**
- * POST { category, difficulty, excludeWords } -> { word, hint }
+ * POST { category, difficulty, excludeWords, language } -> { word, hint }
  *
  * This route is the ONLY place the AI provider's API key is ever read.
  * It never forwards the raw AI response to the client -- only a
@@ -145,6 +190,7 @@ export async function POST(request: Request) {
     category?: Category;
     difficulty?: Difficulty;
     excludeWords?: unknown;
+    language?: unknown;
   };
   try {
     body = await request.json();
@@ -157,6 +203,13 @@ export async function POST(request: Request) {
 
   const category = body.category ?? "random";
   const difficulty = body.difficulty ?? "medium";
+  // Never trust an arbitrary client string here -- only the two known
+  // language values are accepted, anything else (including a missing
+  // field, for backward compatibility with clients built before this
+  // feature) falls back to English.
+  const language: GameLanguage = isGameLanguage(body.language)
+    ? body.language
+    : ENGLISH;
   const MAX_EXCLUDED_WORDS = 8;
   const MAX_EXCLUDED_WORD_LENGTH = 100;
   const excludeWords = Array.isArray(body.excludeWords)
@@ -189,6 +242,7 @@ export async function POST(request: Request) {
         category,
         difficulty,
         excludeWords,
+        language,
       );
       if (!result) break; // a real failure -- fall through to tier 2/3, don't retry a broken response
       if (!excludeSet.has(result.word.toLowerCase())) break; // got a fresh word
