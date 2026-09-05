@@ -175,11 +175,10 @@ async function requestRoundContent(
  * response as a signal to fall back to the local word collection, so
  * failures here are never fatal to the game.
  */
+// app/api/round/generate/route.ts (only the POST handler's retry loop changed)
 export async function POST(request: Request) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    // Misconfiguration, not a player-facing error -- the client falls
-    // back to the local word collection either way.
     return NextResponse.json(
       { error: "AI provider not configured." },
       { status: 503, headers: CORS_HEADERS },
@@ -203,10 +202,6 @@ export async function POST(request: Request) {
 
   const category = body.category ?? "random";
   const difficulty = body.difficulty ?? "medium";
-  // Never trust an arbitrary client string here -- only the two known
-  // language values are accepted, anything else (including a missing
-  // field, for backward compatibility with clients built before this
-  // feature) falls back to English.
   const language: GameLanguage = isGameLanguage(body.language)
     ? body.language
     : ENGLISH;
@@ -228,24 +223,32 @@ export async function POST(request: Request) {
   const excludeSet = new Set(excludeWords);
 
   try {
-    // Up to two attempts: if the model ignores the exclusion list on
-    // the first try (it's a prompt instruction, not an enforced
-    // constraint), retry once with the same exclusion list before
-    // giving up and accepting whatever came back. This is a
-    // best-effort second line of defense on top of the prompt-level
-    // exclusion and temperature above -- never a loop that can hang the
-    // request indefinitely.
+    // Up to two attempts: if the model ignores the exclusion list, or
+    // returns Roman Urdu content that fails validation (non-Latin
+    // script, or -- the reported bug -- a hint that just reads as
+    // plain English), retry once with the same inputs before giving up
+    // and falling through to tier 2/3. This is a best-effort second
+    // line of defense on top of the prompt-level instructions above --
+    // never a loop that can hang the request indefinitely.
     let result: { word: string; hint: string } | null = null;
     for (let attempt = 0; attempt < 2; attempt++) {
-      result = await requestRoundContent(
+      const attemptResult = await requestRoundContent(
         apiKey,
         category,
         difficulty,
         excludeWords,
         language,
       );
-      if (!result) break; // a real failure -- fall through to tier 2/3, don't retry a broken response
-      if (!excludeSet.has(result.word.toLowerCase())) break; // got a fresh word
+      // A null result means requestRoundContent's own validation (JSON
+      // shape, or the Roman Urdu script/English-detection checks)
+      // rejected the model's output -- that's exactly the case that
+      // deserves the one extra attempt described above, so `continue`
+      // rather than bailing out on the first bad response. `result`
+      // only gets overwritten on a real response, so a failed final
+      // attempt still falls through to tier 2/3 with `result` left null.
+      if (!attemptResult) continue;
+      result = attemptResult;
+      if (!excludeSet.has(attemptResult.word.toLowerCase())) break; // got a fresh word
     }
 
     if (!result) {

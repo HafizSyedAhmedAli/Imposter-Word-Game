@@ -1,3 +1,4 @@
+// game/round-validation.ts
 import { GameLanguage } from "./game-types";
 
 const MIN_WORD_LENGTH = 2;
@@ -46,7 +47,10 @@ export function validateRoundContent(
     return { valid: false, reason: "Hint reveals the word." };
   }
 
-  if (language === "roman-urdu" && (containsNonLatinScript(word) || containsNonLatinScript(hint))) {
+  if (
+    language === "roman-urdu" &&
+    (containsNonLatinScript(word) || containsNonLatinScript(hint))
+  ) {
     return {
       valid: false,
       reason: "Roman Urdu content must use Latin letters only.",
@@ -73,11 +77,41 @@ export function containsNonLatinScript(text: string): boolean {
 }
 
 /**
+ * A small set of English function words that essentially never appear
+ * in genuine Roman Urdu (a Roman Urdu sentence borrows English nouns
+ * freely -- "phone", "internet" -- but not English grammar words like
+ * "the"/"was"/"which"). Matched on word boundaries so it doesn't
+ * false-positive on Roman Urdu words that merely contain these letters
+ * as a substring.
+ */
+const ENGLISH_STOPWORD_PATTERN =
+  /\b(the|is|are|was|were|this|that|these|those|and|with|of|our|your|their|his|her|its|from|into|about|because|which|who|whom|whose|will|would|should|could|there|been|being|have|has|had|not|but|for|you|they)\b/gi;
+
+/**
+ * Flags a hint that reads as plain English rather than Roman Urdu --
+ * the failure mode behind the original bug report: the model ignores
+ * the Roman Urdu instruction and returns a fluent English sentence
+ * (e.g. "The star that warms our planet.") which is still pure Latin
+ * script, so `containsNonLatinScript` alone can't catch it. Requires
+ * 2+ distinct stopword matches (not just 1) so a single incidental
+ * English loanword in an otherwise-Urdu sentence doesn't get rejected
+ * -- keeps this in the same spirit as the "not overly aggressive"
+ * script check above.
+ */
+export function looksLikeEnglishNotRomanUrdu(text: string): boolean {
+  const matches = text.match(ENGLISH_STOPWORD_PATTERN) ?? [];
+  const uniqueMatches = new Set(matches.map((word) => word.toLowerCase()));
+  return uniqueMatches.size >= 2;
+}
+
+/**
  * Validates that a Roman Urdu hint is actually written in Latin
- * characters. Deliberately narrow -- it only rejects the specific
- * non-Latin scripts above, never ordinary punctuation or Roman Urdu
- * text itself (spec: "do not implement an overly aggressive
- * validator"). Never throws; callers (the API route and
+ * characters AND doesn't just read as plain English (see
+ * `looksLikeEnglishNotRomanUrdu` above -- the real cause of the "hint
+ * shown in English despite Roman Urdu being selected" bug). Still
+ * deliberately narrow -- it never rejects ordinary punctuation or
+ * genuine Roman Urdu text itself (spec: "do not implement an overly
+ * aggressive validator"). Never throws; callers (the API route and
  * AiWordProvider) decide whether to retry or fall through to the next
  * tier.
  */
@@ -89,6 +123,12 @@ export function validateRomanUrduHint(hint: string): {
     return {
       valid: false,
       reason: "Roman Urdu hint contains non-Latin script.",
+    };
+  }
+  if (looksLikeEnglishNotRomanUrdu(hint)) {
+    return {
+      valid: false,
+      reason: "Roman Urdu hint reads as plain English, not Roman Urdu.",
     };
   }
   return { valid: true };
