@@ -18,6 +18,7 @@ import { AiWordProvider } from "@/providers/ai-word-provider";
 import { IndexedDbCacheProvider } from "@/providers/indexeddb-cache-provider";
 import { FallbackWordProvider } from "@/providers/fallback-word-provider";
 import { getSettings } from "@/lib/settings-store";
+import { analytics, toRoundSource } from "@/lib/analytics";
 
 export type PreparationStage = "word" | "hint" | "roles" | "finalizing";
 
@@ -101,11 +102,24 @@ async function getRoundContent(
       });
 
       rememberWordText(content.word);
+      // AI succeeded and is what will actually serve this round --
+      // analytics is fired here, not gated on anything downstream, and
+      // never delays returning `content` to the caller.
+      analytics.aiRoundGenerated();
+      analytics.roundStarted({ source: toRoundSource(content.source) });
       return content;
     } catch {
       if (signal?.aborted) throw new Error("Round preparation cancelled.");
+      // Tier 1 didn't pan out -- report the fallback once here,
+      // regardless of which of tier 2/3 below ends up serving the round.
+      analytics.aiRoundFallback();
       // Fall through to tier 2 below.
     }
+  } else {
+    // Skipped tier 1 outright because the device is offline (see the
+    // comment above) -- AI was still effectively unavailable, so this
+    // counts as a fallback the same as a failed request would.
+    analytics.aiRoundFallback();
   }
 
   try {
@@ -115,6 +129,7 @@ async function getRoundContent(
       { language },
     );
     rememberWordText(content.word);
+    analytics.roundStarted({ source: toRoundSource(content.source) });
     return content;
   } catch {
     if (signal?.aborted) throw new Error("Round preparation cancelled.");
@@ -127,6 +142,7 @@ async function getRoundContent(
     { language },
   );
   rememberWordText(content.word);
+  analytics.roundStarted({ source: toRoundSource(content.source) });
   return content;
 }
 

@@ -26,6 +26,7 @@ import ImposterRevealCard from "./ImposterRevealCard";
 import AllPlayersReadyCard from "./AllPlayersReadyCard";
 import LeaveRoundDialog from "./LeaveRoundDialog";
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
+import { analytics } from "@/lib/analytics";
 import { light } from "@/lib/haptics";
 import { playSound } from "@/lib/sound-engine";
 import { useLeaveRoundBackGuard } from "@/lib/use-leave-round-back-guard";
@@ -174,6 +175,11 @@ export default function PassPhoneScreen() {
   }
 
   function handleLeaveConfirmed() {
+    analytics.gameAbandoned({
+      phase: "pass",
+      playerCount: activeSession.players.length,
+      mode: activeSession.config.mode,
+    });
     clearStoredRoundSession();
     router.push("/players");
   }

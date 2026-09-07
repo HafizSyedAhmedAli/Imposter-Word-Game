@@ -15,6 +15,8 @@ import ContinueButton from "./ContinueButton";
 import PrivacyNotice from "./PrivacyNotice";
 import { light } from "@/lib/haptics";
 import { playSound } from "@/lib/sound-engine";
+import { analytics } from "@/lib/analytics";
+import type { GameMode } from "@/game/game-types";
 
 export default function GameSetupScreen() {
   const router = useRouter();
@@ -27,6 +29,11 @@ export default function GameSetupScreen() {
     setVotingTimer,
   } = useGameSetup();
   const [error, setError] = useState<string | null>(null);
+
+  function handleModeChange(mode: GameMode) {
+    analytics.modeSelected(mode);
+    setMode(mode);
+  }
 
   function handleContinue() {
     // Configuration-only validation. Player-count-dependent checks (like
@@ -56,7 +63,7 @@ export default function GameSetupScreen() {
             description="Select how many imposters will be in the game."
             delay="40ms"
           >
-            <GameModeSelector mode={config.mode} onChange={setMode} />
+            <GameModeSelector mode={config.mode} onChange={handleModeChange} />
           </SetupSection>
 
           <CategorySelector category={config.category} onChange={setCategory} />

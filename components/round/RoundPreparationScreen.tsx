@@ -20,6 +20,7 @@ import PreparationStatus from "./PreparationStatus";
 import RoundSourceIndicator from "./RoundSourceIndicator";
 import RoundErrorRecovery from "./RoundErrorRecovery";
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
+import { analytics, toRoundSource } from "@/lib/analytics";
 
 type ScreenPhase = "preparing" | "ready" | "no-players" | "error";
 
@@ -114,6 +115,8 @@ export default function RoundPreparationScreen() {
 
     const controller = new AbortController();
     abortRef.current = controller;
+    const onlineAtStart =
+      typeof navigator === "undefined" ? true : navigator.onLine;
 
     try {
       const prepared = await prepareGameRound(config, players, {
@@ -132,6 +135,19 @@ export default function RoundPreparationScreen() {
       markActiveGameRoute("/round");
       setSession(prepared);
       setPhase("ready");
+
+      // The game has genuinely started now -- round content resolved,
+      // roles assigned, and stored. Fired after the state above, never
+      // awaited, so it can never delay or block the player reaching
+      // Screen 5 (see lib/analytics.ts's doc comment).
+      analytics.gameStarted({
+        playerCount: prepared.players.length,
+        mode: prepared.config.mode,
+        category: prepared.config.category,
+        difficulty: prepared.config.difficulty,
+        roundSource: toRoundSource(prepared.round.contentSource),
+        offline: !onlineAtStart,
+      });
 
       await wait(1100);
       if (!controller.signal.aborted) {
@@ -225,6 +241,15 @@ export default function RoundPreparationScreen() {
   }
 
   function confirmLeave() {
+    // Only reachable from phase "ready" (see handleBack below) -- the
+    // round has already been prepared (game_started already fired) and
+    // is now being discarded before the player ever reaches Pass, so
+    // this is a genuine abandonment, not a setup cancellation.
+    analytics.gameAbandoned({
+      phase: "round-ready",
+      playerCount: session?.players.length,
+      mode: session?.config.mode,
+    });
     clearStoredRoundSession();
     router.push("/players");
   }

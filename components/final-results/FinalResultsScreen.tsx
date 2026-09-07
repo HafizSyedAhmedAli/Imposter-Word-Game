@@ -18,6 +18,7 @@ import {
   getStoredRoundSession,
 } from "@/lib/round-session-store";
 import { recordFinalResult } from "@/lib/game-statistics-store";
+import { analytics } from "@/lib/analytics";
 import { isVotingComplete } from "@/game/vote-flow";
 import { getHighestVoteCount } from "@/game/results-flow";
 import type { RoundSession } from "@/game/game-types";
@@ -81,6 +82,14 @@ export default function FinalResultsScreen() {
     if (recordedRef.current !== session.id) {
       recordedRef.current = session.id;
       recordFinalResult(session, outcome);
+      // Same idempotency guard as the statistics write above -- fires
+      // exactly once per finished game, never on a rerender or refresh
+      // of this screen.
+      analytics.gameCompleted({
+        playerCount: session.players.length,
+        mode: session.config.mode,
+        winner: outcome,
+      });
     }
 
     // 2. Play Outcome Sound (+ matching Success haptic for either win --

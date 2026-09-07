@@ -21,6 +21,7 @@ import DiscussionStatusCard from "./DiscussionStatusCard";
 import DiscussionTimer from "./DiscussionTimer";
 import DiscussionTipsCard from "./DiscussionTipsCard";
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
+import { analytics } from "@/lib/analytics";
 import { playSound } from "@/lib/sound-engine";
 import { useLeaveRoundBackGuard } from "@/lib/use-leave-round-back-guard";
 
@@ -82,6 +83,11 @@ export default function DiscussionScreen() {
   }
 
   function handleLeaveConfirmed() {
+    analytics.gameAbandoned({
+      phase: "discussion",
+      playerCount: session!.players.length,
+      mode: session!.config.mode,
+    });
     clearStoredRoundSession();
     router.push("/players");
   }

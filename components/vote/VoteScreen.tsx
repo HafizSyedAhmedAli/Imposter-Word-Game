@@ -15,6 +15,7 @@ import {
   type VoteScreenState,
 } from "@/game/vote-flow";
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
+import { analytics } from "@/lib/analytics";
 import { light, medium } from "@/lib/haptics";
 import {
   clearStoredRoundSession,
@@ -232,6 +233,11 @@ export default function VoteScreen() {
   }
 
   function handleLeaveConfirmed() {
+    analytics.gameAbandoned({
+      phase: "voting",
+      playerCount: session!.players.length,
+      mode: session!.config.mode,
+    });
     clearStoredRoundSession();
     router.push("/players");
   }

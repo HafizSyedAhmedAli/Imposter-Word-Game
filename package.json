@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "emit": "npx tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
@@ -34,6 +35,7 @@
     "howler": "^2.2.4",
     "lucide-react": "^1.31.0",
     "next": "16.3.0",
+    "posthog-js": "^1.427.2",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

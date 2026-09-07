@@ -15,6 +15,7 @@ import {
 } from "@/game/results-flow";
 import { isVotingComplete } from "@/game/vote-flow"; // add this import
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
+import { analytics } from "@/lib/analytics";
 import { medium } from "@/lib/haptics";
 import {
   clearStoredRoundSession,
@@ -118,6 +119,11 @@ export default function ResultsScreen() {
   }
 
   function handleLeaveConfirmed() {
+    analytics.gameAbandoned({
+      phase: "results",
+      playerCount: session!.players.length,
+      mode: session!.config.mode,
+    });
     clearStoredRoundSession();
     router.push("/players");
   }
