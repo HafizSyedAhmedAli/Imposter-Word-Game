@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import { warning } from "@/lib/haptics";
+import { captureError } from "@/lib/monitoring";
 import { resetGameData } from "@/lib/reset-game-data";
 import SettingsHeader from "./SettingsHeader";
 import PreferencesCard from "./PreferencesCard";
@@ -47,6 +48,7 @@ export default function SettingsScreen() {
         // person only ever sees a friendly, generic message (spec:
         // never expose raw IndexedDB/Dexie stack traces).
         console.error("Failed to reset game data:", error);
+        captureError(error, { phase: "settings-reset-game-data" });
         setStatus("error");
         setErrorMessage("Couldn't reset your game data. Please try again.");
       });

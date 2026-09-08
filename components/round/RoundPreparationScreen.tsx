@@ -21,6 +21,7 @@ import RoundSourceIndicator from "./RoundSourceIndicator";
 import RoundErrorRecovery from "./RoundErrorRecovery";
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
 import { analytics, toRoundSource } from "@/lib/analytics";
+import { captureError, setGameContext } from "@/lib/monitoring";
 
 type ScreenPhase = "preparing" | "ready" | "no-players" | "error";
 
@@ -149,12 +150,39 @@ export default function RoundPreparationScreen() {
         offline: !onlineAtStart,
       });
 
+      // Safe, coarse technical context attached to any future Sentry
+      // event for the rest of this round -- never the word/hint or a
+      // player's name/id (see lib/monitoring.ts). Purely diagnostic;
+      // never awaited or allowed to affect the flow below.
+      setGameContext({
+        mode: prepared.config.mode,
+        category: prepared.config.category,
+        difficulty: prepared.config.difficulty,
+        playerCount: prepared.players.length,
+        imposterCount: prepared.round.imposterCount,
+        roundSource: prepared.round.contentSource,
+        language: prepared.round.language,
+        online: onlineAtStart,
+      });
+
       await wait(1100);
       if (!controller.signal.aborted) {
         router.push("/pass");
       }
-    } catch {
+    } catch (error) {
       if (controller.signal.aborted) return;
+      // A genuine, unexpected round-preparation failure -- NOT the
+      // expected AI-fallback path (that's handled entirely inside
+      // game/game-engine.ts's getRoundContent and never throws). The
+      // most common real cause here is an invalid imposter count for
+      // this player count/mode (see prepareGameRound's doc comment).
+      captureError(error, {
+        mode: config.mode,
+        category: config.category,
+        difficulty: config.difficulty,
+        playerCount: players.length,
+        phase: "round-preparation",
+      });
       setPhase("error");
     }
   }

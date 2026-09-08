@@ -7,6 +7,7 @@ import type {
   RoundContentSource,
 } from "@/game/game-types";
 import type { FinalOutcome } from "@/game/final-results-flow";
+import { addBreadcrumb } from "@/lib/monitoring";
 
 /**
  * Lightweight, privacy-conscious product analytics (PostHog). This
@@ -55,8 +56,7 @@ function toWinner(outcome: FinalOutcome): "crew" | "imposters" {
 // the production deploy -- opt-in only (unset/anything other than
 // "false" stays enabled), so no env setup is required for this to work
 // correctly once deployed. See spec section 20.
-const analyticsEnabled =
-  process.env.NEXT_PUBLIC_ANALYTICS_ENABLED !== "false";
+const analyticsEnabled = process.env.NEXT_PUBLIC_ANALYTICS_ENABLED !== "false";
 
 /**
  * Wraps every `posthog.capture()` call so a thrown error (an ad
@@ -68,6 +68,21 @@ function safeTrack(
   name: string,
   properties?: Record<string, string | number | boolean | null>,
 ): void {
+  // Every one of this file's helpers already fires at exactly the game
+  // lifecycle moments Sentry error monitoring wants breadcrumbs for
+  // (game started, round started, AI fallback, etc. -- see each
+  // helper's doc comment), and `properties` here is already the same
+  // privacy-scrubbed shape sent to PostHog (never the secret word/hint
+  // or a player's name). Piggybacking the Sentry breadcrumb on this
+  // single choke point, rather than adding a second call at every site
+  // that calls into `analytics`, keeps the two vendors' instrumentation
+  // from drifting apart. This runs independently of the PostHog-specific
+  // gates below -- breadcrumbs are crash-diagnostic context, not
+  // opt-out-able product analytics (see `NEXT_PUBLIC_ANALYTICS_ENABLED`
+  // above), and lib/monitoring.ts's own `addBreadcrumb` is always a safe
+  // no-op if Sentry isn't configured.
+  addBreadcrumb(name, properties ?? undefined);
+
   if (!analyticsEnabled) return;
   if (typeof window === "undefined") return;
   // `posthog.init()` (lib/posthog-provider.tsx) may not have run yet --
@@ -138,7 +153,11 @@ export const analytics = {
    * which would produce false positives. See each screen's
    * `handleLeaveConfirmed`.
    */
-  gameAbandoned(data: { phase: string; playerCount?: number; mode?: GameMode }) {
+  gameAbandoned(data: {
+    phase: string;
+    playerCount?: number;
+    mode?: GameMode;
+  }) {
     safeTrack("game_abandoned", {
       phase: data.phase,
       ...(data.playerCount !== undefined
@@ -172,7 +191,10 @@ export const analytics = {
    * new analytics module.
    */
   roundCompleted(data?: { source?: RoundSource }) {
-    safeTrack("round_completed", data?.source ? { source: data.source } : undefined);
+    safeTrack(
+      "round_completed",
+      data?.source ? { source: data.source } : undefined,
+    );
   },
 
   /**

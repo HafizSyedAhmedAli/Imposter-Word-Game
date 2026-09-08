@@ -1,3 +1,4 @@
+// lib/db.ts
 import Dexie, { type Table } from "dexie";
 import {
   ENGLISH,
@@ -6,6 +7,7 @@ import {
   type GameLanguage,
 } from "@/game/game-types";
 import { generateId } from "./id";
+import { captureError } from "./monitoring";
 import { getRecentWordIds, rememberWordId } from "./recent-words";
 
 /**
@@ -265,8 +267,11 @@ export async function cacheAiWord(entry: {
         .primaryKeys();
       await db.words.bulkDelete(stale);
     }
-  } catch {
-    // Non-fatal -- see doc comment above.
+  } catch (error) {
+    // Non-fatal -- see doc comment above. Still worth knowing about in
+    // aggregate (e.g. IndexedDB quota exhaustion) without ever blocking
+    // or surfacing to the player.
+    captureError(error, { phase: "cache-ai-word" });
   }
 }
 
@@ -288,8 +293,9 @@ export async function markRoundUsed(id: string): Promise<void> {
       usageCount: entry.usageCount + 1,
       lastUsedAt: Date.now(),
     });
-  } catch {
+  } catch (error) {
     // Non-fatal -- see doc comment above.
+    captureError(error, { phase: "mark-round-used" });
   }
 }
 
