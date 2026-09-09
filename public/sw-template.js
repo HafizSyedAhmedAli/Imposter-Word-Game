@@ -48,6 +48,7 @@ const APP_ROUTES = [
   "/how-to-play",
   "/privacy",
   "/settings",
+  "/settings/custom-words",
   "/statistics",
 ];
 

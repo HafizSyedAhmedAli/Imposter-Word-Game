@@ -12,6 +12,7 @@ import InstallAppCard from "./InstallAppCard";
 import ResetGameDataCard from "./ResetGameDataCard";
 import ResetGameDataDialog from "./ResetGameDataDialog";
 import AboutCard from "./AboutCard";
+import CustomWordsCard from "./CustomWordsCard";
 
 export type ResetStatus = "idle" | "resetting" | "success" | "error";
 
@@ -64,6 +65,7 @@ export default function SettingsScreen() {
         <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 py-6 lg:max-w-4xl">
           <PreferencesCard />
           <LanguageCard />
+           <CustomWordsCard />
           <InstallAppCard />
           <ResetGameDataCard
             status={status}

@@ -15,6 +15,24 @@ import {
 } from "@/game/custom-word-rules";
 
 /**
+ * A strictly-increasing timestamp, used only for `CustomWordEntry.createdAt`.
+ * Two custom words saved back-to-back (e.g. two `addCustomWord` calls in
+ * the same test, or a fast successive real add) can land in the same
+ * millisecond under plain `Date.now()`; `getCustomWords`'s
+ * `orderBy("createdAt")` then breaks that tie by primary key (a random
+ * UUID) instead of insertion order, so "newest first" silently stops
+ * being true. This never returns the same or an earlier value than its
+ * previous call, so insertion order is always preserved regardless of
+ * how fast two saves happen.
+ */
+
+let lastCustomWordTimestamp = 0;
+function nextCustomWordTimestamp(): number {
+  lastCustomWordTimestamp = Math.max(Date.now(), lastCustomWordTimestamp + 1);
+  return lastCustomWordTimestamp;
+}
+
+/**
  * A cached round, always the result of a successful AI generation.
  * `source` is always `"ai"` -- this table is NOT a general-purpose word
  * collection, it's specifically "AI content we've seen before and can
@@ -491,7 +509,7 @@ export async function addCustomWord(input: {
     normalizedWord: validation.value.toLowerCase(),
     category: input.category,
     difficulty: input.difficulty,
-    createdAt: Date.now(),
+    createdAt: nextCustomWordTimestamp(),
   };
   await db.customWords.put(entry);
   return { ok: true, entry };

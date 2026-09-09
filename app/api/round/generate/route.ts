@@ -23,8 +23,6 @@ const DIFFICULTY_GUIDANCE: Record<Difficulty, string> = {
   hard: "Use a less obvious, more specific concept. The hint should be subtle, without being unfair.",
 };
 
-// Add near the top, after the existing DIFFICULTY_GUIDANCE etc.:
-
 // The Capacitor build calls this route cross-origin (from
 // capacitor://localhost or https://localhost, not this route's own
 // domain -- see providers/ai-word-provider.ts). The response never
@@ -89,6 +87,43 @@ Rules:
 ${languageBlock}
 Respond with ONLY a JSON object in this exact shape:
 {"word": "...", "hint": "..."}`;
+}
+
+/**
+ * Hint-only prompt for a Custom Word (spec: "CUSTOM WORD + AI HINT" --
+ * the word itself must stay exactly what the player saved; only a hint
+ * needs generating). Deliberately a separate, smaller prompt rather
+ * than reusing `buildPrompt` above -- that one instructs the model to
+ * invent its OWN word, which is the opposite of what's needed here.
+ * Shares the same difficulty guidance and Roman Urdu instructions so
+ * hint quality/language rules never drift between the two prompts.
+ */
+function buildHintPrompt(
+  word: string,
+  category: Category | undefined,
+  difficulty: Difficulty,
+  language: GameLanguage,
+): string {
+  const categoryLine =
+    category && category !== "random"
+      ? `\nThe word's category is "${category}" -- let that inform the hint's angle if useful.`
+      : "";
+  const languageBlock =
+    language === ROMAN_URDU ? `\n${ROMAN_URDU_INSTRUCTIONS}\n` : "";
+
+  return `Generate exactly one hint for a social party game called "Imposter Word", where most players know a secret word and one "imposter" does not.
+
+The secret word has already been chosen by a player: "${word}"
+Difficulty: ${difficulty}
+
+Rules:
+- Do NOT change, translate, or restate the word itself -- it is fixed. Only write a hint about it.
+- The hint must relate to the word but must NEVER contain the word itself, an obvious variant of it, or a direct synonym that gives it away.
+- ${DIFFICULTY_GUIDANCE[difficulty]}
+- The hint must be appropriate for all ages -- never offensive, violent, or explicit.${categoryLine}
+${languageBlock}
+Respond with ONLY a JSON object in this exact shape:
+{"hint": "..."}`;
 }
 
 /**
@@ -166,16 +201,90 @@ async function requestRoundContent(
 }
 
 /**
+ * The Custom Words counterpart to `requestRoundContent` above: asks the
+ * AI for a hint for a word that's already fixed (a player's saved
+ * Custom Word), instead of asking it to invent its own word. Reuses
+ * `validateRoundContent` (game/round-validation.ts) by passing the
+ * supplied word alongside the model's hint -- exactly the same
+ * "hint must not reveal the word" / length / Roman-Urdu-script checks
+ * `requestRoundContent` gets, with zero duplicated validation logic.
+ */
+async function requestHintForWord(
+  apiKey: string,
+  word: string,
+  category: Category | undefined,
+  difficulty: Difficulty,
+  language: GameLanguage,
+): Promise<{ hint: string } | null> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
+
+  const aiResponse = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { text: buildHintPrompt(word, category, difficulty, language) },
+          ],
+        },
+      ],
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 1.0,
+      },
+    }),
+  });
+
+  if (!aiResponse.ok) return null;
+
+  const data = await aiResponse.json();
+  const rawText: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch {
+    return null;
+  }
+
+  const candidate =
+    typeof parsed === "object" && parsed !== null
+      ? (parsed as { hint?: unknown })
+      : {};
+
+  // Passing the *supplied* word (not anything the model returned) is
+  // the whole point here -- it's what guarantees the hint is actually
+  // validated against the real secret word, not a word the model made up.
+  const validated = validateRoundContent(
+    { word, hint: candidate.hint },
+    language,
+  );
+  if (!validated.valid) return null;
+
+  if (language === ROMAN_URDU) {
+    const scriptCheck = validateRomanUrduHint(validated.hint);
+    if (!scriptCheck.valid) return null;
+  }
+
+  return { hint: validated.hint };
+}
+
+/**
  * POST { category, difficulty, excludeWords, language } -> { word, hint }
+ * POST { word, difficulty, language } -> { hint }  (Custom Words hint-only mode)
  *
  * This route is the ONLY place the AI provider's API key is ever read.
  * It never forwards the raw AI response to the client -- only a
- * validated { word, hint } pair, or a generic error. The client-side
- * AiWordProvider (providers/ai-word-provider.ts) treats ANY non-2xx
- * response as a signal to fall back to the local word collection, so
- * failures here are never fatal to the game.
+ * validated { word, hint } pair (or { hint } alone for the Custom
+ * Words branch), or a generic error. The client-side AiWordProvider
+ * (providers/ai-word-provider.ts) treats ANY non-2xx response as a
+ * signal to fall back to the local word collection, so failures here
+ * are never fatal to the game; providers/custom-word-provider.ts does
+ * the same for its own fallback.
  */
-// app/api/round/generate/route.ts (only the POST handler's retry loop changed)
 export async function POST(request: Request) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -190,6 +299,8 @@ export async function POST(request: Request) {
     difficulty?: Difficulty;
     excludeWords?: unknown;
     language?: unknown;
+    /** Present only for Custom Words hint requests -- see below. */
+    word?: unknown;
   };
   try {
     body = await request.json();
@@ -205,6 +316,47 @@ export async function POST(request: Request) {
   const language: GameLanguage = isGameLanguage(body.language)
     ? body.language
     : ENGLISH;
+
+  // Custom Words hint-only mode (providers/custom-word-provider.ts): a
+  // `word` field means the caller already has a fixed secret word (a
+  // player's saved Custom Word) and only needs a hint for it -- never a
+  // newly-invented word. Deliberately an early return, entirely before
+  // the normal category/difficulty round-generation logic below, so
+  // that existing behavior for every other caller is untouched.
+  const suppliedWord = typeof body.word === "string" ? body.word.trim() : "";
+  if (suppliedWord) {
+    try {
+      let hintResult: { hint: string } | null = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        hintResult = await requestHintForWord(
+          apiKey,
+          suppliedWord,
+          body.category,
+          difficulty,
+          language,
+        );
+        if (hintResult) break;
+      }
+
+      if (!hintResult) {
+        return NextResponse.json(
+          { error: "Hint generation failed." },
+          { status: 502, headers: CORS_HEADERS },
+        );
+      }
+
+      return NextResponse.json(
+        { hint: hintResult.hint },
+        { headers: CORS_HEADERS },
+      );
+    } catch {
+      return NextResponse.json(
+        { error: "Hint generation failed." },
+        { status: 502, headers: CORS_HEADERS },
+      );
+    }
+  }
+
   const MAX_EXCLUDED_WORDS = 8;
   const MAX_EXCLUDED_WORD_LENGTH = 100;
   const excludeWords = Array.isArray(body.excludeWords)

@@ -97,9 +97,13 @@ export type GameSession = {
  *   "cache"    -- a previously AI-generated round, reused from the
  *                 IndexedDB cache (tier 2)
  *   "fallback" -- the static, in-bundle emergency word list (tier 3)
+ *   "custom"   -- a player-authored word from Settings -> Custom Words
+ *                 (lib/db.ts's `customWords` table), selected instead of
+ *                 the 3-tier chain above when the round's category is
+ *                 the CUSTOM_CATEGORY pseudo-category (game/game-rules.ts)
  * See game/game-engine.ts for the priority order between them.
  */
-export type RoundContentSource = "ai" | "cache" | "fallback";
+export type RoundContentSource = "ai" | "cache" | "fallback" | "custom";
 
 /**
  * The output of a word provider (AI or local), before it's attached to a
