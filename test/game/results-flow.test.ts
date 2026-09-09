@@ -8,6 +8,8 @@ import {
   applyVerdict,
   getRoundOutcome,
   continueRound,
+  getVotingHistory,
+  recordVotingHistoryEntry,
 } from "@/game/results-flow";
 import { SKIP_VOTE } from "@/game/vote-flow";
 import { baseSession, multiImposterSession } from "../helpers/fixtures";
@@ -179,5 +181,94 @@ describe("continueRound", () => {
     const session = baseSession({ eliminatedPlayerIds: ["p2"] });
     const next = continueRound(session);
     expect(next.eliminatedPlayerIds).toEqual(["p2"]);
+  });
+
+  it("carries votingHistory over untouched", () => {
+    const session = baseSession({
+      votes: { p2: "p1", p3: "p1", p4: "p1" },
+    });
+    const withHistory = recordVotingHistoryEntry(session);
+    const next = continueRound(withHistory);
+    expect(next.votingHistory).toEqual(withHistory.votingHistory);
+  });
+});
+
+describe("getVotingHistory / recordVotingHistoryEntry", () => {
+  it("returns an empty array when no history has been recorded yet", () => {
+    const session = baseSession();
+    expect(getVotingHistory(session)).toEqual([]);
+  });
+
+  it("records the tally and verdict for a decisive round", () => {
+    const session = baseSession({
+      votes: { p2: "p1", p3: "p1", p4: "p1" },
+      round: { ...baseSession().round, number: 1 },
+    });
+    const next = recordVotingHistoryEntry(session);
+    const history = getVotingHistory(next);
+    expect(history).toHaveLength(1);
+    expect(history[0].round).toBe(1);
+    expect(history[0].verdict).toEqual({
+      type: "imposter-caught",
+      eliminatedPlayerId: "p1",
+    });
+    expect(history[0].tally).toEqual([
+      { playerId: "p1", playerName: "Ahmed", votes: 3 },
+      { playerId: "p2", playerName: "Asmed", votes: 0 },
+      { playerId: "p3", playerName: "Mali", votes: 0 },
+      { playerId: "p4", playerName: "Hafsa", votes: 0 },
+    ]);
+  });
+
+  it("records a tie round with tiedPlayerIds and no eliminated player", () => {
+    const session = baseSession({
+      votes: { p3: "p2", p4: "p1" },
+      round: { ...baseSession().round, number: 1 },
+    });
+    const next = recordVotingHistoryEntry(session);
+    const history = getVotingHistory(next);
+    expect(history).toHaveLength(1);
+    expect(history[0].verdict.type).toBe("tie");
+    if (history[0].verdict.type === "tie") {
+      expect(history[0].verdict.tiedPlayerIds.sort()).toEqual(["p1", "p2"]);
+    }
+  });
+
+  it("is idempotent -- recording the same round twice does not duplicate the entry", () => {
+    const session = baseSession({
+      votes: { p2: "p1", p3: "p1", p4: "p1" },
+      round: { ...baseSession().round, number: 1 },
+    });
+    const once = recordVotingHistoryEntry(session);
+    const twice = recordVotingHistoryEntry(once);
+    expect(twice).toBe(once);
+    expect(getVotingHistory(twice)).toHaveLength(1);
+  });
+
+  it("accumulates multiple rounds in chronological order", () => {
+    const round1 = baseSession({
+      votes: { p2: "p1", p3: "p1", p4: "p1" },
+      round: { ...baseSession().round, number: 1 },
+    });
+    const afterRound1 = recordVotingHistoryEntry(round1);
+
+    const round2 = continueRound(afterRound1);
+    const round2Voted = {
+      ...round2,
+      votes: { p3: "p2", p4: "p2" },
+    };
+    const afterRound2 = recordVotingHistoryEntry(round2Voted);
+
+    const history = getVotingHistory(afterRound2);
+    expect(history.map((entry) => entry.round)).toEqual([1, 2]);
+  });
+
+  it("a fresh game (new session) starts with no voting history", () => {
+    const finishedGame = recordVotingHistoryEntry(
+      baseSession({ votes: { p2: "p1", p3: "p1", p4: "p1" } }),
+    );
+    const newGame = baseSession(); // simulates a brand-new session object
+    expect(getVotingHistory(finishedGame)).toHaveLength(1);
+    expect(getVotingHistory(newGame)).toEqual([]);
   });
 });

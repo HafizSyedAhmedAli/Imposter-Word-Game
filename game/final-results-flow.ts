@@ -6,6 +6,7 @@ import {
   getRoundOutcome,
   getVerdict,
   getVoteTally,
+  getVotingHistory,
   type RoundOutcome,
   type Verdict,
   type VoteTally,
@@ -50,7 +51,10 @@ export function getFinalOutcome(session: RoundSession): FinalOutcome | null {
  * imposter/crew counts -- never hard-coded text picked purely because a
  * screen says "crew won" (spec: "Do NOT hard-code the reason").
  */
-export function getWinReason(session: RoundSession, outcome: FinalOutcome): string {
+export function getWinReason(
+  session: RoundSession,
+  outcome: FinalOutcome,
+): string {
   const totalImposters = session.round.roles.filter(
     (r) => r.role === "imposter",
   ).length;
@@ -80,8 +84,13 @@ export type FinalPlayerResult = {
   eliminated: boolean;
 };
 
-function getRole(session: RoundSession, playerId: string): "player" | "imposter" {
-  return session.round.roles.find((r) => r.playerId === playerId)?.role ?? "player";
+function getRole(
+  session: RoundSession,
+  playerId: string,
+): "player" | "imposter" {
+  return (
+    session.round.roles.find((r) => r.playerId === playerId)?.role ?? "player"
+  );
 }
 
 /**
@@ -90,7 +99,9 @@ function getRole(session: RoundSession, playerId: string): "player" | "imposter"
  * screen allowed to surface every player's role at once; every earlier
  * screen deliberately reveals at most one role per verdict.
  */
-export function getFinalPlayerResults(session: RoundSession): FinalPlayerResult[] {
+export function getFinalPlayerResults(
+  session: RoundSession,
+): FinalPlayerResult[] {
   return session.players.map((player, index) => ({
     player,
     index,
@@ -126,6 +137,18 @@ export function getFinalVerdict(session: RoundSession): Verdict {
  */
 export function getFinalVoteTally(session: RoundSession): VoteTally[] {
   return getVoteTally(session);
+}
+
+/**
+ * Every completed voting round from this game, oldest first -- the data
+ * behind the Final Results screen's "Voting History" option. Simply
+ * re-exposed from results-flow.ts (not recomputed) for the same reason
+ * `getFinalVoteTally` above wraps `getVoteTally`: every other *-flow
+ * consumer on this screen goes through final-results-flow.ts, not
+ * results-flow.ts directly.
+ */
+export function getFinalVotingHistory(session: RoundSession) {
+  return getVotingHistory(session);
 }
 
 export type RoundSummary = {

@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Home, RotateCcw } from "lucide-react";
+import { History, Home, RotateCcw } from "lucide-react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
 import LeaveRoundDialog from "@/components/pass/LeaveRoundDialog";
@@ -13,6 +13,7 @@ import SecretRevealCard from "./SecretRevealCard";
 import ImpostersRevealCard from "./ImpostersRevealCard";
 import PlayerResultsList from "./PlayerResultsList";
 import FinalRoundSummaryCard from "./FinalRoundSummaryCard";
+import VotingHistoryDialog from "./VotingHistoryDialog";
 import {
   clearStoredRoundSession,
   getStoredRoundSession,
@@ -27,6 +28,7 @@ import {
   getFinalOutcome,
   getFinalPlayerResults,
   getFinalVoteTally,
+  getFinalVotingHistory,
   getRoundSummary,
   getWinReason,
 } from "@/game/final-results-flow";
@@ -44,6 +46,7 @@ export default function FinalResultsScreen() {
     getStoredRoundSession(),
   );
   const [confirmingLeave, setConfirmingLeave] = useState(false);
+  const [showVotingHistory, setShowVotingHistory] = useState(false);
   const recordedRef = useRef<string | null>(null);
   const outcomeSoundPlayedRef = useRef(false);
 
@@ -117,6 +120,7 @@ export default function FinalResultsScreen() {
   const tally = getFinalVoteTally(session);
   const highestVotes = getHighestVoteCount(tally);
   const summary = getRoundSummary(session);
+  const votingHistory = getFinalVotingHistory(session);
 
   function openLeaveConfirmation() {
     setConfirmingLeave(true);
@@ -163,6 +167,19 @@ export default function FinalResultsScreen() {
 
           <FinalRoundSummaryCard summary={summary} />
 
+          <button
+            type="button"
+            onClick={() => {
+              playSound("ui-tap");
+              light();
+              setShowVotingHistory(true);
+            }}
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border border-iw-border bg-iw-surface-2 px-6 py-3.5 font-display text-sm font-bold text-iw-ink-100 transition-colors hover:border-iw-border-strong"
+          >
+            <History className="h-4 w-4" aria-hidden="true" />
+            VOTING HISTORY
+          </button>
+
           <div className="mt-2 flex flex-col gap-3">
             <button
               type="button"
@@ -193,6 +210,18 @@ export default function FinalResultsScreen() {
         <LeaveRoundDialog
           onCancel={() => setConfirmingLeave(false)}
           onConfirm={handleLeaveConfirmed}
+        />
+      )}
+
+      {showVotingHistory && (
+        <VotingHistoryDialog
+          history={votingHistory}
+          players={session.players}
+          onClose={() => {
+            playSound("ui-tap");
+            light();
+            setShowVotingHistory(false);
+          }}
         />
       )}
     </div>

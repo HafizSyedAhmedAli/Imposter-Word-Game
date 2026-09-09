@@ -1,6 +1,6 @@
 // game/results-flow.ts
 import { getEliminatedPlayerIds, isEliminated } from "./elimination";
-import type { Player, RoundSession } from "./game-types";
+import type { Player, RoundSession, VotingHistoryEntry } from "./game-types";
 /**
  * Screen 8's pure decision layer. Nothing here touches the DOM or
  * sessionStorage directly -- ResultsScreen.tsx calls these functions and
@@ -149,6 +149,59 @@ export function continueRound(session: RoundSession): RoundSession {
     round: { ...session.round, number: session.round.number + 1 },
     votes: {},
     status: "playing",
+  };
+}
+
+/** Every completed voting round recorded so far this game, oldest first. */
+export function getVotingHistory(session: RoundSession): VotingHistoryEntry[] {
+  return session.votingHistory ?? [];
+}
+
+/**
+ * Snapshots THIS round's vote tally + verdict into `session.votingHistory`,
+ * for the read-only "Voting History" option on the Final Results screen.
+ * Must run before `continueRound` resets `session.votes` for the next
+ * round -- see ResultsScreen.tsx, which calls this right alongside
+ * `applyVerdict` (same moment a round's verdict becomes final), before
+ * the "CONTINUE" button can ever call `continueRound`.
+ *
+ * Idempotent by round number, same guard style as `applyVerdict`: a
+ * refresh that re-runs this for a round already recorded returns
+ * `session` unchanged rather than appending a duplicate entry. This is
+ * what makes it refresh-safe without a separate "has this round been
+ * recorded" flag to keep in sync.
+ */
+export function recordVotingHistoryEntry(session: RoundSession): RoundSession {
+  const existing = getVotingHistory(session);
+  if (existing.some((entry) => entry.round === session.round.number)) {
+    return session;
+  }
+
+  const tally = getVoteTally(session);
+  const verdict = getVerdict(session);
+
+  const historyEntry: VotingHistoryEntry = {
+    round: session.round.number,
+    tally: tally.map((entry) => ({
+      playerId: entry.player.id,
+      playerName: entry.player.name,
+      votes: entry.votes,
+    })),
+    verdict:
+      verdict.type === "tie"
+        ? {
+            type: "tie",
+            tiedPlayerIds: verdict.tied.map((entry) => entry.player.id),
+          }
+        : {
+            type: verdict.type,
+            eliminatedPlayerId: verdict.eliminated.id,
+          },
+  };
+
+  return {
+    ...session,
+    votingHistory: [...existing, historyEntry],
   };
 }
 

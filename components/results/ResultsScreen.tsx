@@ -12,6 +12,7 @@ import {
   getRoundOutcome,
   getVerdict,
   getVoteTally,
+  recordVotingHistoryEntry,
 } from "@/game/results-flow";
 import { isVotingComplete } from "@/game/vote-flow"; // add this import
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
@@ -45,7 +46,12 @@ export default function ResultsScreen() {
     if (existing === null) return null;
     if (existing.status === "ready") return null;
     if (!isVotingComplete(existing)) return null;
-    return applyVerdict(existing);
+    // recordVotingHistoryEntry must run alongside applyVerdict (not
+    // just in the effect below) so this round's snapshot is already
+    // part of `session` by the time handlePrimaryAction spreads it --
+    // otherwise a game-ending "SEE FINAL RESULTS" tap would overwrite
+    // the persisted session with a copy missing this round's history.
+    return recordVotingHistoryEntry(applyVerdict(existing));
   });
   const [confirmingLeave, setConfirmingLeave] = useState(false);
 
@@ -88,13 +94,20 @@ export default function ResultsScreen() {
     }
 
     const withVerdictApplied = applyVerdict(existing);
-    if (withVerdictApplied !== existing) {
-      // applyVerdict only returns a new object when this vote actually
-      // eliminated someone (a tie, or an already-applied verdict on
-      // refresh, returns `existing` unchanged) -- so this branch is the
-      // single, idempotent moment a player is newly eliminated.
-      storeRoundSession(withVerdictApplied);
-      medium();
+    // recordVotingHistoryEntry is idempotent by round number (same as
+    // applyVerdict is by eliminated-player id), so it's safe to run
+    // every time this effect does, tie or not -- unlike applyVerdict, a
+    // tie round still needs its (zero-elimination) tally recorded here.
+    const withHistoryRecorded = recordVotingHistoryEntry(withVerdictApplied);
+    if (withHistoryRecorded !== existing) {
+      storeRoundSession(withHistoryRecorded);
+      if (withVerdictApplied !== existing) {
+        // applyVerdict only returns a new object when this vote actually
+        // eliminated someone (a tie, or an already-applied verdict on
+        // refresh, returns `existing` unchanged) -- so this branch is
+        // the single, idempotent moment a player is newly eliminated.
+        medium();
+      }
     }
     markActiveGameRoute("/results");
     // eslint-disable-next-line react-hooks/exhaustive-deps

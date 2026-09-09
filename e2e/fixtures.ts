@@ -129,10 +129,75 @@ export async function startVoting(page: Page) {
   await page.waitForURL("**/voting");
 }
 
-/** Casts one full vote (pass -> select -> confirm) for the current voter. */
 export async function castVoteFor(page: Page, targetName: string) {
   await page.getByRole("button", { name: /^i'm ready$/i }).click();
   await page.getByRole("radio", { name: new RegExp(targetName, "i") }).click();
   await page.getByRole("button", { name: /^cast vote$/i }).click();
   await page.getByRole("button", { name: /confirm vote/i }).click();
+}
+
+/**
+ * Same walk as `passAllPlayersAndReachDiscussion`, but reads each
+ * player's name off the pass-the-phone heading and records which role
+ * card renders for them, then starts Discussion exactly like that
+ * function does. Voting-history specs need to know the real imposter
+ * (and at least one real crew member) *before* voting starts, so votes
+ * can be cast deterministically -- unlike voting-and-results.spec.ts's
+ * 3-player "everyone votes Bob" trick, a multi-round Voting History
+ * test needs a *specific*, known-safe crew target for its first
+ * (non-eliminating) round, which only exists once the imposter is
+ * identified.
+ */
+export async function passAllPlayersAndIdentifyImposter(
+  page: Page,
+  playerNames: string[],
+): Promise<{ imposterName: string; crewNames: string[] }> {
+  let imposterName: string | null = null;
+  const crewNames: string[] = [];
+
+  for (const expectedName of playerNames) {
+    await expect(
+      page.getByText(`Pass the phone to`, { exact: false }),
+    ).toBeVisible();
+    // PassPromptCard names whoever's turn is next -- confirming it
+    // matches `playerNames`' declared order is what makes attributing
+    // the upcoming role card to the right name safe, rather than just
+    // assuming turn order equals array order.
+    await expect(
+      page.getByText(expectedName, { exact: true }).first(),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: /^i'm ready$/i }).click();
+    await page.getByRole("button", { name: /reveal my role/i }).click();
+
+    const imposterCard = page.getByText("YOU'RE THE IMPOSTER", {
+      exact: false,
+    });
+    if (await imposterCard.isVisible()) {
+      imposterName = expectedName;
+    } else {
+      crewNames.push(expectedName);
+    }
+
+    const hideButton = page.getByRole("button", {
+      name: /hide & pass phone/i,
+    });
+    await expect(hideButton).toBeEnabled({ timeout: 5_000 });
+    await hideButton.click();
+  }
+
+  if (imposterName === null) {
+    // Every seat resolves to exactly one role (see multi-imposter.spec.ts) --
+    // classic mode guarantees exactly one imposter, so this genuinely
+    // never happens; it's here only so a real regression fails loudly
+    // instead of the caller getting a confusing `null` downstream.
+    throw new Error(
+      "passAllPlayersAndIdentifyImposter: no player revealed the imposter card",
+    );
+  }
+
+  await page.getByRole("button", { name: /start discussion/i }).click();
+  await page.waitForURL("**/game");
+
+  return { imposterName, crewNames };
 }

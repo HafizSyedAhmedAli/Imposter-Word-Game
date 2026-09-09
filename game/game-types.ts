@@ -179,4 +179,45 @@ export type RoundSession = {
    * screen itself (spec's "DATA / STATE REQUIREMENTS").
    */
   eliminatedPlayerIds?: string[];
+  /**
+   * Every completed voting round's snapshot, oldest first -- captured by
+   * game/results-flow.ts's `recordVotingHistoryEntry` at the same moment
+   * a round's verdict is resolved on Screen 8, which is the last point
+   * `votes` still holds that round's ballots before `continueRound`
+   * resets it for the next round (see results-flow.ts). Optional/
+   * defensive for the same reason `votes`/`eliminatedPlayerIds` are:
+   * sessions persisted before this field existed won't have it.
+   *
+   * Deliberately a plain, storage-shaped snapshot (player id/name/vote
+   * count pairs, not the full `Player` object) rather than reusing
+   * results-flow.ts's `VoteTally`/`Verdict` types -- those live in a
+   * module that already imports `RoundSession` from here, so importing
+   * them back into this file would be circular. This is purely
+   * additive read-only data for the Final Results screen's "Voting
+   * History" option -- nothing in the live game (voting, elimination,
+   * win checks) ever reads it back.
+   */
+  votingHistory?: VotingHistoryEntry[];
+};
+
+/** One player's vote count within a single recorded voting round. */
+export type VotingHistoryTallyEntry = {
+  playerId: string;
+  playerName: string;
+  votes: number;
+};
+
+/** The outcome of a single recorded voting round -- mirrors `Verdict`
+ *  in game/results-flow.ts, but by player id/name rather than a full
+ *  `Player` object (see `VotingHistoryEntry`'s comment for why). */
+export type VotingHistoryVerdict =
+  | { type: "tie"; tiedPlayerIds: string[] }
+  | { type: "imposter-caught"; eliminatedPlayerId: string }
+  | { type: "wrong-player"; eliminatedPlayerId: string };
+
+/** One completed voting round, as shown on the Voting History view. */
+export type VotingHistoryEntry = {
+  round: number;
+  tally: VotingHistoryTallyEntry[];
+  verdict: VotingHistoryVerdict;
 };
