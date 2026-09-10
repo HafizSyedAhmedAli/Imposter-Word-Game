@@ -11,10 +11,16 @@ import {
 import { onBeforeHardNavigate } from "@/lib/offline-navigation";
 
 // The screens the ambient menu bed should play across. Single source
-// of truth
-const MENU_ROUTES = new Set<string>([
+// of truth. Exported so test/pwa/menu-music-routes.test.ts can check it
+// against lib/app-routes.ts's APP_ROUTES -- this list drifting out of
+// sync with a new settings sub-screen is exactly the bug that silently
+// killed ambient music on /settings/custom-words (it launched without
+// ever being added here), so that check exists to catch the next one
+// before it ships instead of relying on someone noticing by ear.
+export const MENU_ROUTES = new Set<string>([
   "/",
   "/settings",
+  "/settings/custom-words",
   "/how-to-play",
   "/privacy",
   "/setup",

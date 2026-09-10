@@ -1,6 +1,7 @@
 import {
   ENGLISH,
   ROMAN_URDU,
+  type Category,
   type Difficulty,
   type GameLanguage,
 } from "@/game/game-types";
@@ -71,6 +72,7 @@ export async function resolveCustomWordHint(
     // separate abort-handling path needed here.
     const hint = await requestHintForWord(
       entry.word,
+      entry.category,
       entry.difficulty,
       language,
       signal,
@@ -96,6 +98,7 @@ export async function resolveCustomWordHint(
  */
 async function requestHintForWord(
   word: string,
+  category: Category,
   difficulty: Difficulty,
   language: GameLanguage,
   signal?: AbortSignal,
@@ -109,7 +112,7 @@ async function requestHintForWord(
     const response = await fetch(`${API_BASE_URL}/api/round/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ word, difficulty, language }),
+      body: JSON.stringify({ word, category, difficulty, language }),
       signal: controller.signal,
     });
 
