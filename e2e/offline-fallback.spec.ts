@@ -1,5 +1,6 @@
+// e2e/offline-fallback.spec.ts
 import { test, expect } from "@playwright/test";
-import { mockAiRoundGenerationFailure } from "./fixtures";
+import { mockAiRoundGenerationFailure, PLAYER_NAMES } from "./fixtures";
 
 /**
  * Exercises the fallback chain by making the AI call fail at the
@@ -17,7 +18,7 @@ test.describe("Offline / AI-unavailable fallback", () => {
     await page.getByRole("button", { name: /continue/i }).click();
     await page.waitForURL("**/players");
 
-    for (const name of ["Alice", "Bob", "Cara"]) {
+    for (const name of PLAYER_NAMES.slice(0, 3)) {
       await page.getByLabel("Player name").fill(name);
       await page.getByRole("button", { name: /add player/i }).click();
     }
