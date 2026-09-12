@@ -376,31 +376,43 @@ export async function markRoundUsed(id: string): Promise<void> {
  *
  * Within that fixed set of valid entries, preference is applied in
  * tiers -- each tier only narrows the pool if doing so leaves at least
- * one candidate, so the game never fails to return a word just because
- * every entry happens to be "recent" or "used" (spec: don't guarantee
- * perfect uniqueness forever, just make repeats uncommon):
- *   1. Prefer entries not in this session's recent-word history
- *      (lib/recent-words.ts) -- avoids an immediate back-to-back repeat.
+ * one candidate:
+ *   1. Require an entry not in this session's recent-word history
+ *      (lib/recent-words.ts). Unlike the tiers below, this one is NOT
+ *      relaxed when it empties the pool -- see "Exhaustion" below.
  *   2. Within that, prefer never-used entries (`usageCount === 0`),
  *      then the least-recently-used ones -- spreads usage evenly across
  *      the cache over the lifetime of the install instead of always
  *      drawing from the same handful of rows.
- * Once every entry has been used at least once, older/least-recently-used
- * entries are simply recycled -- this is the "allow reuse when
- * necessary" tier, not an error state.
+ * Once every remaining (non-recent) entry has been used at least once,
+ * older/least-recently-used ones among THEM are simply recycled -- that
+ * part is still "allow reuse when necessary," not an error state.
  *
- * Returns `null` when nothing suitable is cached yet -- an empty/sparse
- * cache is an expected, normal state (e.g. the very first offline round
- * on a fresh install), not an error. The caller
- * (providers/indexeddb-cache-provider.ts) turns "null" into a
- * fall-through to tier 3.
+ * Exhaustion: if EVERY entry matching category/difficulty/language has
+ * already been shown this session (tier 1 above would come back empty),
+ * this returns `null` rather than repeating one of them. A round-robin
+ * cache with only a handful of rows for a given category/difficulty
+ * (e.g. right after the AI quota is hit, before many rounds have been
+ * cached) would otherwise start visibly repeating words every few
+ * rounds. Returning `null` here lets the caller fall through to tier 3
+ * (the much larger static offline word list) for a fresh word instead
+ * -- see providers/indexeddb-cache-provider.ts and
+ * game/game-engine.ts's `getRoundContent`. Tier 3 itself still recycles
+ * as an absolute last resort once ITS pool is exhausted too (see
+ * getRandomFallbackWord) -- there is nowhere further to fall back to
+ * after that.
+ *
+ * Also returns `null` when nothing suitable is cached yet at all -- an
+ * empty/sparse cache is an expected, normal state (e.g. the very first
+ * offline round on a fresh install), not an error.
  *
  * This function CAN reject: `getDb()` throws outside the browser, and
  * the IndexedDB read rejects when storage is unavailable. Tier 2 in
  * game/game-engine.ts catches both cases and falls through to tier 3.
  * The caller (providers/indexeddb-cache-provider.ts) is what turns
  * "null" into a fall-through to tier 3 -- this function must never
- * substitute a mismatched entry just to avoid returning null.
+ * substitute a mismatched or repeated entry just to avoid returning
+ * null.
  */
 export async function getRandomCachedWord(
   category: Category,
@@ -426,11 +438,19 @@ export async function getRandomCachedWord(
 
   const recentIds = new Set(getRecentWordIds());
   const nonRecent = matching.filter((w) => !recentIds.has(w.id));
-  const tier1 = nonRecent.length > 0 ? nonRecent : matching;
+  if (nonRecent.length === 0) {
+    // Every candidate for this category/difficulty/language has already
+    // been shown this session -- picking anyway would just repeat a
+    // word back-to-back (or near it). Signal exhaustion instead so the
+    // caller tries the static offline tier for something fresh. See
+    // the "Exhaustion" section of this function's doc comment above.
+    return null;
+  }
+  const tier1 = nonRecent;
 
-  // Within the tier-1 pool, prefer unused entries; if all of them have
-  // been used before, fall back to the least-recently-used ones instead
-  // of narrowing to an empty set.
+  // Within the tier-1 (non-recent) pool, prefer unused entries; if all
+  // of them have been used before, fall back to the least-recently-used
+  // ones instead of narrowing to an empty set.
   const unused = tier1.filter((w) => w.usageCount === 0);
   const tier2 = unused.length > 0 ? unused : tier1;
 

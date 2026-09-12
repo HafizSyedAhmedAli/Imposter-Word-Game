@@ -97,6 +97,32 @@ describe("prepareGameRound -- the 3-tier fallback chain", () => {
     expect(session.round.word).toBe("Comet");
   });
 
+  it("falls all the way to the static word list once the cache pool for this category/difficulty is exhausted, instead of repeating a cached word (tier 2 -> tier 3)", async () => {
+    await cacheAiWord({
+      word: "Comet",
+      hint: "Icy traveler.",
+      category: "random",
+      difficulty: "medium",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("network down")),
+    );
+
+    // First round: AI is unreachable, so this should land on tier 2 and
+    // use the only cached word available.
+    const first = await prepareGameRound(DEFAULT_GAME_CONFIG, makePlayers(5));
+    expect(first.round.contentSource).toBe("cache");
+    expect(first.round.word).toBe("Comet");
+
+    // Second round, same session: "Comet" is now the entire cache pool
+    // for random/medium AND it's already in the recent-word history, so
+    // tier 2 has nothing left to offer without repeating it. This must
+    // fall through to tier 3 rather than showing "Comet" again.
+    const second = await prepareGameRound(DEFAULT_GAME_CONFIG, makePlayers(5));
+    expect(second.round.contentSource).toBe("fallback");
+  });
+
   it("falls back to the static word list when AI fails and the cache is empty (tier 3)", async () => {
     vi.stubGlobal(
       "fetch",

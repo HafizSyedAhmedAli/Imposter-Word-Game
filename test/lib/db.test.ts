@@ -102,6 +102,35 @@ describe("cacheAiWord / getRandomCachedWord", () => {
     expect(chosen?.word).toBe("Beta");
   });
 
+  it("returns null once every cached entry for a category/difficulty has been shown this session, instead of repeating one", async () => {
+    await cacheAiWord({
+      word: "Alpha",
+      hint: "First letter, sort of.",
+      category: "food",
+      difficulty: "easy",
+    });
+    await cacheAiWord({
+      word: "Beta",
+      hint: "Second letter, sort of.",
+      category: "food",
+      difficulty: "easy",
+    });
+
+    const db = getDb();
+    const alpha = await db.words.where({ normalizedWord: "alpha" }).first();
+    const beta = await db.words.where({ normalizedWord: "beta" }).first();
+    rememberWordId(alpha!.id);
+    rememberWordId(beta!.id);
+
+    // Both of this category/difficulty's cached entries are now "recent"
+    // -- there's nothing left to return without repeating one, so this
+    // should signal exhaustion (null) rather than pick a repeat. The
+    // caller (providers/indexeddb-cache-provider.ts) turns that into a
+    // fall-through to the static offline tier.
+    const chosen = await getRandomCachedWord("food", "easy");
+    expect(chosen).toBeNull();
+  });
+
   it("prefers never-used entries over previously-used ones", async () => {
     await cacheAiWord({
       word: "Used",

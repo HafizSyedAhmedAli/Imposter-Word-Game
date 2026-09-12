@@ -17,8 +17,17 @@ export default function PlayerRevealCard({
   onHide: () => void;
 }) {
   const [wordVisible, setWordVisible] = useState(false);
+  // Drives the progress bar under "Your secret word". Starts at 0% and
+  // is flipped to 100% one frame after mount so the browser registers
+  // the 0% starting width before the width transition begins -- without
+  // the rAF, the bar would just appear already full instead of filling.
+  // Purely cosmetic (aria-hidden): its only job is to signal "counting
+  // down," not "stuck," while the word is blurred.
+  const [fillStarted, setFillStarted] = useState(false);
 
   useEffect(() => {
+    const raf = requestAnimationFrame(() => setFillStarted(true));
+
     // NOTE: deliberately no sound here. PassPhoneScreen's handleReveal()
     // already plays "reveal-player" once, for every role, the moment
     // the card first appears. Playing a second chime specifically when
@@ -30,7 +39,10 @@ export default function PlayerRevealCard({
       setWordVisible(true);
     }, CREW_REVEAL_DELAY_MS - CREW_REVEAL_TRANSITION_MS);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(timer);
+    };
   }, []);
 
   return (
@@ -47,6 +59,23 @@ export default function PlayerRevealCard({
         <p className="mt-6 text-xs font-semibold uppercase tracking-wide text-iw-ink-500">
           Your secret word
         </p>
+
+        <div
+          className="mx-auto mt-2 h-1 w-20 overflow-hidden rounded-full bg-iw-border transition-opacity duration-300 ease-out"
+          style={{ opacity: wordVisible ? 0 : 1 }}
+          aria-hidden="true"
+        >
+          <div
+            className="h-full rounded-full bg-iw-online ease-linear"
+            style={{
+              width: fillStarted ? "100%" : "0%",
+              transitionProperty: "width",
+              transitionDuration: `${
+                CREW_REVEAL_DELAY_MS - CREW_REVEAL_TRANSITION_MS
+              }ms`,
+            }}
+          />
+        </div>
 
         <p
           className="mt-1 origin-center transform-gpu select-none font-display text-5xl font-bold text-iw-ink-100 break-words transition-all ease-out will-change-[filter,transform,opacity]"

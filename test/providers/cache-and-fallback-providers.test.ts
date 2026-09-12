@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { getDb, cacheAiWord } from "@/lib/db";
+import { rememberWordId } from "@/lib/recent-words";
 import { IndexedDbCacheProvider } from "@/providers/indexeddb-cache-provider";
 import { FallbackWordProvider } from "@/providers/fallback-word-provider";
 
@@ -63,6 +64,39 @@ describe("IndexedDbCacheProvider (tier 2)", () => {
       category: "movies",
       difficulty: "medium",
     });
+    await expect(provider.generateRoundContent("food", "easy")).rejects.toThrow(
+      /no suitable cached round/i,
+    );
+  });
+
+  it("throws (rather than repeating) once every matching cached entry has already been shown this session", async () => {
+    await cacheAiWord({
+      word: "Alpha",
+      hint: "First letter, sort of.",
+      category: "food",
+      difficulty: "easy",
+    });
+    await cacheAiWord({
+      word: "Beta",
+      hint: "Second letter, sort of.",
+      category: "food",
+      difficulty: "easy",
+    });
+
+    const db = getDb();
+    const alpha = await db.words.where({ normalizedWord: "alpha" }).first();
+    const beta = await db.words.where({ normalizedWord: "beta" }).first();
+    rememberWordId(alpha!.id);
+    rememberWordId(beta!.id);
+
+    // This is the bug this test guards against: with a small cache pool
+    // (e.g. right after the AI quota is hit, before many rounds have
+    // ever been AI-generated on this device), the old behavior would
+    // start silently repeating "Alpha"/"Beta" back-to-back once the
+    // recent-word history covered the whole pool. Now this tier should
+    // decline instead, so game/game-engine.ts's getRoundContent falls
+    // through to the much larger static offline word list (tier 3) for
+    // a fresh word.
     await expect(provider.generateRoundContent("food", "easy")).rejects.toThrow(
       /no suitable cached round/i,
     );
