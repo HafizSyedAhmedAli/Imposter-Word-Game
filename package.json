@@ -17,7 +17,7 @@
     "test:headed": "playwright test  --project=\"Mobile Chrome\" --headed",
     "test:debug": "playwright test --project=\"Mobile Chrome\" --debug",
     "test:debug:name": "playwright test --project=\"Mobile Chrome\" --debug -g",
-    "build:mobile": "node --env-file=.env.local scripts/build-mobile.mjs",
+    "build:mobile": "node --env-file=.env.mobile scripts/build-mobile.mjs",
     "cap:sync": "npm run build:mobile && npx cap sync",
     "cap:open:android": "npx cap open android",
     "cap:assets:android": "npx capacitor-assets generate --android"

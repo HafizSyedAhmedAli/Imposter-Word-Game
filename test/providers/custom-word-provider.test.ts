@@ -84,6 +84,7 @@ describe("resolveCustomWordHint", () => {
         method: "POST",
         body: JSON.stringify({
           word: "Biryani",
+          category: "food",
           difficulty: "medium",
           language: "english",
         }),
@@ -150,4 +151,43 @@ describe("resolveCustomWordHint", () => {
     expect(hint.length).toBeGreaterThan(0);
     expect(hint.toLowerCase()).not.toContain("biryani");
   });
+});
+
+it("rejects a response for a different word and falls back to the generic hint", async () => {
+  // Reproduces the reported bug exactly: a "Biryani" entry's hint
+  // request gets back { word: "Pancake", hint: "..." } -- the shape
+  // the route returns when it falls through to its normal
+  // random-round-generation branch instead of the hint-only one.
+  // Before this fix, only `hint` was ever read from the response, so
+  // this pancake hint would have been accepted and saved onto the
+  // Biryani entry.
+  const entry = await makeEntry({ word: "Biryani" });
+  mockFetchOnce({
+    json: async () => ({
+      word: "Pancake",
+      hint: "A flat, round breakfast item often served with syrup.",
+    }),
+  });
+
+  const hint = await resolveCustomWordHint(entry, "english");
+
+  expect(hint).not.toBe(
+    "A flat, round breakfast item often served with syrup.",
+  );
+  expect(hint.toLowerCase()).not.toContain("biryani");
+
+  // Must also never have been persisted onto the entry.
+  const [saved] = await getCustomWords();
+  expect(saved.hint).toBeUndefined();
+});
+
+it("accepts a response whose word field matches, case-insensitively", async () => {
+  const entry = await makeEntry({ word: "Biryani" });
+  mockFetchOnce({
+    json: async () => ({ word: "biryani", hint: "A spiced rice dish." }),
+  });
+
+  const hint = await resolveCustomWordHint(entry, "english");
+
+  expect(hint).toBe("A spiced rice dish.");
 });

@@ -108,6 +108,7 @@ describe("prepareGameRound -- Custom Words category", () => {
       expect.objectContaining({
         body: JSON.stringify({
           word: "Biryani",
+          category: "food",
           difficulty: "medium",
           language: "english",
         }),

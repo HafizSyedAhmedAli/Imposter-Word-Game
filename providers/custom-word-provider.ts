@@ -121,8 +121,27 @@ async function requestHintForWord(
     const data: unknown = await response.json();
     const candidate =
       typeof data === "object" && data !== null
-        ? (data as { hint?: unknown })
+        ? (data as { word?: unknown; hint?: unknown })
         : {};
+
+    // Guard against a response that isn't actually about this word.
+    // The hint-only route (app/api/round/generate/route.ts) only ever
+    // sends back `{ hint }` for a supplied word -- but if it ever falls
+    // through to its OTHER branch instead (the normal random-round
+    // path, which returns `{ word, hint }` for a freshly invented
+    // word), this is the only place that can catch it. Without this
+    // check, a `word` field is silently ignored and the unrelated
+    // `hint` gets attached to THIS entry -- e.g. a "Biryani" entry
+    // ending up with a hint about pancakes because the response was
+    // actually `{ word: "Pancake", hint: "..." }`. Any `word` field
+    // present must match what was actually requested, or the response
+    // is treated as a failure (falls through to the generic hint).
+    if (
+      typeof candidate.word === "string" &&
+      candidate.word.trim().toLowerCase() !== word.trim().toLowerCase()
+    ) {
+      return null;
+    }
 
     if (typeof candidate.hint !== "string") return null;
     const hint = candidate.hint.trim();
