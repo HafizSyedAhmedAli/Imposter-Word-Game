@@ -54,6 +54,7 @@ You are generating a word-game hint for Pakistani players.
 - Do NOT use Urdu, Arabic, or Devanagari script anywhere in the hint.
 - Keep the wording simple, conversational, and easy to understand -- not overly formal.
 - Do not translate an English hint mechanically. Think about the word first and write the hint naturally in Roman Urdu, the way a Pakistani player would actually say it out loud.
+- Keep the hint SHORT -- about the same length as a short English hint for this game (roughly 4-8 words, one short phrase). Do not write a longer or more descriptive sentence just because it's in Roman Urdu.
 - The hint should help players identify the concept without directly saying the word.`;
 
 function buildPrompt(

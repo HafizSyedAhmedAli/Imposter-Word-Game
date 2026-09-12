@@ -9,7 +9,7 @@ import { EyeOff } from "lucide-react";
 // stay fully independent of the crew card (see the no-`word`-prop note
 // below). Same 2s hold on both cards so the button's enable timing
 // can't itself become a tell for who's the imposter.
-const REVEAL_HOLD_MS = 2000;
+const REVEAL_HOLD_MS = 3000;
 
 // IMPORTANT: this component intentionally has no `word` prop. Do not add
 // one -- the imposter must never receive the secret word, and omitting

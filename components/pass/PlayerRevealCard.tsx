@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { EyeOff } from "lucide-react";
 
-const CREW_REVEAL_DELAY_MS = 2000;
+const CREW_REVEAL_DELAY_MS = 3000;
 const CREW_REVEAL_TRANSITION_MS = 550;
 
 export default function PlayerRevealCard({

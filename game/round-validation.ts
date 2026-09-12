@@ -5,6 +5,7 @@ const MIN_WORD_LENGTH = 2;
 const MAX_WORD_LENGTH = 40;
 const MAX_WORD_TOKENS = 3;
 const MAX_HINT_LENGTH = 160;
+const MAX_HINT_WORDS = 12;
 
 export type RoundContentCandidate = {
   word?: unknown;
@@ -42,7 +43,9 @@ export function validateRoundContent(
   if (hint.length > MAX_HINT_LENGTH) {
     return { valid: false, reason: "Hint is too long." };
   }
-
+  if (hint.trim().split(/\s+/).length > MAX_HINT_WORDS) {
+    return { valid: false, reason: "Hint is too long (too many words)." };
+  }
   if (hint.toLowerCase().includes(word.toLowerCase())) {
     return { valid: false, reason: "Hint reveals the word." };
   }
