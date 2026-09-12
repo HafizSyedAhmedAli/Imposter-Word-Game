@@ -9,6 +9,28 @@ import {
 import { generateId } from "./id";
 import { captureError } from "./monitoring";
 import { getRecentWordIds, rememberWordId } from "./recent-words";
+import {
+  validateCustomWordText,
+  type ExistingCustomWord,
+} from "@/game/custom-word-rules";
+
+/**
+ * A strictly-increasing timestamp, used only for `CustomWordEntry.createdAt`.
+ * Two custom words saved back-to-back (e.g. two `addCustomWord` calls in
+ * the same test, or a fast successive real add) can land in the same
+ * millisecond under plain `Date.now()`; `getCustomWords`'s
+ * `orderBy("createdAt")` then breaks that tie by primary key (a random
+ * UUID) instead of insertion order, so "newest first" silently stops
+ * being true. This never returns the same or an earlier value than its
+ * previous call, so insertion order is always preserved regardless of
+ * how fast two saves happen.
+ */
+
+let lastCustomWordTimestamp = 0;
+function nextCustomWordTimestamp(): number {
+  lastCustomWordTimestamp = Math.max(Date.now(), lastCustomWordTimestamp + 1);
+  return lastCustomWordTimestamp;
+}
 
 /**
  * A cached round, always the result of a successful AI generation.
@@ -75,9 +97,42 @@ export type SettingsRow = {
   language?: string;
 };
 
+/**
+ * A user-saved Custom Word (Settings -> Custom Words). Deliberately its
+ * own table, never folded into `words` above -- `words` is reserved
+ * exclusively for AI-generated content (`source: "ai"`, see its doc
+ * comment), and a hand-typed custom word is neither AI output nor safe
+ * to evict under `MAX_CACHED_WORDS`. Keeping the two separate is what
+ * lets `RoundData.contentSource` tell a custom word apart from a cached
+ * AI one (see game/game-types.ts's `RoundContentSource`).
+ */
+export type CustomWordEntry = {
+  id: string;
+  word: string;
+  /** `word.trim().toLowerCase()` -- same duplicate-detection convention
+   * as `WordEntry.normalizedWord` above (see `addCustomWord`). */
+  normalizedWord: string;
+  category: Category;
+  difficulty: Difficulty;
+  createdAt: number;
+  /**
+   * A previously AI-generated (or otherwise resolved) hint for this
+   * exact word, persisted so it can be reused offline without asking
+   * the AI again every time this custom word is selected for a round.
+   * Optional -- absent until the first round that actually uses this
+   * word resolves a hint for it (see
+   * providers/custom-word-provider.ts's `resolveCustomWordHint`).
+   */
+  hint?: string;
+  /** Which language `hint` above is written in -- a cached English hint
+   * must never be served for a Roman Urdu round, or vice versa. */
+  hintLanguage?: GameLanguage;
+};
+
 class ImposterWordDB extends Dexie {
   words!: Table<WordEntry, string>;
   settings!: Table<SettingsRow, string>;
+  customWords!: Table<CustomWordEntry, string>;
 
   constructor() {
     super("imposter-word-db");
@@ -167,6 +222,18 @@ class ImposterWordDB extends Dexie {
             }
           });
       });
+
+    // v6: adds the `customWords` table (Custom Words feature). Purely
+    // additive, same spirit as v4's `settings` table -- existing
+    // `words`/`settings` rows are completely untouched, and a new empty
+    // table needs no upgrade function.
+    this.version(6).stores({
+      words:
+        "id, category, difficulty, [category+difficulty], createdAt, normalizedWord, lastUsedAt, language, [category+difficulty+language]",
+      settings: "id",
+      customWords:
+        "id, category, difficulty, [category+difficulty], normalizedWord, createdAt",
+    });
   }
 }
 
@@ -399,4 +466,146 @@ export async function getRandomCachedWord(
 export async function resetUserData(): Promise<void> {
   const db = getDb();
   await db.words.clear();
+}
+
+/* -------------------------------------------------------------------- */
+/* Custom Words (Settings -> Custom Words)                               */
+/*                                                                        */
+/* CRUD + selection for user-saved custom words. Kept in this file       */
+/* (rather than a separate lib module) so every Dexie table this app has */
+/* is defined and accessed from one place, matching the existing         */
+/* words/settings functions above.                                       */
+/* -------------------------------------------------------------------- */
+
+export type AddCustomWordResult =
+  | { ok: true; entry: CustomWordEntry }
+  | { ok: false; error: string };
+
+/**
+ * Validates (game/custom-word-rules.ts) and saves a new custom word.
+ * Duplicate detection is case-insensitive and scoped to ALL of the
+ * player's saved custom words (not just the same category/difficulty)
+ * -- "Pizza" saved under Food/Easy and "pizza" under Food/Medium are
+ * still the same word to a player reading their list back.
+ */
+export async function addCustomWord(input: {
+  word: string;
+  category: Category;
+  difficulty: Difficulty;
+}): Promise<AddCustomWordResult> {
+  const db = getDb();
+  const existing: ExistingCustomWord[] = await db.customWords
+    .toArray()
+    .then((rows) => rows.map((r) => ({ normalizedWord: r.normalizedWord })));
+
+  const validation = validateCustomWordText(input.word, existing);
+  if (!validation.valid) {
+    return { ok: false, error: validation.error };
+  }
+
+  const entry: CustomWordEntry = {
+    id: generateId(),
+    word: validation.value,
+    normalizedWord: validation.value.toLowerCase(),
+    category: input.category,
+    difficulty: input.difficulty,
+    createdAt: nextCustomWordTimestamp(),
+  };
+  await db.customWords.put(entry);
+  return { ok: true, entry };
+}
+
+/**
+ * All saved custom words, newest first -- the order the management
+ * screen (Settings -> Custom Words) displays them in.
+ */
+export async function getCustomWords(): Promise<CustomWordEntry[]> {
+  const db = getDb();
+  return db.customWords.orderBy("createdAt").reverse().toArray();
+}
+
+/**
+ * Deletes a single saved custom word. Never affects a round already in
+ * progress -- `RoundData.word`/`hint` are plain strings copied onto the
+ * round once at preparation time (see game/game-engine.ts), so an
+ * active round has no live reference back to this table to be disrupted
+ * by a deletion here (spec: "Custom Word Deletion During A Game" /
+ * "Game State Isolation").
+ */
+export async function deleteCustomWord(id: string): Promise<void> {
+  const db = getDb();
+  await db.customWords.delete(id);
+}
+
+/**
+ * Persists a resolved hint back onto a custom word so future rounds
+ * (including offline ones) can reuse it without asking the AI again --
+ * see providers/custom-word-provider.ts's `resolveCustomWordHint`, the
+ * only caller. Best-effort and silent, same reasoning as `cacheAiWord`
+ * above: a failed write here must never fail the round that's already
+ * using the hint it was just given. Deliberately never logs `hint`
+ * itself to Sentry -- only the `phase` tag, same as every other
+ * `captureError` call in this file.
+ */
+export async function updateCustomWordHint(
+  id: string,
+  hint: string,
+  language: GameLanguage,
+): Promise<void> {
+  try {
+    const db = getDb();
+    await db.customWords.update(id, { hint, hintLanguage: language });
+  } catch (error) {
+    captureError(error, { phase: "update-custom-word-hint" });
+  }
+}
+
+/**
+ * Selects a random saved custom word for a round.
+ *
+ * Selection rule (deliberately more forgiving than
+ * `getRandomCachedWord`'s exact category/difficulty match above): a
+ * custom word pool is small and hand-curated by one player, so
+ * requiring an exact difficulty match could easily leave zero
+ * candidates (e.g. every saved word is "hard" but "easy" was selected).
+ * Prefer an exact difficulty match; if none exists, fall back to any
+ * saved custom word rather than failing the round -- matching the spec's
+ * "custom word availability must never make the game unplayable."
+ * Returns `null` only when there are no saved custom words at all; the
+ * caller (game/game-engine.ts) falls through to the normal AI -> cache
+ * -> fallback pipeline in that case.
+ *
+ * Reuses the same session-scoped recent-word tracking
+ * (lib/recent-words.ts) as `getRandomCachedWord`, so a custom word is
+ * subject to the same "avoid an immediate repeat" behavior as any other
+ * source.
+ */
+export async function getRandomCustomWord(
+  difficulty: Difficulty,
+): Promise<CustomWordEntry | null> {
+  const db = getDb();
+  const all = await db.customWords.toArray();
+  if (all.length === 0) return null;
+
+  const exactDifficulty = all.filter((w) => w.difficulty === difficulty);
+  const pool = exactDifficulty.length > 0 ? exactDifficulty : all;
+
+  const recentIds = new Set(getRecentWordIds());
+  const nonRecent = pool.filter((w) => !recentIds.has(w.id));
+  const candidates = nonRecent.length > 0 ? nonRecent : pool;
+
+  const entry = candidates[Math.floor(Math.random() * candidates.length)];
+  rememberWordId(entry.id);
+  return entry;
+}
+
+/**
+ * Deletes every saved custom word -- the Custom Words half of "Reset
+ * Game Data" (see lib/reset-game-data.ts). Rethrows on failure, same as
+ * `resetUserData` above, since it's part of the same user-initiated,
+ * must-report-failure reset action.
+ */
+export async function clearCustomWords(): Promise<void> {
+  const db = getDb();
+  await db.customWords.clear();
 }

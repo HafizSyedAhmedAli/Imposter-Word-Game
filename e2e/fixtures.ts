@@ -45,11 +45,33 @@ export async function mockAiRoundGenerationFailure(page: Page) {
 
 export type SeatedPlayer = { name: string };
 
-export const DEFAULT_TEST_PLAYERS: SeatedPlayer[] = [
-  { name: "Alice" },
-  { name: "Bob" },
-  { name: "Cara" },
-];
+/**
+ * Canonical pool of test player names, shared across the whole suite so
+ * no spec invents its own throwaway names (Alice/Bob/Cara, Ann/Ben/Cid,
+ * etc.). Specs needing N players take the first N names via
+ * `PLAYER_NAMES.slice(0, N)` -- sequential, deterministic, and never
+ * colliding with each other as substrings (important for specs that
+ * match names with an unanchored `getByRole(..., { name: /x/i })`).
+ */
+export const PLAYER_NAMES = [
+  "Ahmed",
+  "Asmed",
+  "Mali",
+  "Hafsa",
+  "Bareera",
+  "Hamza",
+  "Fatima",
+  "Ayan",
+  "Muniza",
+  "Arham",
+  "Emaan",
+  "Sania",
+] as const;
+
+export const DEFAULT_TEST_PLAYERS: SeatedPlayer[] = PLAYER_NAMES.slice(
+  0,
+  3,
+).map((name) => ({ name }));
 
 /**
  * Adds each player via the real Players screen UI, waiting for the
@@ -143,7 +165,8 @@ export async function castVoteFor(page: Page, targetName: string) {
  * function does. Voting-history specs need to know the real imposter
  * (and at least one real crew member) *before* voting starts, so votes
  * can be cast deterministically -- unlike voting-and-results.spec.ts's
- * 3-player "everyone votes Bob" trick, a multi-round Voting History
+ * 3-player "everyone votes for the same player" trick, a multi-round
+ * Voting History
  * test needs a *specific*, known-safe crew target for its first
  * (non-eliminating) round, which only exists once the imposter is
  * identified.

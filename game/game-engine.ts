@@ -9,14 +9,15 @@ import {
   type Player,
   type RoundSession,
 } from "./game-types";
-import { getImposterCount } from "./game-rules";
+import { CUSTOM_CATEGORY, getImposterCount } from "./game-rules";
 import { assignRoles } from "./role-assignment";
 import { generateId } from "@/lib/id";
-import { cacheAiWord } from "@/lib/db";
+import { cacheAiWord, getRandomCustomWord } from "@/lib/db";
 import { getRecentWordText, rememberWordText } from "@/lib/recent-words";
 import { AiWordProvider } from "@/providers/ai-word-provider";
 import { IndexedDbCacheProvider } from "@/providers/indexeddb-cache-provider";
 import { FallbackWordProvider } from "@/providers/fallback-word-provider";
+import { resolveCustomWordHint } from "@/providers/custom-word-provider";
 import { getSettings } from "@/lib/settings-store";
 import { analytics, toRoundSource } from "@/lib/analytics";
 
@@ -147,6 +148,66 @@ async function getRoundContent(
 }
 
 /**
+ * Custom Words tier: draws a random saved custom word (lib/db.ts) and
+ * resolves its hint (providers/custom-word-provider.ts), instead of the
+ * AI -> cache -> fallback chain above. Selected only when the round's
+ * category is `CUSTOM_CATEGORY` (see `getRoundContentForRound` below).
+ *
+ * Never leaves the player stuck with no round: if there are no saved
+ * custom words (or reading them fails for any reason -- e.g. IndexedDB
+ * unavailable), this falls through to the exact same 3-tier pipeline
+ * `getRoundContent` above provides for "Random", so a round can always
+ * start (spec: "custom word availability must never make the game
+ * unplayable").
+ */
+async function getCustomRoundContent(
+  difficulty: Difficulty,
+  language: GameLanguage,
+  signal?: AbortSignal,
+): Promise<GeneratedRoundContent> {
+  try {
+    const entry = await getRandomCustomWord(difficulty);
+    if (entry) {
+      const hint = await resolveCustomWordHint(entry, language, signal);
+      if (signal?.aborted) throw new Error("Round preparation cancelled.");
+      rememberWordText(entry.word);
+      analytics.roundStarted({ source: toRoundSource("custom") });
+      return {
+        word: entry.word,
+        hint,
+        source: "custom",
+        language,
+      };
+    }
+  } catch {
+    if (signal?.aborted) throw new Error("Round preparation cancelled.");
+    // No custom words saved, or something went wrong reading them --
+    // fall through to the standard pipeline below.
+  }
+
+  return getRoundContent("random", difficulty, language, signal);
+}
+
+/**
+ * The single entry point `prepareGameRound` calls for word/hint content.
+ * Dispatches to the Custom Words tier above when the player selected the
+ * `CUSTOM_CATEGORY` pseudo-category (game/game-rules.ts); every other
+ * category goes through the unmodified `getRoundContent` 3-tier chain
+ * exactly as before this feature existed.
+ */
+async function getRoundContentForRound(
+  category: Category,
+  difficulty: Difficulty,
+  language: GameLanguage,
+  signal?: AbortSignal,
+): Promise<GeneratedRoundContent> {
+  if (category === CUSTOM_CATEGORY) {
+    return getCustomRoundContent(difficulty, language, signal);
+  }
+  return getRoundContent(category, difficulty, language, signal);
+}
+
+/**
  * Coordinates the entire round-preparation pipeline: imposter count ->
  * word/hint (AI -> IndexedDB cache -> static fallback, see
  * getRoundContent above) -> role assignment -> a finished RoundSession.
@@ -174,7 +235,7 @@ export async function prepareGameRound(
   const language = options.language ?? (await getSettings()).language;
 
   await onStage?.("word");
-  const content = await getRoundContent(
+  const content = await getRoundContentForRound(
     config.category,
     config.difficulty,
     language,

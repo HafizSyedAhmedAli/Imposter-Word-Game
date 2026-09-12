@@ -5,12 +5,14 @@ import {
   passAllPlayersAndIdentifyImposter,
   startVoting,
   castVoteFor,
+  PLAYER_NAMES,
 } from "./fixtures";
 
 /**
  * Both specs below identify the real imposter (via
  * passAllPlayersAndIdentifyImposter) instead of relying on
- * voting-and-results.spec.ts's "everyone votes Bob" 3-player trick.
+ * voting-and-results.spec.ts's "everyone votes for the same player"
+ * 3-player trick.
  * That's necessary here because a *specific*, known-safe crew target
  * is required for the first, non-eliminating round of the multi-round
  * test -- there's no way to guarantee that with an arbitrary name.
@@ -22,7 +24,7 @@ test.describe("Voting History", () => {
   }) => {
     test.slow();
 
-    const playerNames = ["Alice", "Bob", "Cara"];
+    const playerNames = PLAYER_NAMES.slice(0, 3);
     await startGameWithPlayers(
       page,
       playerNames.map((name) => ({ name })),
@@ -80,7 +82,7 @@ test.describe("Voting History", () => {
   }) => {
     test.slow();
 
-    const playerNames = ["Ann", "Ben", "Cid", "Dee"];
+    const playerNames = PLAYER_NAMES.slice(0, 4);
     await startGameWithPlayers(
       page,
       playerNames.map((name) => ({ name })),

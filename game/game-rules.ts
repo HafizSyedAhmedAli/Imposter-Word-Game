@@ -48,6 +48,34 @@ export const MORE_CATEGORIES: { id: Category; label: string }[] = [
   { id: "technology", label: "Technology" },
   { id: "places", label: "Places" },
   { id: "objects", label: "Random Objects" },
+  { id: "custom", label: "Custom Words" },
+];
+
+/**
+ * The pseudo-category that tells the round-preparation pipeline to draw
+ * from the player's own saved Custom Words (Settings -> Custom Words)
+ * instead of the normal AI -> cache -> fallback chain. Deliberately just
+ * another `Category` value -- exactly like `"random"` is already a
+ * pseudo-category rather than a real content bucket -- so it reuses the
+ * existing category-selection UI (CategorySelector/MoreCategoriesSheet)
+ * and `GameConfig.category` field with zero new state on the setup
+ * screen. See game/game-engine.ts for how it's dispatched, and
+ * lib/db.ts for the underlying `customWords` table.
+ */
+export const CUSTOM_CATEGORY: Category = "custom";
+
+/**
+ * The concrete categories a Custom Word can be filed under when a
+ * player saves one (Settings -> Custom Words -> Add Custom Word) --
+ * every real category from CATEGORIES/MORE_CATEGORIES above, minus the
+ * pseudo-category entries that aren't real content buckets: "random"
+ * (nothing to file a word under), "more" (a UI affordance that opens
+ * the sheet, not a category), and CUSTOM_CATEGORY itself (a custom word
+ * can't be filed under "Custom Words").
+ */
+export const CUSTOM_WORD_CATEGORIES: { id: Category; label: string }[] = [
+  ...CATEGORIES.filter((c) => c.id !== "random" && c.id !== "more"),
+  ...MORE_CATEGORIES.filter((c) => c.id !== CUSTOM_CATEGORY),
 ];
 
 export const DIFFICULTIES: {

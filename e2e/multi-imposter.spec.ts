@@ -1,8 +1,8 @@
 // e2e/multi-imposter.spec.ts
 import { test, expect } from "@playwright/test";
-import { mockAiRoundGeneration, addPlayers } from "./fixtures";
+import { mockAiRoundGeneration, addPlayers, PLAYER_NAMES } from "./fixtures";
 
-const NAMES = ["Ann", "Ben", "Cid", "Dee", "Eve", "Fay", "Gus", "Hal"];
+const NAMES = PLAYER_NAMES.slice(0, 8); // 8 = Double Trouble's roster size below
 
 test.describe("Multi-imposter mode", () => {
   test("8 players / Double Trouble reaches round preparation with 2 imposters seated", async ({

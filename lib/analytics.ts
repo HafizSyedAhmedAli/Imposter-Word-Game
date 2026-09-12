@@ -26,12 +26,12 @@ import { addBreadcrumb } from "@/lib/monitoring";
 
 /**
  * Reuses the game engine's own `RoundContentSource` ("ai" | "cache" |
- * "fallback") as the single source of truth for which tier actually
- * served a round -- see game/game-engine.ts. `RoundSource` is the
- * analytics-facing vocabulary for the same concept: it additionally
- * allows `"custom"` for a future user-authored-content provider (none
- * exists in this codebase today, see providers/word-provider.ts), and
- * spells the cache tier as `"cached-ai"` to read clearly on a dashboard.
++ * "fallback" | "custom") as the single source of truth for which tier
++ * actually served a round -- see game/game-engine.ts. `RoundSource` is
++ * the analytics-facing vocabulary for the same concept: `"custom"`
++ * covers a player-authored word from Settings -> Custom Words (see
++ * providers/custom-word-provider.ts), and the cache tier is spelled
++ * `"cached-ai"` to read clearly on a dashboard.
  */
 export type RoundSource = "ai" | "builtin" | "cached-ai" | "custom";
 
@@ -44,6 +44,8 @@ export function toRoundSource(source: RoundContentSource): RoundSource {
       return "cached-ai";
     case "fallback":
       return "builtin";
+    case "custom":
+      return "custom";
   }
 }
 
