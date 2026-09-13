@@ -40,6 +40,7 @@ if (existsSync(apiDir)) {
   moved = true;
 }
 
+let exitCode = 0;
 try {
   const result = spawnSync("npx", ["next", "build"], {
     stdio: "inherit",
@@ -49,11 +50,15 @@ try {
     },
     shell: process.platform === "win32",
   });
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
-  }
+  exitCode = result.status ?? 1;
 } finally {
+  // This must run even when the build above failed -- app/api being
+  // left renamed away is what would silently break `npm run dev` /
+  // `next build` afterwards, and that's strictly worse than the
+  // mobile build itself failing.
   if (moved) {
     renameSync(apiDirHidden, apiDir);
   }
 }
+
+process.exit(exitCode);

@@ -13,6 +13,23 @@ const nextConfig: NextConfig = {
   // app/api/round/generate keeps working there.
   ...(isCapacitorBuild ? { output: "export" } : {}),
 
+  // next build's own build-time type-check normally walks the whole
+  // project via the root tsconfig.json's `**/*.ts` include, which
+  // covers test/**. That's fine on the web build, where app/api is
+  // still on disk -- but build-mobile.mjs renames app/api out of the
+  // tree first, so test/api/round-generate-hint.test.ts's static
+  // `import { POST } from "@/app/api/round/generate/route"` fails to
+  // resolve and the typecheck step fails even though nothing is
+  // actually broken. tsconfig.build.json is identical except it
+  // excludes test/ and e2e/, and is only swapped in for this build
+  // target -- `npm run emit` and vitest still type-check test files
+  // against the full tsconfig.json.
+  typescript: {
+    tsconfigPath: isCapacitorBuild
+      ? "./tsconfig.build.json"
+      : "./tsconfig.json",
+  },
+
   // Exposes the package.json version to the client for the Settings
   // screen's About card, without bundling the rest of package.json
   // (dependency list, scripts, etc.) into client code.
