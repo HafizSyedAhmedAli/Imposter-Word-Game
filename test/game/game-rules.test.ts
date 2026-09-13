@@ -7,9 +7,12 @@ import {
   getPlayerCountMessage,
   validateGameConfig,
   validatePlayerName,
+  getGameConfigCategoryLabel,
   MIN_PLAYERS,
   MAX_PLAYERS,
   MAX_PLAYER_NAME_LENGTH,
+  MORE_CATEGORIES,
+  CUSTOM_WORD_CATEGORIES,
   GAME_MODE_RULES,
   DEFAULT_GAME_CONFIG,
 } from "@/game/game-rules";
@@ -206,5 +209,53 @@ describe("validatePlayerName", () => {
   it("allows editing a player's own name without flagging it as a duplicate", () => {
     const result = validatePlayerName("Ahmed", existing, "p1");
     expect(result.valid).toBe(true);
+  });
+});
+
+describe("MORE_CATEGORIES", () => {
+  it("no longer lists Custom Words -- it has its own Setup screen toggle instead", () => {
+    expect(MORE_CATEGORIES.some((c) => c.id === "custom")).toBe(false);
+  });
+});
+
+describe("CUSTOM_WORD_CATEGORIES", () => {
+  it("does not include the custom pseudo-category itself", () => {
+    expect(CUSTOM_WORD_CATEGORIES.some((c) => c.id === "custom")).toBe(false);
+  });
+
+  it("does not include random or more", () => {
+    expect(CUSTOM_WORD_CATEGORIES.some((c) => c.id === "random")).toBe(false);
+    expect(CUSTOM_WORD_CATEGORIES.some((c) => c.id === "more")).toBe(false);
+  });
+});
+
+describe("getGameConfigCategoryLabel", () => {
+  it("resolves a normal category from CATEGORIES", () => {
+    expect(getGameConfigCategoryLabel({ category: "food" })).toBe("Food");
+  });
+
+  it("resolves a normal category from MORE_CATEGORIES", () => {
+    expect(getGameConfigCategoryLabel({ category: "vehicles" })).toBe(
+      "Vehicles",
+    );
+  });
+
+  it("labels the custom pseudo-category as 'Custom Words' when no sub-category is set", () => {
+    expect(getGameConfigCategoryLabel({ category: "custom" })).toBe(
+      "Custom Words",
+    );
+  });
+
+  it("includes the specific saved category when customWordCategory is set", () => {
+    expect(
+      getGameConfigCategoryLabel({
+        category: "custom",
+        customWordCategory: "food",
+      }),
+    ).toBe("Custom Words · Food");
+  });
+
+  it("falls back to the raw id for an unrecognized category", () => {
+    expect(getGameConfigCategoryLabel({ category: "made-up" })).toBe("made-up");
   });
 });

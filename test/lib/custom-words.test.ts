@@ -217,6 +217,57 @@ describe("getRandomCustomWord", () => {
       expect(picked?.word).not.toBe("Gone");
     }
   });
+
+  it("narrows to the requested category when one is given", async () => {
+    await addCustomWord({
+      word: "Biryani",
+      category: "food",
+      difficulty: "medium",
+    });
+    await addCustomWord({
+      word: "Falcon",
+      category: "animals",
+      difficulty: "medium",
+    });
+
+    for (let i = 0; i < 5; i++) {
+      const picked = await getRandomCustomWord("medium", "animals");
+      expect(picked?.word).toBe("Falcon");
+    }
+  });
+
+  it("falls back to the full saved list when no word matches the requested category", async () => {
+    await addCustomWord({
+      word: "Biryani",
+      category: "food",
+      difficulty: "medium",
+    });
+
+    // Nothing saved under "sports" -- must not come back empty just
+    // because the specific category has no candidates.
+    const picked = await getRandomCustomWord("medium", "sports");
+    expect(picked?.word).toBe("Biryani");
+  });
+
+  it("omitting the category searches every saved word, same as before this parameter existed", async () => {
+    await addCustomWord({
+      word: "Biryani",
+      category: "food",
+      difficulty: "medium",
+    });
+    await addCustomWord({
+      word: "Falcon",
+      category: "animals",
+      difficulty: "medium",
+    });
+
+    const seen = new Set<string>();
+    for (let i = 0; i < 30; i++) {
+      const picked = await getRandomCustomWord("medium");
+      if (picked) seen.add(picked.word);
+    }
+    expect(seen.size).toBeGreaterThan(1);
+  });
 });
 
 describe("updateCustomWordHint", () => {

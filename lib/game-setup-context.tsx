@@ -17,6 +17,7 @@ import type {
   TimerSettings,
 } from "@/game/game-types";
 import {
+  CUSTOM_CATEGORY,
   DEFAULT_GAME_CONFIG,
   MAX_PLAYERS,
   validatePlayerName,
@@ -31,6 +32,15 @@ type GameSetupContextValue = {
   config: GameConfig;
   setMode: (mode: GameMode) => void;
   setCategory: (category: Category) => void;
+  /**
+   * Sets the category to `CUSTOM_CATEGORY` and records which of the
+   * player's saved custom-word categories to draw from, in one atomic
+   * update -- see `GameConfig.customWordCategory`'s doc comment. Used
+   * only by the Setup screen's Custom Words toggle
+   * (components/setup/CategorySelector.tsx); every other category
+   * selection goes through `setCategory` above instead.
+   */
+  selectCustomWordCategory: (category: Category) => void;
   setDifficulty: (difficulty: Difficulty) => void;
   setDiscussionTimer: (patch: Partial<TimerSettings>) => void;
   setVotingTimer: (patch: Partial<TimerSettings>) => void;
@@ -118,7 +128,19 @@ export function GameSetupProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setCategory = useCallback((category: Category) => {
-    setConfig((prev) => ({ ...prev, category }));
+    // Any selection made through the normal category row/"More" sheet
+    // means the player has left Custom Words mode -- always clear a
+    // stale `customWordCategory` here so it can never linger onto a
+    // later `CUSTOM_CATEGORY` selection it wasn't actually chosen for.
+    setConfig((prev) => ({ ...prev, category, customWordCategory: undefined }));
+  }, []);
+
+  const selectCustomWordCategory = useCallback((category: Category) => {
+    setConfig((prev) => ({
+      ...prev,
+      category: CUSTOM_CATEGORY,
+      customWordCategory: category,
+    }));
   }, []);
 
   const setDifficulty = useCallback((difficulty: Difficulty) => {
@@ -212,6 +234,7 @@ export function GameSetupProvider({ children }: { children: React.ReactNode }) {
       config,
       setMode,
       setCategory,
+      selectCustomWordCategory,
       setDifficulty,
       setDiscussionTimer,
       setVotingTimer,
@@ -228,6 +251,7 @@ export function GameSetupProvider({ children }: { children: React.ReactNode }) {
       config,
       setMode,
       setCategory,
+      selectCustomWordCategory,
       setDifficulty,
       setDiscussionTimer,
       setVotingTimer,

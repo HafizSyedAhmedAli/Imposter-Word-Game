@@ -1,25 +1,16 @@
 import { Skull, Dices, Gauge } from "lucide-react";
 import type { GameConfig } from "@/game/game-types";
 import {
-  CATEGORIES,
   DIFFICULTIES,
-  MORE_CATEGORIES,
+  getGameConfigCategoryLabel,
   getImposterCount,
   getModeDisplayName,
 } from "@/game/game-rules";
 
-function getCategoryLabel(id: string): string {
-  return (
-    CATEGORIES.find((c) => c.id === id)?.label ??
-    MORE_CATEGORIES.find((c) => c.id === id)?.label ??
-    id
-  );
-}
-
 export default function GameConfigSummary({ config }: { config: GameConfig }) {
   const modeName = getModeDisplayName(config.mode);
   const difficultyInfo = DIFFICULTIES.find((d) => d.id === config.difficulty);
-  const categoryLabel = getCategoryLabel(config.category);
+  const categoryLabel = getGameConfigCategoryLabel(config);
 
   // Random mode doesn't reveal an imposter count until the game engine
   // resolves it against the final player count (see game-rules.ts).

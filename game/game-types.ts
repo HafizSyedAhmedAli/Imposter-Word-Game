@@ -57,6 +57,18 @@ export type GameOptions = {
 export type GameConfig = {
   mode: GameMode;
   category: Category;
+  /**
+   * Which concrete category to draw a Custom Word from, e.g. "food".
+   * Only meaningful when `category === CUSTOM_CATEGORY` (see
+   * game/game-rules.ts) -- every other category ignores this field
+   * entirely. Set by the Setup screen's Custom Words toggle
+   * (components/setup/CategorySelector.tsx) once the player picks
+   * which of their saved custom-word categories to play from; `game
+   * -engine.ts`'s `getCustomRoundContent` reads it to scope
+   * `getRandomCustomWord` (lib/db.ts) down to that one category
+   * instead of the player's entire saved list.
+   */
+  customWordCategory?: Category;
   difficulty: Difficulty;
   options: GameOptions;
 };

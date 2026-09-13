@@ -24,6 +24,7 @@ export default function GameSetupScreen() {
     config,
     setMode,
     setCategory,
+    selectCustomWordCategory,
     setDifficulty,
     setDiscussionTimer,
     setVotingTimer,
@@ -66,7 +67,12 @@ export default function GameSetupScreen() {
             <GameModeSelector mode={config.mode} onChange={handleModeChange} />
           </SetupSection>
 
-          <CategorySelector category={config.category} onChange={setCategory} />
+          <CategorySelector
+            category={config.category}
+            customWordCategory={config.customWordCategory}
+            onChange={setCategory}
+            onSelectCustomWordCategory={selectCustomWordCategory}
+          />
 
           <SetupSection title="3. CHOOSE DIFFICULTY" delay="120ms">
             <DifficultySelector

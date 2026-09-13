@@ -192,6 +192,51 @@ describe("prepareGameRound -- Custom Words category", () => {
     expect(session.round.word).toBe("Biryani");
   });
 
+  it("scopes the draw to customWordCategory when set", async () => {
+    setOnline(false);
+    await addCustomWord({
+      word: "Biryani",
+      category: "food",
+      difficulty: "medium",
+    });
+    await addCustomWord({
+      word: "Falcon",
+      category: "animals",
+      difficulty: "medium",
+    });
+
+    const config = {
+      ...DEFAULT_GAME_CONFIG,
+      category: CUSTOM_CATEGORY,
+      customWordCategory: "animals",
+    };
+
+    for (let i = 0; i < 5; i++) {
+      clearRecentWords();
+      const session = await prepareGameRound(config, makePlayers(5));
+      expect(session.round.word).toBe("Falcon");
+    }
+  });
+
+  it("falls back to any saved custom word when customWordCategory has no matches", async () => {
+    setOnline(false);
+    await addCustomWord({
+      word: "Biryani",
+      category: "food",
+      difficulty: "medium",
+    });
+
+    const config = {
+      ...DEFAULT_GAME_CONFIG,
+      category: CUSTOM_CATEGORY,
+      customWordCategory: "sports",
+    };
+
+    const session = await prepareGameRound(config, makePlayers(5));
+    expect(session.round.word).toBe("Biryani");
+    expect(session.round.contentSource).toBe("custom");
+  });
+
   it("does not affect the normal 'random' category's own word selection", async () => {
     await addCustomWord({
       word: "ShouldNeverAppearHere",

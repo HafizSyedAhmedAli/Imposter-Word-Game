@@ -376,43 +376,31 @@ export async function markRoundUsed(id: string): Promise<void> {
  *
  * Within that fixed set of valid entries, preference is applied in
  * tiers -- each tier only narrows the pool if doing so leaves at least
- * one candidate:
- *   1. Require an entry not in this session's recent-word history
- *      (lib/recent-words.ts). Unlike the tiers below, this one is NOT
- *      relaxed when it empties the pool -- see "Exhaustion" below.
+ * one candidate, so the game never fails to return a word just because
+ * every entry happens to be "recent" or "used" (spec: don't guarantee
+ * perfect uniqueness forever, just make repeats uncommon):
+ *   1. Prefer entries not in this session's recent-word history
+ *      (lib/recent-words.ts) -- avoids an immediate back-to-back repeat.
  *   2. Within that, prefer never-used entries (`usageCount === 0`),
  *      then the least-recently-used ones -- spreads usage evenly across
  *      the cache over the lifetime of the install instead of always
  *      drawing from the same handful of rows.
- * Once every remaining (non-recent) entry has been used at least once,
- * older/least-recently-used ones among THEM are simply recycled -- that
- * part is still "allow reuse when necessary," not an error state.
+ * Once every entry has been used at least once, older/least-recently-used
+ * entries are simply recycled -- this is the "allow reuse when
+ * necessary" tier, not an error state.
  *
- * Exhaustion: if EVERY entry matching category/difficulty/language has
- * already been shown this session (tier 1 above would come back empty),
- * this returns `null` rather than repeating one of them. A round-robin
- * cache with only a handful of rows for a given category/difficulty
- * (e.g. right after the AI quota is hit, before many rounds have been
- * cached) would otherwise start visibly repeating words every few
- * rounds. Returning `null` here lets the caller fall through to tier 3
- * (the much larger static offline word list) for a fresh word instead
- * -- see providers/indexeddb-cache-provider.ts and
- * game/game-engine.ts's `getRoundContent`. Tier 3 itself still recycles
- * as an absolute last resort once ITS pool is exhausted too (see
- * getRandomFallbackWord) -- there is nowhere further to fall back to
- * after that.
- *
- * Also returns `null` when nothing suitable is cached yet at all -- an
- * empty/sparse cache is an expected, normal state (e.g. the very first
- * offline round on a fresh install), not an error.
+ * Returns `null` when nothing suitable is cached yet -- an empty/sparse
+ * cache is an expected, normal state (e.g. the very first offline round
+ * on a fresh install), not an error. The caller
+ * (providers/indexeddb-cache-provider.ts) turns "null" into a
+ * fall-through to tier 3.
  *
  * This function CAN reject: `getDb()` throws outside the browser, and
  * the IndexedDB read rejects when storage is unavailable. Tier 2 in
  * game/game-engine.ts catches both cases and falls through to tier 3.
  * The caller (providers/indexeddb-cache-provider.ts) is what turns
  * "null" into a fall-through to tier 3 -- this function must never
- * substitute a mismatched or repeated entry just to avoid returning
- * null.
+ * substitute a mismatched entry just to avoid returning null.
  */
 export async function getRandomCachedWord(
   category: Category,
@@ -438,19 +426,11 @@ export async function getRandomCachedWord(
 
   const recentIds = new Set(getRecentWordIds());
   const nonRecent = matching.filter((w) => !recentIds.has(w.id));
-  if (nonRecent.length === 0) {
-    // Every candidate for this category/difficulty/language has already
-    // been shown this session -- picking anyway would just repeat a
-    // word back-to-back (or near it). Signal exhaustion instead so the
-    // caller tries the static offline tier for something fresh. See
-    // the "Exhaustion" section of this function's doc comment above.
-    return null;
-  }
-  const tier1 = nonRecent;
+  const tier1 = nonRecent.length > 0 ? nonRecent : matching;
 
-  // Within the tier-1 (non-recent) pool, prefer unused entries; if all
-  // of them have been used before, fall back to the least-recently-used
-  // ones instead of narrowing to an empty set.
+  // Within the tier-1 pool, prefer unused entries; if all of them have
+  // been used before, fall back to the least-recently-used ones instead
+  // of narrowing to an empty set.
   const unused = tier1.filter((w) => w.usageCount === 0);
   const tier2 = unused.length > 0 ? unused : tier1;
 
@@ -595,6 +575,17 @@ export async function updateCustomWordHint(
  * caller (game/game-engine.ts) falls through to the normal AI -> cache
  * -> fallback pipeline in that case.
  *
+ * `category`, when given, narrows the pool to that one category first
+ * (Setup screen's Custom Words toggle -- see
+ * components/setup/CategorySelector.tsx and
+ * `GameConfig.customWordCategory`). Same forgiving spirit as the
+ * difficulty match above: if narrowing to `category` would leave zero
+ * candidates (e.g. the player deleted every word in that category from
+ * Settings after starting Setup, or restored a stale session), this
+ * falls back to the player's full saved list rather than failing the
+ * round. Omitting `category` entirely (existing callers/tests) searches
+ * every saved custom word, exactly as before this parameter existed.
+ *
  * Reuses the same session-scoped recent-word tracking
  * (lib/recent-words.ts) as `getRandomCachedWord`, so a custom word is
  * subject to the same "avoid an immediate repeat" behavior as any other
@@ -602,13 +593,19 @@ export async function updateCustomWordHint(
  */
 export async function getRandomCustomWord(
   difficulty: Difficulty,
+  category?: Category,
 ): Promise<CustomWordEntry | null> {
   const db = getDb();
   const all = await db.customWords.toArray();
   if (all.length === 0) return null;
 
-  const exactDifficulty = all.filter((w) => w.difficulty === difficulty);
-  const pool = exactDifficulty.length > 0 ? exactDifficulty : all;
+  const categoryPool = category
+    ? all.filter((w) => w.category === category)
+    : all;
+  const basePool = categoryPool.length > 0 ? categoryPool : all;
+
+  const exactDifficulty = basePool.filter((w) => w.difficulty === difficulty);
+  const pool = exactDifficulty.length > 0 ? exactDifficulty : basePool;
 
   const recentIds = new Set(getRecentWordIds());
   const nonRecent = pool.filter((w) => !recentIds.has(w.id));

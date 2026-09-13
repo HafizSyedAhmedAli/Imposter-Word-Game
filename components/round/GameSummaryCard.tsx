@@ -1,20 +1,11 @@
 import { Users, Skull, Dices, Gauge } from "lucide-react";
 import type { GameConfig } from "@/game/game-types";
 import {
-  CATEGORIES,
   DIFFICULTIES,
   MAX_PLAYERS,
-  MORE_CATEGORIES,
+  getGameConfigCategoryLabel,
   getModeDisplayName,
 } from "@/game/game-rules";
-
-function getCategoryLabel(id: string): string {
-  return (
-    CATEGORIES.find((c) => c.id === id)?.label ??
-    MORE_CATEGORIES.find((c) => c.id === id)?.label ??
-    id
-  );
-}
 
 /**
  * Read-only summary shown throughout preparation. Intentionally mirrors
@@ -34,7 +25,7 @@ export default function GameSummaryCard({
 }) {
   const modeName = getModeDisplayName(config.mode);
   const difficultyInfo = DIFFICULTIES.find((d) => d.id === config.difficulty);
-  const categoryLabel = getCategoryLabel(config.category);
+  const categoryLabel = getGameConfigCategoryLabel(config);
 
   return (
     <section className="animate-iw-fade-up rounded-3xl border border-iw-border bg-iw-surface/40 p-4 backdrop-blur-sm sm:p-5">

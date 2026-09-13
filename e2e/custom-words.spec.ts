@@ -47,18 +47,21 @@ test.describe("Custom Words", () => {
     await playLink.click();
     await page.waitForURL("**/setup");
 
-    // "Custom Words" lives in the "More" sheet (game/game-rules.ts's
-    // MORE_CATEGORIES) rather than the top-level category row.
-    await page.getByRole("radio", { name: "More" }).click();
-    const moreSheet = page.getByRole("dialog", { name: /more categories/i });
-    await moreSheet.getByRole("radio", { name: "Custom Words" }).click();
-    await expect(moreSheet).toBeHidden();
-    // Picking from the sheet is reflected back on "More" itself
-    // (CategorySelector's isFromMoreSheet), confirming the selection stuck.
-    await expect(page.getByRole("radio", { name: "More" })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
+    // Custom Words has its own toggle at the top of the category
+    // section (components/setup/CategorySelector.tsx) -- switching it
+    // on swaps the row to the categories the player has actually saved
+    // words under. The word above was saved under "Food" (the default
+    // category in AddCustomWordCard), so that's the chip this test
+    // expects to see and select.
+    const customWordsToggle = page.getByRole("switch", {
+      name: /custom words/i,
+    });
+    await customWordsToggle.click();
+    await expect(customWordsToggle).toHaveAttribute("aria-checked", "true");
+
+    const foodChip = page.getByRole("radio", { name: "Food" });
+    await foodChip.waitFor({ state: "visible" });
+    await expect(foodChip).toHaveAttribute("aria-checked", "true");
 
     const setupContinue = page.getByRole("button", { name: /continue/i });
     await setupContinue.waitFor({ state: "visible" });

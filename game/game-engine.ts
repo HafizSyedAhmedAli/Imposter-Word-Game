@@ -153,6 +153,12 @@ async function getRoundContent(
  * AI -> cache -> fallback chain above. Selected only when the round's
  * category is `CUSTOM_CATEGORY` (see `getRoundContentForRound` below).
  *
+ * `customWordCategory` narrows the draw to one of the player's saved
+ * categories (Setup screen's Custom Words toggle -- see
+ * components/setup/CategorySelector.tsx and
+ * `GameConfig.customWordCategory`); `undefined` searches every saved
+ * custom word, same as before this parameter existed.
+ *
  * Never leaves the player stuck with no round: if there are no saved
  * custom words (or reading them fails for any reason -- e.g. IndexedDB
  * unavailable), this falls through to the exact same 3-tier pipeline
@@ -163,10 +169,11 @@ async function getRoundContent(
 async function getCustomRoundContent(
   difficulty: Difficulty,
   language: GameLanguage,
+  customWordCategory?: Category,
   signal?: AbortSignal,
 ): Promise<GeneratedRoundContent> {
   try {
-    const entry = await getRandomCustomWord(difficulty);
+    const entry = await getRandomCustomWord(difficulty, customWordCategory);
     if (entry) {
       const hint = await resolveCustomWordHint(entry, language, signal);
       if (signal?.aborted) throw new Error("Round preparation cancelled.");
@@ -199,10 +206,16 @@ async function getRoundContentForRound(
   category: Category,
   difficulty: Difficulty,
   language: GameLanguage,
+  customWordCategory?: Category,
   signal?: AbortSignal,
 ): Promise<GeneratedRoundContent> {
   if (category === CUSTOM_CATEGORY) {
-    return getCustomRoundContent(difficulty, language, signal);
+    return getCustomRoundContent(
+      difficulty,
+      language,
+      customWordCategory,
+      signal,
+    );
   }
   return getRoundContent(category, difficulty, language, signal);
 }
@@ -239,6 +252,7 @@ export async function prepareGameRound(
     config.category,
     config.difficulty,
     language,
+    config.customWordCategory,
     signal,
   );
   if (signal?.aborted) throw new Error("Round preparation cancelled.");

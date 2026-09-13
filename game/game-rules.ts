@@ -40,6 +40,13 @@ export const CATEGORIES: { id: Category; label: string }[] = [
 
 // Extra categories surfaced from the "More" sheet. Kept short for the MVP;
 // this list is easy to extend without touching any component.
+//
+// Custom Words is deliberately NOT listed here -- it has its own
+// dedicated toggle at the top of the Setup screen's category section
+// (components/setup/CategorySelector.tsx) instead of living as just
+// another entry in this sheet, since selecting it swaps the entire
+// category row to the player's own saved-word categories rather than
+// picking a single value the way every other entry here does.
 export const MORE_CATEGORIES: { id: Category; label: string }[] = [
   { id: "vehicles", label: "Vehicles" },
   { id: "jobs", label: "Jobs" },
@@ -48,7 +55,6 @@ export const MORE_CATEGORIES: { id: Category; label: string }[] = [
   { id: "technology", label: "Technology" },
   { id: "places", label: "Places" },
   { id: "objects", label: "Random Objects" },
-  { id: "custom", label: "Custom Words" },
 ];
 
 /**
@@ -69,14 +75,44 @@ export const CUSTOM_CATEGORY: Category = "custom";
  * player saves one (Settings -> Custom Words -> Add Custom Word) --
  * every real category from CATEGORIES/MORE_CATEGORIES above, minus the
  * pseudo-category entries that aren't real content buckets: "random"
- * (nothing to file a word under), "more" (a UI affordance that opens
- * the sheet, not a category), and CUSTOM_CATEGORY itself (a custom word
- * can't be filed under "Custom Words").
+ * (nothing to file a word under) and "more" (a UI affordance that opens
+ * the sheet, not a category). The `!== CUSTOM_CATEGORY` filter is a
+ * defensive no-op today (MORE_CATEGORIES no longer contains it -- see
+ * its comment), kept in case a future edit ever adds it back there.
  */
 export const CUSTOM_WORD_CATEGORIES: { id: Category; label: string }[] = [
   ...CATEGORIES.filter((c) => c.id !== "random" && c.id !== "more"),
   ...MORE_CATEGORIES.filter((c) => c.id !== CUSTOM_CATEGORY),
 ];
+
+/**
+ * The label shown wherever a `GameConfig`'s category is displayed
+ * read-only (Players screen's GameConfigSummary, Round Preparation's
+ * GameSummaryCard). A plain `CATEGORIES`/`MORE_CATEGORIES` lookup can't
+ * resolve `CUSTOM_CATEGORY` on its own -- it's a pseudo-category with no
+ * entry in either list (see MORE_CATEGORIES's comment) -- so this
+ * special-cases it into "Custom Words" (plus the specific saved
+ * category the player picked, e.g. "Custom Words · Food", when
+ * `customWordCategory` is set) before falling back to the normal
+ * lookup for every other category.
+ */
+export function getGameConfigCategoryLabel(config: {
+  category: Category;
+  customWordCategory?: Category;
+}): string {
+  if (config.category === CUSTOM_CATEGORY) {
+    const subLabel = config.customWordCategory
+      ? CUSTOM_WORD_CATEGORIES.find((c) => c.id === config.customWordCategory)
+          ?.label
+      : undefined;
+    return subLabel ? `Custom Words · ${subLabel}` : "Custom Words";
+  }
+  return (
+    CATEGORIES.find((c) => c.id === config.category)?.label ??
+    MORE_CATEGORIES.find((c) => c.id === config.category)?.label ??
+    config.category
+  );
+}
 
 export const DIFFICULTIES: {
   id: Difficulty;
@@ -336,3 +372,10 @@ export function validatePlayerName(
 
   return { valid: true, value: trimmed };
 }
+
+/* Player rules (Screen 3)                                            */
+/*                                                                     */
+/* Everything below governs *player setup only* -- how many players a */
+/* mode needs, and whether a player name is acceptable. None of this   */
+/* assigns roles, picks a word, or talks to the AI / IndexedDB layer.  */
+/* ------------------------------------------------------------------ */
