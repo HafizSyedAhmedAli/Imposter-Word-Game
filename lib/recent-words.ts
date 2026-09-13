@@ -3,9 +3,11 @@ const RECENT_WORDS_LIMIT = 10;
 
 /**
  * Session-scoped "don't repeat this word again immediately" tracking.
- * Shared across every word source (AI cache, static fallback) so a
- * player never sees the same word twice in a row regardless of which
- * tier it came from -- see lib/db.ts and lib/fallback-words.ts.
+ * Deliberately capped and ordered (most-recent-first) -- this is only
+ * ever meant to answer "was this shown a moment ago?", not "was this
+ * shown at all this session?". See `getShownWordIds` below for the
+ * latter; do not widen this cap to make exhaustion detection work, it
+ * has its own dedicated, uncapped tracker for that.
  */
 export function getRecentWordIds(): string[] {
   if (typeof window === "undefined") return [];
@@ -19,6 +21,36 @@ export function getRecentWordIds(): string[] {
     return [];
   }
 }
+
+const SHOWN_WORDS_KEY = "iw:shown-word-ids";
+
+/**
+ * Session-scoped "has this exact cached/fallback row already been shown
+ * this session?" tracking. Unlike `getRecentWordIds` above, this is
+ * deliberately UNCAPPED: `lib/db.ts`'s `getRandomCachedWord` and
+ * `lib/fallback-words/index.ts`'s `getRandomFallbackWord` both need to
+ * detect when *every* matching row for a category/difficulty/language
+ * has already been shown, so a small cache pool (or even a single
+ * 20-entry static category/difficulty pool) doesn't quietly start
+ * repeating words just because more than `RECENT_WORDS_LIMIT` distinct
+ * rows have been shown this session. A capped/ordered list can't answer
+ * that question -- older entries would silently "become new again" once
+ * evicted -- so this is a plain unordered set instead, populated by the
+ * same `rememberWordId` call site as the capped list above.
+ */
+export function getShownWordIds(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = sessionStorage.getItem(SHOWN_WORDS_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((id): id is string => typeof id === "string");
+  } catch {
+    return [];
+  }
+}
+
 export function rememberWordId(id: string): void {
   if (typeof window === "undefined") return;
   try {
@@ -30,6 +62,16 @@ export function rememberWordId(id: string): void {
   } catch {
     // Best-effort only -- duplicate protection is a nice-to-have, never
     // something that should block a round from starting.
+  }
+  try {
+    const shown = getShownWordIds();
+    if (!shown.includes(id)) {
+      shown.push(id);
+      sessionStorage.setItem(SHOWN_WORDS_KEY, JSON.stringify(shown));
+    }
+  } catch {
+    // Best-effort only, same reasoning as above -- exhaustion detection
+    // degrading is never a reason to block a round from starting.
   }
 }
 
@@ -82,7 +124,8 @@ export function rememberWordText(word: string): void {
 // lib/recent-words.ts (append at end of file, after rememberWordText)
 
 /**
- * Clears both recent-word trackers above. Part of "Reset Game Data" (see
+ * Clears all three recent-word trackers above (including the uncapped
+ * shown-word-ids set). Part of "Reset Game Data" (see
  * lib/reset-game-data.ts) -- without this, a reset round could still
  * feel non-random immediately afterwards, since these session-scoped
  * "don't repeat" lists would otherwise survive the reset untouched.
@@ -92,6 +135,7 @@ export function clearRecentWords(): void {
   try {
     sessionStorage.removeItem(RECENT_WORDS_KEY);
     sessionStorage.removeItem(RECENT_WORD_TEXT_KEY);
+    sessionStorage.removeItem(SHOWN_WORDS_KEY);
   } catch {
     // Best-effort only, same reasoning as rememberWordId above.
   }

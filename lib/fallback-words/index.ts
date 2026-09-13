@@ -1,5 +1,5 @@
 import type { Category, Difficulty, GameLanguage } from "@/game/game-types";
-import { getRecentWordIds, rememberWordId } from "../recent-words";
+import { getShownWordIds, rememberWordId } from "../recent-words";
 import type { FallbackWordEntry } from "./types";
 import { FOOD_FALLBACK_WORDS } from "./food";
 import { ANIMALS_FALLBACK_WORDS } from "./animals";
@@ -81,9 +81,9 @@ function pickRandom<T>(items: T[]): T {
  * category + difficulty + language as closely as possible via graceful
  * tiers:
  *
- *   1. Exact category + difficulty + language, excluding recently used
- *      words
- *   2. Exact category + difficulty + language (recent words allowed)
+ *   1. Exact category + difficulty + language, excluding words already
+ *      shown this session
+ *   2. Exact category + difficulty + language (shown words allowed)
  *
  * `language` is matched exactly and never relaxed -- a Roman Urdu
  * selection must never silently fall back to an English entry (spec:
@@ -119,8 +119,13 @@ export function getRandomFallbackWord(
     );
   }
 
-  const recentIds = new Set(getRecentWordIds());
-  const nonRecent = matching.filter((w) => !recentIds.has(w.id));
+  // Uses the uncapped `getShownWordIds` tracker (not `getRecentWordIds`,
+  // which only remembers the last 10 words across every category
+  // combined) -- a category/difficulty pool here can hold up to 20
+  // entries, so a capped/ordered check would start "forgetting" earlier
+  // entries were shown well before the pool was actually exhausted.
+  const shownIds = new Set(getShownWordIds());
+  const nonRecent = matching.filter((w) => !shownIds.has(w.id));
   const pool = nonRecent.length > 0 ? nonRecent : matching;
 
   const entry = pickRandom(pool);

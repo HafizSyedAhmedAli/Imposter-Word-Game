@@ -8,7 +8,11 @@ import {
 } from "@/game/game-types";
 import { generateId } from "./id";
 import { captureError } from "./monitoring";
-import { getRecentWordIds, rememberWordId } from "./recent-words";
+import {
+  getRecentWordIds,
+  getShownWordIds,
+  rememberWordId,
+} from "./recent-words";
 import {
   validateCustomWordText,
   type ExistingCustomWord,
@@ -379,15 +383,14 @@ export async function markRoundUsed(id: string): Promise<void> {
  * one candidate, so the game never fails to return a word just because
  * every entry happens to be "recent" or "used" (spec: don't guarantee
  * perfect uniqueness forever, just make repeats uncommon):
- *   1. Prefer entries not in this session's recent-word history
- *      (lib/recent-words.ts) -- avoids an immediate back-to-back repeat.
- *   2. Within that, prefer never-used entries (`usageCount === 0`),
- *      then the least-recently-used ones -- spreads usage evenly across
- *      the cache over the lifetime of the install instead of always
- *      drawing from the same handful of rows.
- * Once every entry has been used at least once, older/least-recently-used
- * entries are simply recycled -- this is the "allow reuse when
- * necessary" tier, not an error state.
+ *   0. Exclude every entry already shown this session
+ *      (lib/recent-words.ts's uncapped `getShownWordIds` tracker) --
+ *      if that leaves nothing, return `null` (exhaustion) rather than
+ *      repeat one; the caller falls through to tier 3.
+ *   1. Within what's left, prefer never-used entries
+ *      (`usageCount === 0`), then the least-recently-used ones --
+ *      spreads usage evenly across the cache over the lifetime of the
+ *      install instead of always drawing from the same handful of rows.
  *
  * Returns `null` when nothing suitable is cached yet -- an empty/sparse
  * cache is an expected, normal state (e.g. the very first offline round
@@ -424,9 +427,18 @@ export async function getRandomCachedWord(
   );
   if (matching.length === 0) return null;
 
-  const recentIds = new Set(getRecentWordIds());
-  const nonRecent = matching.filter((w) => !recentIds.has(w.id));
-  const tier1 = nonRecent.length > 0 ? nonRecent : matching;
+  // Exhaustion check: if every matching row has already been shown this
+  // session, there is nothing left to offer without repeating one --
+  // signal that via `null` rather than quietly reusing a shown-word.
+  // Deliberately uses the *uncapped* `getShownWordIds` tracker rather
+  // than `getRecentWordIds` (which only remembers the last 10 words
+  // across every category/difficulty combined) -- a category/difficulty
+  // pool bigger than 10 must not silently "forget" its earlier entries
+  // were already shown. See providers/indexeddb-cache-provider.ts, which
+  // turns this null into a fall-through to the tier-3 static provider.
+  const shownIds = new Set(getShownWordIds());
+  const tier1 = matching.filter((w) => !shownIds.has(w.id));
+  if (tier1.length === 0) return null;
 
   // Within the tier-1 pool, prefer unused entries; if all of them have
   // been used before, fall back to the least-recently-used ones instead
@@ -586,10 +598,11 @@ export async function updateCustomWordHint(
  * round. Omitting `category` entirely (existing callers/tests) searches
  * every saved custom word, exactly as before this parameter existed.
  *
- * Reuses the same session-scoped recent-word tracking
- * (lib/recent-words.ts) as `getRandomCachedWord`, so a custom word is
- * subject to the same "avoid an immediate repeat" behavior as any other
- * source.
+ * Deliberately still uses the capped `getRecentWordIds` tracker (NOT
+ * `getShownWordIds`) -- a custom word list is small and hand-curated,
+ * and this selector already falls back to repeating when narrowing
+ * would leave zero candidates (see above), so it only ever needs
+ * "avoid an immediate repeat," not full-session exhaustion detection.
  */
 export async function getRandomCustomWord(
   difficulty: Difficulty,
