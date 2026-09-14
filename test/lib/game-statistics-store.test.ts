@@ -1,79 +1,106 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
+import { getDb } from "@/lib/db";
 import {
-  getStatistics,
   recordFinalResult,
+  getGameHistory,
+  getStatisticsSnapshot,
   resetStatistics,
 } from "@/lib/game-statistics-store";
 import { baseSession, multiImposterSession } from "../helpers/fixtures";
 
-describe("getStatistics", () => {
-  it("starts at zero for every field", () => {
-    expect(getStatistics()).toEqual({
-      gamesPlayed: 0,
-      crewWins: 0,
-      imposterWins: 0,
-      impostersCaught: 0,
-      totalImpostersRevealed: 0,
-    });
+// `getDb()` returns a module-level singleton Dexie instance backed by
+// fake-indexeddb (see test/setup.ts) that is NOT reset by the global
+// beforeEach/afterEach hooks -- clear the table this file touches after
+// every test to stay isolated, same convention as test/lib/db.test.ts.
+afterEach(async () => {
+  const db = getDb();
+  await db.completedGames.clear();
+});
+
+describe("recordFinalResult / getGameHistory", () => {
+  it("stores a completed game, retrievable afterward", async () => {
+    const session = baseSession({ eliminatedPlayerIds: ["p1"] });
+    await recordFinalResult(session, "crew-win");
+
+    const history = await getGameHistory();
+    expect(history).toHaveLength(1);
+    expect(history[0].id).toBe(session.id);
+    expect(history[0].winner).toBe("crew-win");
+  });
+
+  it("stores multiple distinct completed games", async () => {
+    await recordFinalResult(
+      baseSession({ id: "game-1", eliminatedPlayerIds: ["p1"] }),
+      "crew-win",
+    );
+    await recordFinalResult(
+      baseSession({ id: "game-2", eliminatedPlayerIds: ["p2", "p3"] }),
+      "imposter-win",
+    );
+
+    const history = await getGameHistory();
+    expect(history).toHaveLength(2);
+  });
+
+  it("is idempotent per session id -- recording the same finished game twice never duplicates it", async () => {
+    const session = baseSession({ eliminatedPlayerIds: ["p1"] });
+    await recordFinalResult(session, "crew-win");
+    await recordFinalResult(session, "crew-win");
+
+    const history = await getGameHistory();
+    expect(history).toHaveLength(1);
   });
 });
 
-describe("recordFinalResult", () => {
-  it("increments gamesPlayed and crewWins for a crew-win", () => {
-    const session = baseSession({ eliminatedPlayerIds: ["p1"] });
-    const stats = recordFinalResult(session, "crew-win");
-    expect(stats.gamesPlayed).toBe(1);
-    expect(stats.crewWins).toBe(1);
-    expect(stats.imposterWins).toBe(0);
-    expect(stats.impostersCaught).toBe(1);
-    expect(stats.totalImpostersRevealed).toBe(1);
+describe("getStatisticsSnapshot", () => {
+  it("returns the zero-state when nothing has been recorded", async () => {
+    const snapshot = await getStatisticsSnapshot();
+    expect(snapshot.global.gamesPlayed).toBe(0);
+    expect(snapshot.global.crewWinRate).toBe(0);
+    expect(snapshot.players).toEqual([]);
   });
 
-  it("increments imposterWins for an imposter-win", () => {
-    const session = baseSession({ eliminatedPlayerIds: ["p2", "p3"] });
-    const stats = recordFinalResult(session, "imposter-win");
-    expect(stats.imposterWins).toBe(1);
-    expect(stats.crewWins).toBe(0);
-    expect(stats.impostersCaught).toBe(0);
-  });
+  it("aggregates global and per-player statistics from every stored game", async () => {
+    await recordFinalResult(
+      baseSession({ id: "game-1", eliminatedPlayerIds: ["p1"] }),
+      "crew-win",
+    );
+    await recordFinalResult(
+      multiImposterSession({ id: "game-2", eliminatedPlayerIds: ["p1", "p2"] }),
+      "crew-win",
+    );
 
-  it("counts every imposter caught in a multi-imposter game", () => {
-    const session = multiImposterSession({ eliminatedPlayerIds: ["p1", "p2"] });
-    const stats = recordFinalResult(session, "crew-win");
-    expect(stats.impostersCaught).toBe(2);
-    expect(stats.totalImpostersRevealed).toBe(2);
-  });
-
-  it("is idempotent per session id -- a refresh does not double-count", () => {
-    const session = baseSession({ eliminatedPlayerIds: ["p1"] });
-    recordFinalResult(session, "crew-win");
-    const stats = recordFinalResult(session, "crew-win");
-    expect(stats.gamesPlayed).toBe(1);
-  });
-
-  it("accumulates across multiple distinct games", () => {
-    const first = baseSession({ id: "game-1", eliminatedPlayerIds: ["p1"] });
-    const second = baseSession({ id: "game-2", eliminatedPlayerIds: ["p2", "p3"] });
-    recordFinalResult(first, "crew-win");
-    const stats = recordFinalResult(second, "imposter-win");
-    expect(stats.gamesPlayed).toBe(2);
-    expect(stats.crewWins).toBe(1);
-    expect(stats.imposterWins).toBe(1);
+    const snapshot = await getStatisticsSnapshot();
+    expect(snapshot.global.gamesPlayed).toBe(2);
+    expect(snapshot.global.crewWins).toBe(2);
+    expect(snapshot.global.crewWinRate).toBe(100);
+    // "Ahmed" (p1) is an imposter in both fixtures.
+    const ahmed = snapshot.players.find((p) => p.normalizedName === "ahmed");
+    expect(ahmed?.gamesPlayed).toBe(2);
+    expect(ahmed?.imposterGames).toBe(2);
   });
 });
 
 describe("resetStatistics", () => {
-  it("clears accumulated statistics back to zero", () => {
-    recordFinalResult(baseSession({ eliminatedPlayerIds: ["p1"] }), "crew-win");
-    resetStatistics();
-    expect(getStatistics().gamesPlayed).toBe(0);
+  it("clears every stored completed game", async () => {
+    await recordFinalResult(
+      baseSession({ eliminatedPlayerIds: ["p1"] }),
+      "crew-win",
+    );
+    await resetStatistics();
+
+    const history = await getGameHistory();
+    expect(history).toHaveLength(0);
+    expect((await getStatisticsSnapshot()).global.gamesPlayed).toBe(0);
   });
 
-  it("allows a previously-finalized round id to be recorded again after reset", () => {
+  it("allows a previously-recorded session id to be recorded again after reset", async () => {
     const session = baseSession({ eliminatedPlayerIds: ["p1"] });
-    recordFinalResult(session, "crew-win");
-    resetStatistics();
-    const stats = recordFinalResult(session, "crew-win");
-    expect(stats.gamesPlayed).toBe(1);
+    await recordFinalResult(session, "crew-win");
+    await resetStatistics();
+    await recordFinalResult(session, "crew-win");
+
+    const history = await getGameHistory();
+    expect(history).toHaveLength(1);
   });
 });
