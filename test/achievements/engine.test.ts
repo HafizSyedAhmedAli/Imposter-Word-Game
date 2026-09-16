@@ -4,7 +4,10 @@ import {
   buildAchievementPlayerContexts,
   evaluateAchievementsForPlayer,
 } from "@/lib/achievements/engine";
-import { getAchievementById } from "@/lib/achievements/definitions";
+import {
+  ACHIEVEMENTS,
+  getAchievementById,
+} from "@/lib/achievements/definitions";
 
 /**
  * Pure, no-IndexedDB tests for achievement evaluation -- every
@@ -336,6 +339,125 @@ describe("Custom Words compatibility", () => {
   it("a Custom Words game (category is the custom pseudo-category) still counts toward ordinary achievements", () => {
     const games = [game({ id: "g1", category: "custom" })];
     expect(stateFor(games, "ahmed", "first_game").unlocked).toBe(true);
+  });
+});
+
+describe("partial progress values (not just the unlocked boundary)", () => {
+  it("party_legend reports accurate progress before 50, not just a pass/fail boolean", () => {
+    const fortyNine = Array.from({ length: 49 }, (_, i) =>
+      game({ id: `g${i}` }),
+    );
+    const state = stateFor(fortyNine, "ahmed", "party_legend");
+    expect(state.unlocked).toBe(false);
+    expect(state.progress).toEqual({ current: 49, target: 50 });
+  });
+
+  it("crew_veteran reports accurate mid-range progress", () => {
+    const fiveCrewWins = Array.from({ length: 5 }, (_, i) =>
+      game({ id: `g${i}`, winner: "crew-win", players: [player()] }),
+    );
+    const state = stateFor(fiveCrewWins, "ahmed", "crew_veteran");
+    expect(state.unlocked).toBe(false);
+    expect(state.progress).toEqual({ current: 5, target: 10 });
+  });
+
+  it("master_of_deception reports accurate mid-range progress", () => {
+    const threeImposterWins = Array.from({ length: 3 }, (_, i) =>
+      game({
+        id: `g${i}`,
+        winner: "imposter-win",
+        players: [player({ role: "imposter" })],
+      }),
+    );
+    const state = stateFor(threeImposterWins, "ahmed", "master_of_deception");
+    expect(state.unlocked).toBe(false);
+    expect(state.progress).toEqual({ current: 3, target: 10 });
+  });
+
+  it("sharp_eyes reports accurate mid-range progress", () => {
+    const sevenCatchAssists = Array.from({ length: 7 }, (_, i) =>
+      game({
+        id: `g${i}`,
+        impostersCaught: 1,
+        players: [player({ role: "player" })],
+      }),
+    );
+    const state = stateFor(sevenCatchAssists, "ahmed", "sharp_eyes");
+    expect(state.unlocked).toBe(false);
+    expect(state.progress).toEqual({ current: 7, target: 10 });
+  });
+});
+
+describe("double_trouble / triple_threat -- Crew-side players are never credited", () => {
+  it("a Crew player in a game the Imposters won with 2 Imposters does not unlock double_trouble", () => {
+    const games = [
+      game({
+        id: "g1",
+        imposterCount: 2,
+        winner: "imposter-win",
+        players: [player({ role: "player" })],
+      }),
+    ];
+    expect(stateFor(games, "ahmed", "double_trouble").unlocked).toBe(false);
+    expect(stateFor(games, "ahmed", "triple_threat").unlocked).toBe(false);
+  });
+
+  it("an Imposter who LOST a 2-Imposter game does not unlock double_trouble even though imposterCount matches", () => {
+    const games = [
+      game({
+        id: "g1",
+        imposterCount: 2,
+        winner: "crew-win",
+        players: [player({ role: "imposter" })],
+      }),
+    ];
+    expect(stateFor(games, "ahmed", "double_trouble").unlocked).toBe(false);
+  });
+});
+
+describe("cross-game player-name normalization", () => {
+  it("merges differently-cased/whitespaced names for the same player into one context, aggregating both games", () => {
+    const games = [
+      game({
+        id: "g1",
+        winner: "crew-win",
+        impostersCaught: 1,
+        players: [
+          player({ name: "Ahmed", normalizedName: "ahmed", role: "player" }),
+        ],
+      }),
+      game({
+        id: "g2",
+        winner: "crew-win",
+        impostersCaught: 1,
+        players: [
+          player({
+            name: "  AHMED  ",
+            normalizedName: "ahmed",
+            role: "player",
+          }),
+        ],
+      }),
+    ];
+
+    const contexts = buildAchievementPlayerContexts(games);
+    // One merged context, not two separate ones.
+    expect(contexts.size).toBe(1);
+
+    const state = stateFor(games, "ahmed", "sharp_eyes");
+    // Both games' crew-catch-assists count toward the same player.
+    expect(state.progress).toEqual({ current: 2, target: 10 });
+  });
+});
+
+describe("evaluateAchievementsForPlayer ordering", () => {
+  it("returns achievement states in the same order ACHIEVEMENTS is defined, regardless of unlock state", () => {
+    const games = [game({ id: "g1" })];
+    const contexts = buildAchievementPlayerContexts(games);
+    const states = evaluateAchievementsForPlayer(contexts.get("ahmed")!);
+    expect(states.map((s) => s.definition.id)).toEqual(
+      ACHIEVEMENTS.map((a) => a.id),
+    );
   });
 });
 

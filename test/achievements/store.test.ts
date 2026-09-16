@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { getDb, type CompletedGameRecord } from "@/lib/db";
 import type { RoundSession } from "@/game/game-types";
 import {
@@ -197,6 +197,42 @@ describe("processAchievementsForCompletedGame", () => {
     expect(
       snapshot.unlocksById.get("ahmed::first_game")?.unlockedAt,
     ).toBeTypeOf("number");
+  });
+});
+
+describe("processAchievementsForCompletedGame -- best-effort failure handling", () => {
+  it("returns an empty array instead of throwing when reading game history fails", async () => {
+    await seedCompletedGame(baseGame);
+    const session = sessionFor([{ id: "p1", name: "Ahmed" }]);
+
+    const db = getDb();
+    const orderBySpy = vi
+      .spyOn(db.completedGames, "orderBy")
+      .mockImplementationOnce(() => {
+        throw new Error("simulated IndexedDB failure");
+      });
+
+    await expect(processAchievementsForCompletedGame(session)).resolves.toEqual(
+      [],
+    );
+    // Nothing was persisted either -- a failed read must not produce a
+    // partial/incorrect unlock write.
+    expect(await getDb().achievementUnlocks.count()).toBe(0);
+
+    orderBySpy.mockRestore();
+  });
+
+  it("skips a session player who has no matching completed-game context, without throwing", async () => {
+    await seedCompletedGame(baseGame); // only "Ahmed" (p1) is in game history
+    const session = sessionFor([
+      { id: "p1", name: "Ahmed" },
+      { id: "p2", name: "Ghost" }, // never recorded in any completed game
+    ]);
+
+    const newlyUnlocked = await processAchievementsForCompletedGame(session);
+
+    expect(newlyUnlocked.some((e) => e.normalizedName === "ghost")).toBe(false);
+    expect(newlyUnlocked.some((e) => e.normalizedName === "ahmed")).toBe(true);
   });
 });
 
