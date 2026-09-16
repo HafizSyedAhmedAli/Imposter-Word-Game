@@ -14,11 +14,17 @@ import ImpostersRevealCard from "./ImpostersRevealCard";
 import PlayerResultsList from "./PlayerResultsList";
 import FinalRoundSummaryCard from "./FinalRoundSummaryCard";
 import VotingHistoryDialog from "./VotingHistoryDialog";
+import AchievementsUnlockedBanner from "./AchievementsUnlockedBanner";
+import AchievementUnlockToast from "@/components/achievements/AchievementUnlockToast";
 import {
   clearStoredRoundSession,
   getStoredRoundSession,
 } from "@/lib/round-session-store";
 import { recordFinalResult } from "@/lib/game-statistics-store";
+import {
+  processAchievementsForCompletedGame,
+  type UnlockedAchievementEvent,
+} from "@/lib/achievements/store";
 import { analytics } from "@/lib/analytics";
 import { isVotingComplete } from "@/game/vote-flow";
 import { getHighestVoteCount } from "@/game/results-flow";
@@ -47,6 +53,9 @@ export default function FinalResultsScreen() {
   );
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const [showVotingHistory, setShowVotingHistory] = useState(false);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<
+    UnlockedAchievementEvent[]
+  >([]);
   const recordedRef = useRef<string | null>(null);
   const outcomeSoundPlayedRef = useRef(false);
 
@@ -81,18 +90,32 @@ export default function FinalResultsScreen() {
     const outcome = getFinalOutcome(session);
     if (outcome === null) return;
 
-    // 1. Record Final Result
+    // 1. Record Final Result, then evaluate Achievements against the
+    // now-updated game history.
     if (recordedRef.current !== session.id) {
       recordedRef.current = session.id;
-      // Fire-and-forget: `recordFinalResult` persists to IndexedDB and
-      // reports its own failures (see lib/db.ts's `recordCompletedGame`)
-      // -- this screen must never wait on or fail because of a
-      // statistics write for a game that's already over. Also naturally
-      // idempotent even without this `recordedRef` guard (Dexie `put`
-      // against `session.id`), but the guard still avoids firing the
-      // write (and the analytics event right below) more than once per
-      // rendered session.
-      void recordFinalResult(session, outcome);
+      // Fire-and-forget from this effect's point of view (the screen
+      // never awaits or blocks on it), but internally sequenced:
+      // `recordFinalResult` must land in `completedGames` (see
+      // lib/db.ts's `recordCompletedGame`) BEFORE achievement
+      // evaluation reads that same table (spec section 13's pipeline:
+      // Completed Game -> Statistics -> Achievement Evaluation), or a
+      // player's very own just-finished game wouldn't count toward
+      // their own achievements yet. Both steps already report their
+      // own failures internally and never throw -- a failed write here
+      // must never surface an error on a screen whose game is already
+      // over. Also naturally idempotent even without this
+      // `recordedRef` guard (Dexie `put` against `session.id`), but the
+      // guard still avoids re-running the whole sequence (and the
+      // analytics event right below) more than once per rendered
+      // session.
+      void (async () => {
+        await recordFinalResult(session, outcome);
+        const newlyUnlocked = await processAchievementsForCompletedGame(
+          session,
+        );
+        setUnlockedAchievements(newlyUnlocked);
+      })();
       // Same idempotency guard as the statistics write above -- fires
       // exactly once per finished game, never on a rerender or refresh
       // of this screen.
@@ -155,6 +178,7 @@ export default function FinalResultsScreen() {
   return (
     <div className="relative flex min-h-dvh w-full justify-center">
       <SpaceBackdrop />
+      <AchievementUnlockToast events={unlockedAchievements} />
 
       <div className="flex w-full max-w-[1400px] flex-col px-4 pl-safe pr-safe pt-safe pb-safe sm:px-6 sm:py-8">
         <RoundPreparationHeader onBack={openLeaveConfirmation} />
@@ -174,6 +198,8 @@ export default function FinalResultsScreen() {
           <VoteResultsCard tally={tally} highestVotes={highestVotes} />
 
           <FinalRoundSummaryCard summary={summary} />
+
+          <AchievementsUnlockedBanner count={unlockedAchievements.length} />
 
           <button
             type="button"

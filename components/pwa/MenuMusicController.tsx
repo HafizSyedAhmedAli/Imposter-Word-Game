@@ -20,6 +20,7 @@ import { onBeforeHardNavigate } from "@/lib/offline-navigation";
 export const MENU_ROUTES = new Set<string>([
   "/",
   "/statistics",
+  "/achievements",
   "/settings",
   "/settings/custom-words",
   "/how-to-play",

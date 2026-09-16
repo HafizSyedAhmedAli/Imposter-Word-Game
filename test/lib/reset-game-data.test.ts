@@ -13,6 +13,10 @@ import {
   DEFAULT_SETTINGS,
 } from "@/lib/settings-store";
 import { recordFinalResult, getGameHistory } from "@/lib/game-statistics-store";
+import {
+  processAchievementsForCompletedGame,
+  getAchievementsSnapshot,
+} from "@/lib/achievements/store";
 import { rememberWordId, getRecentWordIds } from "@/lib/recent-words";
 import {
   storeRoundSession,
@@ -26,6 +30,7 @@ afterEach(async () => {
   await db.settings.clear();
   await db.customWords.clear();
   await db.completedGames.clear();
+  await db.achievementUnlocks.clear();
 });
 
 describe("resetGameData", () => {
@@ -90,5 +95,39 @@ describe("resetGameData", () => {
 
     expect(clearSpy).toHaveBeenCalledTimes(1);
     clearSpy.mockRestore();
+  });
+
+  it("clears achievement unlock history and returns achievement progress to locked/zero (spec section 16)", async () => {
+    const session = baseSession({ eliminatedPlayerIds: ["p1"] });
+    await recordFinalResult(session, "crew-win");
+    const newlyUnlocked = await processAchievementsForCompletedGame(session);
+
+    // Sanity: something was actually unlocked before the reset, or this
+    // test would pass trivially.
+    expect(newlyUnlocked.length).toBeGreaterThan(0);
+    expect(await getDb().achievementUnlocks.count()).toBeGreaterThan(0);
+
+    await resetGameData();
+
+    expect(await getDb().achievementUnlocks.count()).toBe(0);
+    const snapshotAfterReset = await getAchievementsSnapshot();
+    expect(snapshotAfterReset.players).toHaveLength(0);
+    expect(snapshotAfterReset.unlocksById.size).toBe(0);
+  });
+
+  it("does not leave any local player able to re-trigger an old unlock notification after reset", async () => {
+    const session = baseSession({ eliminatedPlayerIds: ["p1"] });
+    await recordFinalResult(session, "crew-win");
+    await processAchievementsForCompletedGame(session);
+
+    await resetGameData();
+
+    // Playing the exact same game again after a reset must unlock
+    // First Game fresh (it's a brand new history, not a duplicate of
+    // the pre-reset one) -- proving no stale "already unlocked" record
+    // survived the reset.
+    await recordFinalResult(session, "crew-win");
+    const newlyUnlocked = await processAchievementsForCompletedGame(session);
+    expect(newlyUnlocked.map((e) => e.achievement.id)).toContain("first_game");
   });
 });

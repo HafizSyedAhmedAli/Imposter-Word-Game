@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, BookOpenText, Users } from "lucide-react";
+import { BarChart3, BookOpenText, Trophy, Users } from "lucide-react";
 import GameLogo from "./GameLogo";
 import GameRecoveryPrompt from "./GameRecoveryPrompt";
 import HomeFooter from "./HomeFooter";
@@ -52,6 +52,12 @@ export default function HomeScreen() {
                 icon={BarChart3}
                 title="STATISTICS"
                 subtitle="Your local game history"
+              />
+              <HomeMenuItem
+                href="/achievements"
+                icon={Trophy}
+                title="ACHIEVEMENTS"
+                subtitle="Unlock badges and challenges"
               />
             </nav>
           </div>

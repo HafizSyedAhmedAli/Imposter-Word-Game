@@ -29,6 +29,7 @@ export const APP_ROUTES = [
   "/settings",
   "/settings/custom-words",
   "/statistics",
+  "/achievements",
 ] as const;
 
 export type AppRoute = (typeof APP_ROUTES)[number];
