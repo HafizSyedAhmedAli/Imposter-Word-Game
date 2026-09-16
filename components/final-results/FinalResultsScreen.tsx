@@ -84,7 +84,15 @@ export default function FinalResultsScreen() {
     // 1. Record Final Result
     if (recordedRef.current !== session.id) {
       recordedRef.current = session.id;
-      recordFinalResult(session, outcome);
+      // Fire-and-forget: `recordFinalResult` persists to IndexedDB and
+      // reports its own failures (see lib/db.ts's `recordCompletedGame`)
+      // -- this screen must never wait on or fail because of a
+      // statistics write for a game that's already over. Also naturally
+      // idempotent even without this `recordedRef` guard (Dexie `put`
+      // against `session.id`), but the guard still avoids firing the
+      // write (and the analytics event right below) more than once per
+      // rendered session.
+      void recordFinalResult(session, outcome);
       // Same idempotency guard as the statistics write above -- fires
       // exactly once per finished game, never on a rerender or refresh
       // of this screen.

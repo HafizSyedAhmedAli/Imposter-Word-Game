@@ -12,7 +12,7 @@ import {
   getSettings,
   DEFAULT_SETTINGS,
 } from "@/lib/settings-store";
-import { recordFinalResult, getStatistics } from "@/lib/game-statistics-store";
+import { recordFinalResult, getGameHistory } from "@/lib/game-statistics-store";
 import { rememberWordId, getRecentWordIds } from "@/lib/recent-words";
 import {
   storeRoundSession,
@@ -25,6 +25,7 @@ afterEach(async () => {
   await db.words.clear();
   await db.settings.clear();
   await db.customWords.clear();
+  await db.completedGames.clear();
 });
 
 describe("resetGameData", () => {
@@ -36,7 +37,10 @@ describe("resetGameData", () => {
       difficulty: "hard",
     });
     await updateSettings({ sound: false });
-    recordFinalResult(baseSession({ eliminatedPlayerIds: ["p1"] }), "crew-win");
+    await recordFinalResult(
+      baseSession({ eliminatedPlayerIds: ["p1"] }),
+      "crew-win",
+    );
     rememberWordId("some-id");
     storeRoundSession(baseSession({ status: "ready" }));
     await addCustomWord({
@@ -49,7 +53,7 @@ describe("resetGameData", () => {
 
     expect(await getRandomCachedWord("movies", "hard")).toBeNull();
     expect(await getSettings()).toEqual(DEFAULT_SETTINGS);
-    expect(getStatistics().gamesPlayed).toBe(0);
+    expect(await getGameHistory()).toEqual([]);
     expect(getRecentWordIds()).toEqual([]);
     expect(getStoredRoundSession()).toBeNull();
     expect(await getCustomWords()).toEqual([]);

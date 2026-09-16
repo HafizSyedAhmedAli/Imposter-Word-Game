@@ -20,7 +20,6 @@ const NON_MENU_ROUTES = new Set<string>([
   "/voting",
   "/results",
   "/final-results",
-  "/statistics",
 ]);
 
 describe("MenuMusicController's MENU_ROUTES", () => {

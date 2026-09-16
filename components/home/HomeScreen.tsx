@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpenText, Users } from "lucide-react";
+import { BarChart3, BookOpenText, Users } from "lucide-react";
 import GameLogo from "./GameLogo";
 import GameRecoveryPrompt from "./GameRecoveryPrompt";
 import HomeFooter from "./HomeFooter";
@@ -46,6 +46,12 @@ export default function HomeScreen() {
                 icon={Users}
                 title="GAME SETTINGS"
                 subtitle="Timers, sounds and more"
+              />
+              <HomeMenuItem
+                href="/statistics"
+                icon={BarChart3}
+                title="STATISTICS"
+                subtitle="Your local game history"
               />
             </nav>
           </div>

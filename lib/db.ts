@@ -5,6 +5,7 @@ import {
   type Category,
   type Difficulty,
   type GameLanguage,
+  type GameMode,
 } from "@/game/game-types";
 import { generateId } from "./id";
 import { captureError } from "./monitoring";
@@ -133,10 +134,77 @@ export type CustomWordEntry = {
   hintLanguage?: GameLanguage;
 };
 
+/**
+ * One player's public, post-game result within a single completed game
+ * (Statistics feature). Deliberately does NOT carry the round's secret
+ * word/hint -- only what the Final Results screen already reveals to
+ * everyone (see game/final-results-flow.ts's `getFinalPlayerResults`).
+ * `playerId` is only unique *within* one game (see game/game-types.ts's
+ * `Player.id`, a fresh `generateId()` per game) -- cross-game player
+ * matching for lifetime per-player statistics is done by
+ * `normalizedName`, never `playerId`.
+ */
+export type CompletedGamePlayerResult = {
+  playerId: string;
+  /** Trimmed display name, exactly as the player entered it that game. */
+  name: string;
+  /** `name.trim().toLowerCase()` -- the cross-game identity key. Two
+   * games with "Ahmed" and "ahmed " are the same local player; two
+   * games with "Ahmed" and "Ahmed R." are not. */
+  normalizedName: string;
+  role: "player" | "imposter";
+  /** Whether this player was voted out at any point during the game. */
+  eliminated: boolean;
+  /** Total votes received across every voting round this game (summed
+   * from `RoundSession.votingHistory`, never who-voted-for-whom). */
+  votesReceived: number;
+};
+
+/**
+ * One finished game's local, offline-only summary (Statistics feature).
+ * Primary-keyed by `id` = the originating `RoundSession.id` -- the same
+ * id that's stable for the lifetime of one game across every
+ * `continueRound` call (see game/game-types.ts). This is what makes
+ * recording a finished game naturally idempotent: writing the same
+ * game's record twice (a refresh of the Final Results screen, React
+ * Strict Mode's double-invoke) is a Dexie `put` against the same key,
+ * which overwrites in place rather than creating a duplicate row -- see
+ * `recordCompletedGame` below. No separate "already recorded" list is
+ * needed as a result.
+ *
+ * Deliberately stores one row per completed game (not a running lifetime
+ * counter) so per-player statistics, future achievements, and local
+ * leaderboards can all be derived later from this same table without a
+ * schema change -- see lib/statistics-aggregation.ts, which is the only
+ * thing that turns these rows into the numbers the Statistics screen
+ * shows.
+ */
+export type CompletedGameRecord = {
+  id: string;
+  /** Epoch ms this game was recorded (not when it started). */
+  completedAt: number;
+  playerCount: number;
+  imposterCount: number;
+  winner: "crew-win" | "imposter-win";
+  /** `RoundSession.round.number` at the moment the game ended -- how
+   * many discussion/voting cycles this one game went through. */
+  roundsPlayed: number;
+  category: Category;
+  difficulty: Difficulty;
+  mode: GameMode;
+  /** How many of this game's imposters were ever voted out -- a
+   * convenience field mirroring what `players` already encodes, kept
+   * here (rather than recomputed on every aggregation pass) the same
+   * way `WordEntry.normalizedWord` mirrors `word` for cheap lookups. */
+  impostersCaught: number;
+  players: CompletedGamePlayerResult[];
+};
+
 class ImposterWordDB extends Dexie {
   words!: Table<WordEntry, string>;
   settings!: Table<SettingsRow, string>;
   customWords!: Table<CustomWordEntry, string>;
+  completedGames!: Table<CompletedGameRecord, string>;
 
   constructor() {
     super("imposter-word-db");
@@ -237,6 +305,23 @@ class ImposterWordDB extends Dexie {
       settings: "id",
       customWords:
         "id, category, difficulty, [category+difficulty], normalizedWord, createdAt",
+    });
+
+    // v7: adds the `completedGames` table (Statistics feature). Purely
+    // additive, same spirit as v4's `settings` and v6's `customWords`
+    // tables -- every existing `words`/`settings`/`customWords` row is
+    // completely untouched, and a new empty table needs no upgrade
+    // function. Indexed on `completedAt` (history, oldest/newest first)
+    // and `[category+difficulty+mode]` (the "Most Played" aggregates in
+    // lib/statistics-aggregation.ts, so that pass doesn't need a full
+    // table scan to group by them as the table grows).
+    this.version(7).stores({
+      words:
+        "id, category, difficulty, [category+difficulty], createdAt, normalizedWord, lastUsedAt, language, [category+difficulty+language]",
+      settings: "id",
+      customWords:
+        "id, category, difficulty, [category+difficulty], normalizedWord, createdAt",
+      completedGames: "id, completedAt, [category+difficulty+mode]",
     });
   }
 }
@@ -638,4 +723,59 @@ export async function getRandomCustomWord(
 export async function clearCustomWords(): Promise<void> {
   const db = getDb();
   await db.customWords.clear();
+}
+
+/* -------------------------------------------------------------------- */
+/* Statistics (Home -> Statistics)                                       */
+/*                                                                        */
+/* CRUD for locally-stored completed-game summaries. This module never   */
+/* decides who won or builds a record itself -- see                      */
+/* lib/statistics-record.ts (pure record-building) and                   */
+/* lib/statistics-aggregation.ts (pure aggregation into the numbers the  */
+/* Statistics screen shows). This file only persists/reads/clears rows,  */
+/* matching the words/settings/customWords functions above.              */
+/* -------------------------------------------------------------------- */
+
+/**
+ * Saves one finished game's record. A plain Dexie `put` against the
+ * primary key (`record.id` = the game's `RoundSession.id`) -- calling
+ * this twice for the same finished game (a refreshed Final Results
+ * screen) overwrites the same row with identical data rather than
+ * creating a duplicate, so no separate dedupe bookkeeping is needed for
+ * "a completed game must only be recorded once" (see
+ * `CompletedGameRecord`'s doc comment above).
+ *
+ * Best-effort and silent, same reasoning as `cacheAiWord`: this always
+ * runs after the round is already fully decided and the Final Results
+ * screen is already showing that outcome to the players, so a failed
+ * statistics write must never surface an error or retry loop on a
+ * screen whose game is already over.
+ */
+export async function recordCompletedGame(
+  record: CompletedGameRecord,
+): Promise<void> {
+  try {
+    const db = getDb();
+    await db.completedGames.put(record);
+  } catch (error) {
+    captureError(error, { phase: "record-completed-game" });
+  }
+}
+
+/** Every locally-stored completed game, oldest first. */
+export async function getCompletedGames(): Promise<CompletedGameRecord[]> {
+  const db = getDb();
+  return db.completedGames.orderBy("completedAt").toArray();
+}
+
+/**
+ * Deletes every stored completed-game record -- the Statistics half of
+ * "Reset Game Data" (see lib/reset-game-data.ts). Rethrows on failure,
+ * same as `resetUserData`/`clearCustomWords` above: this is a
+ * user-initiated action that must report success or failure, not fail
+ * silently and leave stale statistics behind.
+ */
+export async function clearCompletedGames(): Promise<void> {
+  const db = getDb();
+  await db.completedGames.clear();
 }

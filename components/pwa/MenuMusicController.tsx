@@ -19,6 +19,7 @@ import { onBeforeHardNavigate } from "@/lib/offline-navigation";
 // before it ships instead of relying on someone noticing by ear.
 export const MENU_ROUTES = new Set<string>([
   "/",
+  "/statistics",
   "/settings",
   "/settings/custom-words",
   "/how-to-play",
