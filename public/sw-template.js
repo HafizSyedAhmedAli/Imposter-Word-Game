@@ -50,6 +50,7 @@ const APP_ROUTES = [
   "/settings",
   "/settings/custom-words",
   "/statistics",
+  "/achievements",
 ];
 
 const PRECACHE_URLS = [
