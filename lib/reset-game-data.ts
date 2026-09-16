@@ -65,10 +65,7 @@ async function performReset(): Promise<void> {
   await resetUserData();
   await clearCustomWords();
   await resetStatistics();
-<<<<<<< HEAD
-=======
   await resetAchievements();
->>>>>>> bd55e96 (Implemented Achievements)
   await resetSettings();
   clearRecentWords();
   clearStoredRoundSession();
