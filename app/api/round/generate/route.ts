@@ -16,11 +16,22 @@ import {
 // environment for the outbound fetch to the AI provider.
 export const runtime = "nodejs";
 
-const DIFFICULTY_GUIDANCE: Record<Difficulty, string> = {
-  easy: "Use a common, instantly recognizable word. The hint should be clear and directly helpful.",
+// The word itself must ALWAYS be common and instantly recognizable to an
+// average person, regardless of difficulty. Difficulty controls ONLY how
+// obvious the HINT is -- never how obscure the word is. This is
+// deliberately a single constant (not keyed by Difficulty) so it's
+// impossible for a future edit to accidentally reintroduce
+// difficulty-scaled word obscurity here.
+const WORD_QUALITY_RULE =
+  "The word must be a common, everyday word or concept that an average person would instantly recognize -- never an obscure, technical, regional-niche, or specialist term. This applies at every difficulty level: difficulty must NEVER make the word itself more obscure or harder to know, only the hint's phrasing.";
+
+// Controls ONLY how directly the hint points at the word. The word's own
+// commonness is governed exclusively by WORD_QUALITY_RULE above.
+const HINT_DIFFICULTY_GUIDANCE: Record<Difficulty, string> = {
+  easy: "The hint should be very clear and directly helpful -- almost anyone should be able to guess the word quickly from it.",
   medium:
-    "Use a moderately recognizable word. The hint should be indirect but still understandable.",
-  hard: "Use a less obvious, more specific concept. The hint should be subtle, without being unfair.",
+    "The hint should not be obvious. Avoid the most direct description or defining trait -- point at the word more indirectly (e.g. via a related detail, context, or association) so it takes a moment of thought to connect the hint to the word.",
+  hard: "The hint should be subtle and non-obvious -- avoid any direct or defining description of the word. Point at it obliquely (an unusual angle, a less common association, or an indirect consequence/context), so it takes real thought to connect the hint to the word, without being unfair, misleading, or so vague it could fit many different words.",
 };
 
 // The Capacitor build calls this route cross-origin (from
@@ -76,12 +87,13 @@ function buildPrompt(
   return `Generate exactly one secret word and one hint for a social party game called "Imposter Word", where most players know a secret word and one "imposter" does not.
 
 Category: ${category === "random" ? "any family-friendly category" : category}
-Difficulty: ${difficulty}
+Hint difficulty: ${difficulty} (this affects ONLY how obvious the hint is -- the word itself must always be common, as required below)
 
 Rules:
 - The word must be a single concept or short recognizable term (at most 3 words).
 - The word must be appropriate for all ages -- never offensive, violent, or explicit.
-- ${DIFFICULTY_GUIDANCE[difficulty]}
+- ${WORD_QUALITY_RULE}
+- ${HINT_DIFFICULTY_GUIDANCE[difficulty]}
 - The hint must relate to the word but must NEVER contain the word itself (or an obvious variant of it).
 - Do not use real people, brands, or copyrighted characters as the word.
 - Vary your answer -- avoid defaulting to the single most obvious or stereotypical example for this category every time.${exclusionRule}
@@ -115,12 +127,12 @@ function buildHintPrompt(
   return `Generate exactly one hint for a social party game called "Imposter Word", where most players know a secret word and one "imposter" does not.
 
 The secret word has already been chosen by a player: "${word}"
-Difficulty: ${difficulty}
+Hint difficulty: ${difficulty}
 
 Rules:
 - Do NOT change, translate, or restate the word itself -- it is fixed. Only write a hint about it.
 - The hint must relate to the word but must NEVER contain the word itself, an obvious variant of it, or a direct synonym that gives it away.
-- ${DIFFICULTY_GUIDANCE[difficulty]}
+- ${HINT_DIFFICULTY_GUIDANCE[difficulty]}
 - The hint must be appropriate for all ages -- never offensive, violent, or explicit.${categoryLine}
 ${languageBlock}
 Respond with ONLY a JSON object in this exact shape:

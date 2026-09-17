@@ -119,13 +119,19 @@ export const DIFFICULTIES: {
   title: string;
   description: string;
 }[] = [
-  { id: "easy", title: "EASY", description: "Common words & clearer hints" },
+  // The word is always a common, everyday word at every difficulty --
+  // difficulty controls ONLY how obvious the hint is (see
+  // app/api/round/generate/route.ts's WORD_QUALITY_RULE /
+  // HINT_DIFFICULTY_GUIDANCE). These descriptions deliberately don't
+  // mention word difficulty, so they don't drift back out of sync with
+  // that behavior.
+  { id: "easy", title: "EASY", description: "Clear, obvious hints" },
   {
     id: "medium",
     title: "MEDIUM",
-    description: "Balanced words & indirect hints",
+    description: "Hints are less obvious",
   },
-  { id: "hard", title: "HARD", description: "Harder words & subtle hints" },
+  { id: "hard", title: "HARD", description: "Subtle, tricky hints" },
 ];
 
 // Settings screen catalog (Language). Mirrors the CATEGORIES/DIFFICULTIES
