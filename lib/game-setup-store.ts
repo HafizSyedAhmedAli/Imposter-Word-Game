@@ -6,6 +6,13 @@ const STORAGE_KEY = "iw:game-setup";
 export type StoredGameSetup = {
   config: GameConfig;
   players: Player[];
+  /**
+   * Whether the Players screen's randomize toggle is on. Defaults to
+   * `false` when absent so a session stored before this field existed
+   * still hydrates cleanly -- see the `?? false` at the read site in
+   * game-setup-context.tsx.
+   */
+  randomizeEnabled: boolean;
 };
 
 /**
