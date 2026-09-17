@@ -1,3 +1,4 @@
+// test/lib/recent-words.test.ts
 import { describe, it, expect } from "vitest";
 import {
   getRecentWordIds,
@@ -38,7 +39,7 @@ describe("recent word IDs (sessionStorage)", () => {
   });
 });
 
-describe("recent word text (sessionStorage)", () => {
+describe("recent word text (localStorage)", () => {
   it("normalizes case before storing", () => {
     rememberWordText("PIZZA");
     expect(getRecentWordText()).toEqual(["pizza"]);
@@ -49,9 +50,17 @@ describe("recent word text (sessionStorage)", () => {
     expect(getRecentWordText()).toEqual([]);
   });
 
-  it("caps the list at 8 entries", () => {
-    for (let i = 0; i < 12; i++) rememberWordText(`word-${i}`);
-    expect(getRecentWordText()).toHaveLength(8);
+  it("caps the list at 30 entries", () => {
+    for (let i = 0; i < 35; i++) rememberWordText(`word-${i}`);
+    expect(getRecentWordText()).toHaveLength(30);
+  });
+
+  it("survives a fresh session (backed by localStorage, not sessionStorage)", () => {
+    rememberWordText("pizza");
+    // Simulates what a new day/session looks like: sessionStorage is
+    // gone, localStorage is not.
+    window.sessionStorage.clear();
+    expect(getRecentWordText()).toEqual(["pizza"]);
   });
 });
 

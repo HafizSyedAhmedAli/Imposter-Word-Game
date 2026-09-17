@@ -1,7 +1,8 @@
+// components/players/PlayersScreen.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import { useGameSetup } from "@/lib/game-setup-context";
 import { isPlayerCountValid, MAX_PLAYERS } from "@/game/game-rules";
@@ -12,7 +13,7 @@ import GameConfigSummary from "./GameConfigSummary";
 import PlayerCount from "./PlayerCount";
 import PlayerInput from "./PlayerInput";
 import PlayerList from "./PlayerList";
-import RandomizePlayersButton from "./RandomizePlayersButton";
+import RandomizePlayersToggle from "./RandomizePlayersToggle";
 import PlayerValidationMessage from "./PlayerValidationMessage";
 import PlayersContinueButton from "./PlayersContinueButton";
 
@@ -25,11 +26,38 @@ export default function PlayersScreen() {
     editPlayer,
     removePlayer,
     randomizePlayers,
+    randomizeEnabled,
+    setRandomizeEnabled,
   } = useGameSetup();
   const [inputError, setInputError] = useState<string | null>(null);
 
   const canContinue = isPlayerCountValid(config.mode, players.length);
   const atMaxPlayers = players.length >= MAX_PLAYERS;
+
+  // Auto-rotate once per visit to this screen when the toggle is
+  // already on -- this is what makes "on" mean "randomize every round"
+  // rather than only the moment it's flipped on. Results -> Final
+  // Results -> "Play Again" (and "leave round") all route back through
+  // `/players`, remounting this component fresh each time, so a
+  // mount-only effect lines up exactly with "after every round".
+  //
+  // Guarded with a ref (not just an empty dependency array) because the
+  // effect's own dependency array can't gate it -- randomizeEnabled and
+  // randomizePlayers are deliberately left out of the deps so this never
+  // re-fires later in the same visit just because the toggle was
+  // flipped on mid-screen (handleToggleRandomize already covers that
+  // case). The ref additionally protects against React Strict Mode's
+  // dev-only double-invoke of effects, which would otherwise rotate the
+  // list twice on a single real mount.
+  const hasAutoRandomizedRef = useRef(false);
+  useEffect(() => {
+    if (hasAutoRandomizedRef.current) return;
+    hasAutoRandomizedRef.current = true;
+    if (randomizeEnabled) {
+      randomizePlayers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleAddPlayer(name: string): boolean {
     const result = addPlayer(name);
@@ -39,6 +67,19 @@ export default function PlayersScreen() {
     }
     setInputError(null);
     return true;
+  }
+
+  // Turning the toggle on rotates the player list once, immediately
+  // (circular-list style -- see rotate() in lib/shuffle.ts), on top of
+  // the automatic rotation the mount effect above applies on every
+  // future visit while it stays on. Turning it off is just a state
+  // change: the order stays exactly as it last was.
+  function handleToggleRandomize() {
+    const next = !randomizeEnabled;
+    setRandomizeEnabled(next);
+    if (next) {
+      randomizePlayers();
+    }
   }
 
   function handleContinue() {
@@ -69,15 +110,15 @@ export default function PlayersScreen() {
             className="animate-iw-fade-up rounded-3xl border border-iw-border bg-iw-surface/40 p-4 backdrop-blur-sm sm:p-5"
             style={{ animationDelay: "60ms" }}
           >
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-lg font-semibold tracking-wide text-iw-ink-100 sm:text-xl">
-                PLAYER LIST
-              </h2>
-              <RandomizePlayersButton
-                onClick={randomizePlayers}
-                disabled={players.length < 2}
-              />
-            </div>
+            <h2 className="font-display text-lg font-semibold tracking-wide text-iw-ink-100 sm:text-xl">
+              PLAYER LIST
+            </h2>
+
+            <RandomizePlayersToggle
+              enabled={randomizeEnabled}
+              onToggle={handleToggleRandomize}
+              disabled={players.length < 2}
+            />
 
             <div className="mt-4">
               <PlayerCount count={players.length} />
