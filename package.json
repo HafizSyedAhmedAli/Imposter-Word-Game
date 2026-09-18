@@ -20,7 +20,8 @@
     "build:mobile": "node --env-file=.env.mobile scripts/build-mobile.mjs",
     "cap:sync": "npm run build:mobile && npx cap sync",
     "open:android": "npx cap open android",
-    "cap:assets:android": "npx capacitor-assets generate --android"
+    "cap:assets:android": "npx capacitor-assets generate --android",
+    "release:local": "npm run lint && npm run emit && npm run build && npm run test:run && npm run test:e2e:local && npm run cap:sync && npm run open:android"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",

@@ -15,13 +15,18 @@ describe("game-setup-store", () => {
     const setup = {
       config: DEFAULT_GAME_CONFIG,
       players: [{ id: "p1", name: "Ahmed" }],
+      randomizeEnabled: false, 
     };
     storeGameSetup(setup);
     expect(getStoredGameSetup()).toEqual(setup);
   });
 
   it("clearStoredGameSetup removes it", () => {
-    storeGameSetup({ config: DEFAULT_GAME_CONFIG, players: [] });
+    storeGameSetup({
+      config: DEFAULT_GAME_CONFIG,
+      players: [],
+      randomizeEnabled: false, 
+    });
     clearStoredGameSetup();
     expect(getStoredGameSetup()).toBeNull();
   });
