@@ -11,6 +11,7 @@ import {
   validateRomanUrduHint,
   validateRoundContent,
 } from "@/game/round-validation";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 // Node runtime (not edge) -- keeps this close to a normal server
 // environment for the outbound fetch to the AI provider.
@@ -299,6 +300,29 @@ async function requestHintForWord(
  * the same for its own fallback.
  */
 export async function POST(request: Request) {
+  // Basic per-IP throttle: this endpoint is unauthenticated and
+  // publicly discoverable, and each call spends Gemini API quota/
+  // billing. A failure here is harmless to gameplay (the client falls
+  // back to the local word list -- see the doc comment above), so it's
+  // safe to reject aggressively rather than risk quota exhaustion.
+  const clientIp = getClientIp(request);
+  const { allowed, retryAfterSeconds } = rateLimit(
+    `round-generate:${clientIp}`,
+    20, // requests
+    60_000, // per 60s window
+  );
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many requests." },
+      {
+        status: 429,
+        headers: {
+          ...CORS_HEADERS,
+          "Retry-After": String(retryAfterSeconds ?? 60),
+        },
+      },
+    );
+  }
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(

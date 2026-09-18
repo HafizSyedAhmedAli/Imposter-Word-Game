@@ -1,5 +1,21 @@
 apply plugin: 'com.android.application'
 
+// Release signing is optional at build time: if no keystore.properties
+// file exists (e.g. local dev builds, or before you've generated your
+// upload keystore), the release build simply stays unsigned rather than
+// failing -- same defensive pattern used below for google-services.json.
+// Create keystore.properties (gitignored) with:
+//   storeFile=../your-upload-key.jks
+//   storePassword=...
+//   keyAlias=...
+//   keyPassword=...
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+def hasKeystore = keystorePropertiesFile.exists()
+if (hasKeystore) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.hafizsyedahmedali.imposterword"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -8,7 +24,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "1.2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +32,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (hasKeystore) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasKeystore) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

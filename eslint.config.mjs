@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "test-results/**",
     // android/** contains the Capacitor web assets bundle -- compiled,
     // minified JS copied in by `npx cap sync`, never hand-written source.
     // Linting it produces thousands of meaningless warnings/errors on

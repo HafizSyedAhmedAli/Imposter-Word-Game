@@ -7,6 +7,7 @@ import {
   Settings2,
   History,
   Mail,
+  Activity,
 } from "lucide-react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import PrivacyHeader from "./PrivacyHeader";
@@ -30,15 +31,15 @@ export default function PrivacyPolicyScreen() {
 
         <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 py-6 lg:max-w-4xl">
           <p className="text-center text-xs text-iw-ink-500">
-            Last updated: August 27, 2026
+            Last updated: September 18, 2026
           </p>
 
           <PrivacySectionCard icon={ShieldQuestion} title="Summary" delayMs={0}>
             <p>
               Imposter Word Game is a local, pass-the-phone party game. It does
-              not require an account, does not collect personal information, and
-              does not use analytics or advertising services. Almost everything
-              the app needs to run stays on your device.
+              not require an account and does not collect personal information.
+              Almost everything the app needs to run stays on your device; the
+              exceptions are described below.
             </p>
           </PrivacySectionCard>
 
@@ -105,15 +106,44 @@ export default function PrivacyPolicyScreen() {
           </PrivacySectionCard>
 
           <PrivacySectionCard
+            icon={Activity}
+            title="Analytics & Crash Reporting"
+            delayMs={150}
+          >
+            <p>
+              We use <strong className="text-iw-ink-100">PostHog</strong>, a
+              product analytics tool, to understand how the app is used (e.g.
+              which screens are visited, which features are popular) so we can
+              improve the game. This data is tied to an anonymous device/session
+              identifier, not to your name or any personal information.
+            </p>
+            <p>
+              We use <strong className="text-iw-ink-100">Sentry</strong> to
+              collect crash and error reports so we can find and fix bugs. These
+              reports may include technical details such as device type, OS
+              version, and app state at the time of the error. They do not
+              include player names or other content you type into the game.
+            </p>
+            <p>
+              Neither service is used for advertising, and neither receives
+              player names, game statistics, or any other on-device data
+              described above.
+            </p>
+          </PrivacySectionCard>
+
+          <PrivacySectionCard
             icon={ClipboardList}
             title="Third-Party Services"
             delayMs={180}
           >
             <p>
               We use the{" "}
-              <strong className="text-iw-ink-100">Google Gemini API</strong>{" "}
-              solely to generate game words and hints, as described above.
-              Google&rsquo;s handling of that request is governed by{" "}
+              <strong className="text-iw-ink-100">Google Gemini API</strong> to
+              generate game words and hints, as described above;{" "}
+              <strong className="text-iw-ink-100">PostHog</strong> for product
+              analytics; and <strong className="text-iw-ink-100">Sentry</strong>{" "}
+              for crash reporting, as described above. Google&rsquo;s handling
+              of the word-generation request is governed by{" "}
               <a
                 href="https://policies.google.com/privacy"
                 target="_blank"
@@ -122,7 +152,8 @@ export default function PrivacyPolicyScreen() {
               >
                 Google&rsquo;s Privacy Policy
               </a>
-              . We do not use any advertising, analytics, or tracking SDKs.
+              . We do not use any advertising SDKs, and we do not sell or share
+              your data with third parties for advertising purposes.
             </p>
           </PrivacySectionCard>
 
@@ -135,7 +166,9 @@ export default function PrivacyPolicyScreen() {
               On-device data (player names, settings, statistics, cached words)
               remains on your device until you clear the app&rsquo;s storage or
               uninstall it. We do not operate a database of player-identifiable
-              information, because none is ever transmitted to us.
+              information, because none is ever transmitted to us. Analytics and
+              crash-report data collected via PostHog and Sentry is retained
+              according to those providers&rsquo; own retention policies.
             </p>
           </PrivacySectionCard>
 
