@@ -1,15 +1,20 @@
+import type { Difficulty } from "@/entities/game-session";
+import type { GeneratedRoundContent } from "@/entities/round";
 import {
   ENGLISH,
   type Category,
-  type Difficulty,
   type GameLanguage,
-  type GeneratedRoundContent,
 } from "@/game/game-types";
-import { getRandomFallbackWord } from "@/lib/fallback-words";
+import { getRandomFallbackWord } from "./fallback-words";
 import type { WordProvider } from "./word-provider";
 
 /**
- * TIER 3 -- final emergency fallback (see lib/fallback-words.ts). Used
+ * NOTE on the `@/game/game-types` import above: see ./word-provider.ts.
+ * Deliberate, temporary bridge.
+ */
+
+/**
+ * TIER 3 -- final emergency fallback (see ./fallback-words/index.ts). Used
  * only when BOTH AI generation and the IndexedDB cache lookup have
  * failed. Backed by a static, in-bundle array that covers every real
  * category/difficulty combination, so this succeeds in practice -- but

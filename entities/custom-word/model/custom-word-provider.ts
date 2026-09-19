@@ -1,16 +1,24 @@
+import type { Difficulty } from "@/entities/game-session";
+import { validateRomanUrduHint } from "@/entities/round";
 import {
   ENGLISH,
   ROMAN_URDU,
   type Category,
-  type Difficulty,
   type GameLanguage,
 } from "@/game/game-types";
-import { validateRomanUrduHint } from "@/game/round-validation";
-import { updateCustomWordHint, type CustomWordEntry } from "@/lib/db";
+import { updateCustomWordHint } from "./custom-word-store";
+import type { CustomWordEntry } from "./custom-word-types";
+
+/**
+ * NOTE on the `@/game/game-types` import above: `Category`,
+ * `GameLanguage`, and the `ENGLISH`/`ROMAN_URDU` constants are still
+ * defined in the pre-FSD `game/game-types.ts` -- see ../../README.md.
+ * Deliberate, temporary bridge.
+ */
 
 const AI_TIMEOUT_MS = 10_000;
 
-// Same reasoning as providers/ai-word-provider.ts's API_BASE_URL: empty
+// Same reasoning as entities/word's ai-word-provider.ts API_BASE_URL: empty
 // (same-origin) on web, set at build time for the Capacitor app.
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
@@ -18,10 +26,10 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
  * Static, language-aware, never-reveals-the-word hint used only when a
  * fresh AI hint can't be obtained (offline, request failure, or no
  * cached hint yet) -- the tier-3-equivalent "always succeeds" fallback
- * for Custom Words, mirroring lib/fallback-words.ts's role for the
- * normal AI -> cache -> fallback pipeline. Deliberately generic (it
- * can't know anything about the word itself) but still satisfies "the
- * hint must never simply restate the word."
+ * for Custom Words, mirroring the static fallback list's role
+ * (entities/word) for the normal AI -> cache -> fallback pipeline.
+ * Deliberately generic (it can't know anything about the word itself)
+ * but still satisfies "the hint must never simply restate the word."
  */
 const GENERIC_HINT: Record<GameLanguage, string> = {
   [ENGLISH]: "A word one of the players picked before this game started.",
@@ -37,9 +45,9 @@ const GENERIC_HINT: Record<GameLanguage, string> = {
  *
  *   1. A hint already generated for this exact word, in this exact
  *      language, previously (persisted on the CustomWordEntry itself --
- *      see lib/db.ts's `updateCustomWordHint`). Works fully offline once
- *      it exists, and never asks the AI again for a word it already has
- *      a good hint for.
+ *      see ./custom-word-store.ts's `updateCustomWordHint`). Works fully
+ *      offline once it exists, and never asks the AI again for a word it
+ *      already has a good hint for.
  *   2. A fresh AI-generated hint for this specific word, via the
  *      existing AI route's hint-only mode (app/api/round/generate/route.ts)
  *      -- reusing the existing AI hint-generation system rather than

@@ -1,4 +1,10 @@
-import type { Category, Difficulty, GameLanguage } from "@/game/game-types";
+import type { Difficulty } from "@/entities/game-session";
+import type { Category, GameLanguage } from "@/game/game-types";
+
+/**
+ * NOTE: `Category`/`GameLanguage` are still in the pre-FSD
+ * `game/game-types.ts` -- see ../word-provider.ts. Temporary bridge.
+ */
 
 /**
  * A single TIER 3 (static fallback) word/hint pair. See ./index.ts for

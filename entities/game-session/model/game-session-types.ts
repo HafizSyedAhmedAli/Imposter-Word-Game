@@ -4,11 +4,12 @@ import type { Category } from "@/game/game-types";
 
 /**
  * NOTE on the import above: `Category` is still defined in the pre-FSD
- * `game/game-types.ts` -- see ../../README.md. It hasn't been assigned
- * a slice yet (it's a candidate for the planned `entities/word` slice,
- * since categories are fundamentally about which word pool a round
- * draws from). This entity depends on it as a deliberate, temporary
- * bridge; update this import once that's decided.
+ * `game/game-types.ts` -- see ../../README.md. `entities/word` now
+ * exists, but `Category` deliberately did not move into it: that slice's
+ * `WordProvider` needs `Difficulty` from here, so moving `Category` alone
+ * would make the two slices depend on each other. This entity depends on
+ * it as a deliberate, temporary bridge; resolve by moving `Category` and
+ * `Difficulty` into `entities/word` together.
  */
 
 /**

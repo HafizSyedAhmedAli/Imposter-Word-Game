@@ -70,18 +70,91 @@ each exposing a single `index.ts` public API.
   since removing it wasn't part of this change.
   **Bridge dependency (temporary):** `GameConfig` still imports
   `Category` from `@/game/game-types`, since `Category` hasn't been
-  assigned a slice yet (candidate for the planned `entities/word`
-  slice below). `game/game-types.ts` re-exports this slice's types
+  assigned a slice yet (see the `entities/word` entry below for why it
+  didn't move there). `game/game-types.ts` re-exports this slice's types
   back out as a temporary bridge, same reversed pattern as
   `entities/player`/`entities/round`, so its ~22 existing consumers of
   `GameConfig`/`GameMode`/`GameOptions`/`TimerSettings` keep working
   unchanged.
+- `entities/word` — the `WordProvider` interface, its three tiered
+  implementations (`AiWordProvider`, `IndexedDbCacheProvider`,
+  `FallbackWordProvider`), and the static tier-3 word list
+  (`FALLBACK_WORDS`, `FallbackWordEntry`, `getRandomFallbackWord`).
+  Moved from `providers/{word,ai-word,indexeddb-cache,fallback-word}-provider.ts`
+  and `lib/fallback-words/` (the twelve category folders moved
+  unchanged -- their relative `../types` imports still resolve).
+  Public API: `@/entities/word` (barrel at `entities/word/index.ts`) —
+  internals live under `entities/word/model/`.
+  **Not moved, on purpose:**
+  - `providers/custom-word-provider.ts` — it depends on the custom-word
+    row type and `updateCustomWordHint`, so it moved with
+    `entities/custom-word` (below), not this slice.
+  - `lib/recent-words.ts` — the session-storage "already shown" tracker
+    is also imported by `lib/db.ts` and `lib/reset-game-data.ts`, so it
+    stays put as a bridge (`entities/word` imports it from
+    `@/lib/recent-words`) until `lib/db.ts` moves.
+  - `Category` — it was flagged above as a candidate for this slice, but
+    moving it now would make `entities/game-session` and `entities/word`
+    depend on each other: `WordProvider` needs `Difficulty` from
+    `game-session`, and `GameConfig` needs `Category` from here. It stays
+    in `game/game-types.ts` for now; resolve by moving `Category` and
+    `Difficulty` together (and `GeneratedRoundContent`, which
+    `entities/round` would then also import from here) in one change.
+  **Bridge dependencies (temporary):** imports `Category`, `GameLanguage`,
+  `ENGLISH`, `ROMAN_URDU` from `@/game/game-types`, `getRandomCachedWord`
+  from `@/lib/db`, and `getShownWordIds`/`rememberWordId` from
+  `@/lib/recent-words`. Imports `Difficulty` from `@/entities/game-session`
+  and `GeneratedRoundContent` + the validation functions from
+  `@/entities/round` directly (ordinary, sparing cross-slice imports).
+  Nothing in `entities/game-session` or `entities/round` imports back
+  from this slice, so the graph stays acyclic.
+  The old paths are thin re-export bridges, same reversed pattern as the
+  other slices: `providers/ai-word-provider.ts`,
+  `providers/indexeddb-cache-provider.ts`,
+  `providers/fallback-word-provider.ts`, and `lib/fallback-words.ts`
+  (previously a directory). Their existing consumers
+  (`game/game-engine.ts` and four test files) keep working unchanged;
+  repoint each to `@/entities/word` as it's touched.
+- `entities/custom-word` — the `CustomWordEntry` / `AddCustomWordResult`
+  types, the pure validation rules (`MAX_CUSTOM_WORD_LENGTH`,
+  `validateCustomWordText`), the data access
+  (`addCustomWord`, `getCustomWords`, `deleteCustomWord`,
+  `updateCustomWordHint`, `getRandomCustomWord`, `clearCustomWords`),
+  and the hint resolver (`resolveCustomWordHint`). Moved from
+  `game/custom-word-rules.ts`, `providers/custom-word-provider.ts`, and
+  the Custom Words section of `lib/db.ts`. Public API:
+  `@/entities/custom-word` (barrel at `entities/custom-word/index.ts`) —
+  internals live under `entities/custom-word/model/`.
+  **Not moved, on purpose:** the `customWords` Dexie table declaration
+  (schema versions v6–v8 and their migrations) stays in `lib/db.ts`
+  alongside every other table -- it moves when `lib/db.ts` itself does
+  (planned `shared/api/db`). `getDb` is imported from there.
+  **Bridge dependencies (temporary):** imports `getDb` from `@/lib/db`,
+  `captureError` from `@/lib/monitoring`, `getRecentWordIds`/
+  `rememberWordId` from `@/lib/recent-words`, and `Category`,
+  `GameLanguage`, `ENGLISH`, `ROMAN_URDU` from `@/game/game-types`.
+  Imports `Difficulty` from `@/entities/game-session` and
+  `validateRomanUrduHint` from `@/entities/round` directly.
+  **Bridge in the other direction (note the runtime cycle):**
+  `lib/db.ts` imports the `CustomWordEntry` type from this slice for its
+  `Table<CustomWordEntry>` declaration (type-only, erased) and
+  re-exports the six functions and both types from this slice so its
+  ~12 existing consumers (four Settings/Setup components,
+  `game/game-engine.ts`, `lib/reset-game-data.ts`, and four test files)
+  keep working unchanged. Unlike the type-only bridges above, the
+  function re-exports are a real runtime cycle (`lib/db.ts` <->
+  `entities/custom-word`). It's benign -- every function only touches
+  `getDb` when *called*, never at module load, and the suite passes
+  whether the entry point is `lib/db.ts`, the slice barrel, or
+  `game/game-engine.ts` -- but it disappears once consumers are
+  repointed to `@/entities/custom-word` and `lib/db.ts` drops those
+  re-exports. Two more thin bridges: `game/custom-word-rules.ts` and
+  `providers/custom-word-provider.ts` re-export from the slice
+  (`AddCustomWordCard.tsx`, `game/game-engine.ts`, and two test files
+  use them).
 
 ## Planned slices (not yet moved — see `../ARCHITECTURE.md`)
 
-- `entities/word` — `providers/word-provider.ts` and its
-  ai/fallback/cache/custom implementations, `lib/fallback-words/`
-- `entities/custom-word` — `game/custom-word-rules.ts` + `customWords` table
 - `entities/achievement` — `lib/achievements/*`
 - `entities/statistics` — `lib/statistics-aggregation.ts`, `statistics-record.ts`
 - `entities/voting-history` — `VotingHistoryEntry`, `VotingHistoryTallyEntry`,

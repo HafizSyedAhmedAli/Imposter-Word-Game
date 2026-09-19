@@ -1,12 +1,19 @@
+import type { Difficulty } from "@/entities/game-session";
+import type { GeneratedRoundContent } from "@/entities/round";
 import {
   ENGLISH,
   type Category,
-  type Difficulty,
   type GameLanguage,
-  type GeneratedRoundContent,
 } from "@/game/game-types";
 import { getRandomCachedWord } from "@/lib/db";
 import type { WordProvider } from "./word-provider";
+
+/**
+ * NOTE on the imports above: `@/game/game-types` (see ./word-provider.ts)
+ * and `@/lib/db` (`getRandomCachedWord` -- the `words` Dexie table stays
+ * put until `lib/db.ts` itself moves, see ../../../shared/README.md) are
+ * the pre-FSD locations. Deliberate, temporary bridges.
+ */
 
 /**
  * TIER 2 -- IndexedDB AI cache (see lib/db.ts). Only ever returns

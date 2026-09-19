@@ -1,16 +1,23 @@
+import type { Difficulty } from "@/entities/game-session";
+import {
+  validateRomanUrduHint,
+  validateRoundContent,
+  type GeneratedRoundContent,
+} from "@/entities/round";
 import {
   ENGLISH,
   ROMAN_URDU,
   type Category,
-  type Difficulty,
   type GameLanguage,
-  type GeneratedRoundContent,
 } from "@/game/game-types";
-import {
-  validateRomanUrduHint,
-  validateRoundContent,
-} from "@/game/round-validation";
 import type { WordProvider } from "./word-provider";
+
+/**
+ * NOTE on the `@/game/game-types` import above: `Category`,
+ * `GameLanguage`, and the `ENGLISH`/`ROMAN_URDU` constants are still
+ * defined in the pre-FSD `game/game-types.ts` -- see ./word-provider.ts
+ * and ../../README.md. Deliberate, temporary bridge.
+ */
 
 const AI_TIMEOUT_MS = 10_000;
 

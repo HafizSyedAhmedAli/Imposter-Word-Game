@@ -65,6 +65,18 @@ to change without breaking consumers.
     from `game/game-types.ts`, which now re-exports them as a
     temporary bridge. `entities/round` was repointed to import
     `GameConfig` from here directly instead of via that bridge.
-  - **Next:** `word`, `custom-word`, `achievement`, `statistics`,
-    `voting-history`, per the migration plan tracked in project
-    memory.
+  - `entities/word` (done) — `WordProvider`, the AI / IndexedDB-cache /
+    static-fallback providers, and the static fallback word list moved
+    from `providers/` and `lib/fallback-words/`; the old paths re-export
+    from this slice as temporary bridges. `lib/recent-words.ts`
+    deliberately stays put for now, and `Category` stays in
+    `game/game-types.ts` to avoid a `game-session` <-> `word`
+    dependency cycle (see `entities/README.md`).
+  - `entities/custom-word` (done) — `CustomWordEntry`, the validation
+    rules, the Custom Words data access, and `resolveCustomWordHint`
+    moved from `game/custom-word-rules.ts`, `providers/custom-word-provider.ts`,
+    and `lib/db.ts`. The `customWords` table declaration stays in
+    `lib/db.ts`, which re-exports the moved functions as a temporary
+    bridge (a benign runtime cycle, documented in `entities/README.md`).
+  - **Next:** `achievement`, `statistics`, `voting-history`, per the
+    migration plan tracked in project memory.

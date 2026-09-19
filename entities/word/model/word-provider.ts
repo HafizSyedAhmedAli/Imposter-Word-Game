@@ -1,9 +1,18 @@
-import type {
-  Category,
-  Difficulty,
-  GameLanguage,
-  GeneratedRoundContent,
-} from "@/game/game-types";
+import type { Difficulty } from "@/entities/game-session";
+import type { GeneratedRoundContent } from "@/entities/round";
+import type { Category, GameLanguage } from "@/game/game-types";
+
+/**
+ * NOTE on the imports above: `Category` and `GameLanguage` are still
+ * defined in the pre-FSD `game/game-types.ts` -- see ../../README.md.
+ * `Category` can't move into this slice yet without making
+ * `entities/game-session` and this slice depend on each other (this
+ * interface needs `Difficulty` from there, and `GameConfig` there needs
+ * `Category` from here); `GameLanguage` hasn't been assigned a slice.
+ * `Difficulty` and `GeneratedRoundContent` come straight from their own
+ * slices' public APIs. Update the `game/game-types` import once that
+ * decision is made.
+ */
 
 /**
  * Anything that can produce round content (a word + hint pair) for a

@@ -1,4 +1,4 @@
-// game/custom-word-rules.ts
+// entities/custom-word/model/custom-word-rules.ts
 /**
  * Pure validation for the Custom Words feature (Settings -> Custom
  * Words). Deliberately separate from game/round-validation.ts -- that
@@ -8,11 +8,10 @@
  * allowed to type in as their own custom word (spec: "do not make
  * custom words unusable for legitimate longer phrases").
  *
- * Kept in `game/` (not `lib/`) to match this codebase's existing
- * separation of concerns: pure, synchronous domain rules live here
- * (mirroring `validatePlayerName` above in game-rules.ts), while the
- * async IndexedDB read/write lives in lib/db.ts and calls into this
- * module rather than duplicating the rules itself.
+ * Moved here from `game/custom-word-rules.ts` (see entities/README.md).
+ * Pure, synchronous domain rules live in this file, while the async
+ * IndexedDB read/write lives in ./custom-word-store.ts and calls into
+ * this module rather than duplicating the rules itself.
  */
 
 /** Generous enough for a short phrase ("Interstellar", "New York City") without being unusable. */
@@ -25,9 +24,8 @@ export type CustomWordValidation =
 /**
  * A minimal shape validation needs from an existing saved custom word --
  * just enough to check for a duplicate, without this module depending on
- * lib/db.ts's full `CustomWordEntry` type (which would invert the
- * intended dependency direction: lib/db.ts calls into game/, not the
- * other way around).
+ * the full `CustomWordEntry` type (./custom-word-types.ts), so the rules
+ * stay a pure, dependency-free module.
  */
 export type ExistingCustomWord = { normalizedWord: string };
 
@@ -45,10 +43,10 @@ export type ExistingCustomWord = { normalizedWord: string };
  * the *comparison* against `existing` is case-insensitive, never the
  * stored/displayed text itself.
  *
- * Never throws -- callers (lib/db.ts's `addCustomWord`) decide what to
- * do with a failed validation, same convention as
- * game/round-validation.ts's `validateRoundContent` and this file's own
- * `validatePlayerName` sibling above.
+ * Never throws -- callers (./custom-word-store.ts's `addCustomWord`)
+ * decide what to do with a failed validation, same convention as
+ * entities/round's `validateRoundContent` and game-rules.ts's
+ * `validatePlayerName`.
  */
 export function validateCustomWordText(
   word: string,

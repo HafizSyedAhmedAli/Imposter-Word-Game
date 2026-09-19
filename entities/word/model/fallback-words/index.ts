@@ -1,5 +1,6 @@
-import type { Category, Difficulty, GameLanguage } from "@/game/game-types";
-import { getShownWordIds, rememberWordId } from "../recent-words";
+import type { Difficulty } from "@/entities/game-session";
+import type { Category, GameLanguage } from "@/game/game-types";
+import { getShownWordIds, rememberWordId } from "@/lib/recent-words";
 import type { FallbackWordEntry } from "./types";
 import { FOOD_FALLBACK_WORDS } from "./food";
 import { ANIMALS_FALLBACK_WORDS } from "./animals";
@@ -14,10 +15,11 @@ import { TECHNOLOGY_FALLBACK_WORDS } from "./technology";
 import { PLACES_FALLBACK_WORDS } from "./places";
 import { RANDOM_OBJECTS_FALLBACK_WORDS } from "./random-objects";
 
-// Re-exported so existing callers (e.g. providers/fallback-word-provider.ts,
-// tests) that do `import { FallbackWordEntry } from "@/lib/fallback-words"`
-// keep working unchanged -- this directory is a drop-in replacement for
-// the single file it replaced.
+// NOTE: `Category`/`GameLanguage` (@/game/game-types) and the session
+// tracker in `@/lib/recent-words` are still the pre-FSD locations --
+// deliberate, temporary bridges, see ../word-provider.ts and
+// entities/README.md.
+
 export type { FallbackWordEntry };
 
 /**
@@ -33,7 +35,7 @@ export type { FallbackWordEntry };
  * content (`source: "ai"`). Keeping this array separate is what lets
  * Screen 4 tell the difference between "this round came from the AI
  * cache" and "this round came from the last-resort static list" (see
- * providers/fallback-word-provider.ts and providers/indexeddb-cache-provider.ts).
+ * ../fallback-word-provider.ts and ../indexeddb-cache-provider.ts).
  *
  * Deliberately generic/non-branded terms (e.g. "Sequel" instead of an
  * actual movie title) so nothing here depends on third-party IP. Covers
