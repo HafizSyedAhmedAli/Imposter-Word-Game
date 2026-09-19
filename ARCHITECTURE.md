@@ -49,6 +49,22 @@ to change without breaking consumers.
 - **Step 3 (done):** `entities/settings` pilot slice moved from
   `lib/settings-store.ts` (see `entities/README.md` for the slice's two
   temporary bridge dependencies on `@/lib/db` and `@/game/*`).
-- **Next:** remaining `entities/*` slices (`word`, `player`, `round`,
-  `game-session`, `achievement`, `statistics`, `custom-word`,
-  `voting-history`), per the migration plan tracked in project memory.
+- **Step 4 (in progress):** remaining `entities/*` slices, moved one at a
+  time.
+  - `entities/player` (done) — `Player` type moved from
+    `game/game-types.ts`, which now re-exports it as a temporary bridge
+    (see `entities/README.md`).
+  - `entities/round` (done) — round-domain types and validation logic
+    moved from `game/game-types.ts` and `game/round-validation.ts`,
+    both of which now re-export from this slice as temporary bridges.
+    Also bridges the other way, temporarily importing
+    `GameLanguage`/`VotingHistoryEntry` back from `game/game-types.ts`
+    until `voting-history` exists (see `entities/README.md`).
+  - `entities/game-session` (done) — `GameMode`, `Difficulty`,
+    `TimerSettings`, `GameOptions`, `GameConfig`, `GameSession` moved
+    from `game/game-types.ts`, which now re-exports them as a
+    temporary bridge. `entities/round` was repointed to import
+    `GameConfig` from here directly instead of via that bridge.
+  - **Next:** `word`, `custom-word`, `achievement`, `statistics`,
+    `voting-history`, per the migration plan tracked in project
+    memory.
