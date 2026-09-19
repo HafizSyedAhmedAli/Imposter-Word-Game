@@ -1,5 +1,5 @@
 import type { Player, PlayerRole } from "./game-types";
-import { shuffle } from "@/lib/shuffle";
+import { shuffle } from "@/shared/lib/shuffle";
 
 /**
  * Randomly assigns exactly `imposterCount` players the "imposter" role and

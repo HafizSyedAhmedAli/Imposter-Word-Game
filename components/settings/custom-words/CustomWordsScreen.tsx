@@ -15,8 +15,8 @@ import {
   type CustomWordEntry,
 } from "@/lib/db";
 import type { Category, Difficulty } from "@/game/game-types";
-import { success, warning } from "@/lib/haptics";
-import { playSound } from "@/lib/sound-engine";
+import { success, warning } from "@/shared/lib/haptics";
+import { playSound } from "@/shared/lib/sound-engine";
 import { captureError } from "@/lib/monitoring";
 
 export default function CustomWordsScreen() {

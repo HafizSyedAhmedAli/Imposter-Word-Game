@@ -2,7 +2,7 @@
 
 import Link, { type LinkProps } from "next/link";
 import type { AnchorHTMLAttributes, MouseEvent, ReactNode } from "react";
-import { navigateInternal } from "@/lib/offline-navigation";
+import { navigateInternal } from "@/shared/lib/offline-navigation";
 
 type AppLinkProps = LinkProps &
   Omit<AnchorHTMLAttributes<HTMLAnchorElement>, keyof LinkProps> & {

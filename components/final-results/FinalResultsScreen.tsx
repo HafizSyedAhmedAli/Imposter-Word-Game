@@ -38,8 +38,8 @@ import {
   getRoundSummary,
   getWinReason,
 } from "@/game/final-results-flow";
-import { light, success } from "@/lib/haptics";
-import { playSound } from "@/lib/sound-engine";
+import { light, success } from "@/shared/lib/haptics";
+import { playSound } from "@/shared/lib/sound-engine";
 import { useLeaveRoundBackGuard } from "@/lib/use-leave-round-back-guard";
 
 export default function FinalResultsScreen() {

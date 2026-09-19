@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ChevronRight, PenSquare } from "lucide-react";
-import { playSound } from "@/lib/sound-engine";
+import { playSound } from "@/shared/lib/sound-engine";
 
 export default function CustomWordsCard() {
   return (

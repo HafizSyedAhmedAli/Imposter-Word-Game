@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
-import { warning } from "@/lib/haptics";
+import { warning } from "@/shared/lib/haptics";
 import { captureError } from "@/lib/monitoring";
 import { resetGameData } from "@/lib/reset-game-data";
 import SettingsHeader from "./SettingsHeader";

@@ -11,7 +11,7 @@ import {
 } from "./game-types";
 import { CUSTOM_CATEGORY, getImposterCount } from "./game-rules";
 import { assignRoles } from "./role-assignment";
-import { generateId } from "@/lib/id";
+import { generateId } from "@/shared/lib/id";
 import { cacheAiWord, getRandomCustomWord } from "@/lib/db";
 import { getRecentWordText, rememberWordText } from "@/lib/recent-words";
 import { AiWordProvider } from "@/providers/ai-word-provider";

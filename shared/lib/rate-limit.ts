@@ -85,3 +85,15 @@ export function getClientIp(request: Request): string {
   if (realIp) return realIp.trim();
   return "unknown";
 }
+
+/**
+ * Clears every tracked bucket. Test-only: this module's state is a
+ * process-lifetime Map by design (see the file doc comment above), so
+ * without this, tests that call the rate-limited route repeatedly share
+ * one bucket keyed by "unknown" (no x-forwarded-for header in tests) and
+ * silently start getting 429s once a suite crosses the real limit. Never
+ * call this from application code.
+ */
+export function __resetRateLimitForTests(): void {
+  buckets.clear();
+}

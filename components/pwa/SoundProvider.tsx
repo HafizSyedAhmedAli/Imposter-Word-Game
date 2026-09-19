@@ -2,13 +2,13 @@
 
 import { useEffect } from "react";
 import { getSettings } from "@/lib/settings-store";
-import { setHapticsEnabled } from "@/lib/haptics";
+import { setHapticsEnabled } from "@/shared/lib/haptics";
 import {
   preloadSounds,
   primeAudioUnlock,
   setMusicEnabled,
   setSoundEnabled,
-} from "@/lib/sound-engine";
+} from "@/shared/lib/sound-engine";
 
 export default function SoundProvider() {
   useEffect(() => {

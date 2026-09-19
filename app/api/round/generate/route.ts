@@ -11,7 +11,7 @@ import {
   validateRomanUrduHint,
   validateRoundContent,
 } from "@/game/round-validation";
-import { getClientIp, rateLimit } from "@/lib/rate-limit";
+import { getClientIp, rateLimit } from "@/shared/lib/rate-limit";
 
 // Node runtime (not edge) -- keeps this close to a normal server
 // environment for the outbound fetch to the AI provider.

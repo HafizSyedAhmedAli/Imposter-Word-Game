@@ -7,7 +7,7 @@ import {
   type GameLanguage,
   type GameMode,
 } from "@/game/game-types";
-import { generateId } from "./id";
+import { generateId } from "@/shared/lib/id";
 import { captureError } from "./monitoring";
 import {
   getRecentWordIds,

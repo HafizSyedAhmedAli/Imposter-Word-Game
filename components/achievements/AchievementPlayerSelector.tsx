@@ -1,7 +1,7 @@
 "use client";
 
-import { playSound } from "@/lib/sound-engine";
-import { light } from "@/lib/haptics";
+import { playSound } from "@/shared/lib/sound-engine";
+import { light } from "@/shared/lib/haptics";
 import type { AchievementPlayerContext } from "@/lib/achievements/engine";
 
 // Same deterministic, name-hash palette convention as

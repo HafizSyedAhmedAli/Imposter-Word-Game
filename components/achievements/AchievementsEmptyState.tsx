@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Play, Trophy } from "lucide-react";
-import { playSound } from "@/lib/sound-engine";
+import { playSound } from "@/shared/lib/sound-engine";
 
 /**
  * Shown when no completed games are stored locally yet, so there is no

@@ -1,6 +1,6 @@
 "use client";
 
-import { light, setHapticsEnabled } from "@/lib/haptics";
+import { light, setHapticsEnabled } from "@/shared/lib/haptics";
 import {
   DEFAULT_SETTINGS,
   getSettings,
@@ -11,7 +11,7 @@ import {
   playSound,
   setMusicEnabled,
   setSoundEnabled,
-} from "@/lib/sound-engine";
+} from "@/shared/lib/sound-engine";
 import {
   HeadphoneOff,
   Headphones,

@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import type { UnlockedAchievementEvent } from "@/lib/achievements/store";
-import { playSound } from "@/lib/sound-engine";
-import { success } from "@/lib/haptics";
+import { playSound } from "@/shared/lib/sound-engine";
+import { success } from "@/shared/lib/haptics";
 
 const AUTO_DISMISS_MS = 3600;
 

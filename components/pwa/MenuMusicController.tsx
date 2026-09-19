@@ -7,8 +7,8 @@ import {
   stopAmbient,
   persistAmbientContinuity,
   consumeAmbientContinuity,
-} from "@/lib/sound-engine";
-import { onBeforeHardNavigate } from "@/lib/offline-navigation";
+} from "@/shared/lib/sound-engine";
+import { onBeforeHardNavigate } from "@/shared/lib/offline-navigation";
 
 // The screens the ambient menu bed should play across. Single source
 // of truth. Exported so test/pwa/menu-music-routes.test.ts can check it

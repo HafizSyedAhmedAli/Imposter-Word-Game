@@ -25,7 +25,7 @@ afterEach(() => {
 describe("getConnectivityServerSnapshot", () => {
   it("always reports online -- this is a cosmetic indicator, never a functionality gate", async () => {
     const { getConnectivityServerSnapshot: serverSnapshot } = await import(
-      "@/lib/connectivity"
+      "@/shared/lib/connectivity"
     );
     expect(serverSnapshot()).toBe(true);
   });
@@ -35,7 +35,7 @@ describe("getConnectivitySnapshot / subscribeConnectivity", () => {
   it("reflects navigator.onLine as its initial snapshot", async () => {
     vi.spyOn(window.navigator, "onLine", "get").mockReturnValue(true);
     const { getConnectivitySnapshot: snapshot } = await import(
-      "@/lib/connectivity"
+      "@/shared/lib/connectivity"
     );
     expect(snapshot()).toBe(true);
   });
@@ -44,7 +44,7 @@ describe("getConnectivitySnapshot / subscribeConnectivity", () => {
     const {
       subscribeConnectivity: subscribe,
       getConnectivitySnapshot: snapshot,
-    } = await import("@/lib/connectivity");
+    } = await import("@/shared/lib/connectivity");
 
     const listener = vi.fn();
     subscribe(listener);
@@ -59,7 +59,7 @@ describe("getConnectivitySnapshot / subscribeConnectivity", () => {
     const {
       subscribeConnectivity: subscribe,
       getConnectivitySnapshot: snapshot,
-    } = await import("@/lib/connectivity");
+    } = await import("@/shared/lib/connectivity");
 
     const listener = vi.fn();
     subscribe(listener);
@@ -75,7 +75,7 @@ describe("getConnectivitySnapshot / subscribeConnectivity", () => {
   it("does not notify listeners when the reported status hasn't actually changed", async () => {
     vi.spyOn(window.navigator, "onLine", "get").mockReturnValue(true);
     const { subscribeConnectivity: subscribe } = await import(
-      "@/lib/connectivity"
+      "@/shared/lib/connectivity"
     );
 
     const listener = vi.fn();
@@ -89,7 +89,7 @@ describe("getConnectivitySnapshot / subscribeConnectivity", () => {
 
   it("returns an unsubscribe function that stops further notifications", async () => {
     const { subscribeConnectivity: subscribe } = await import(
-      "@/lib/connectivity"
+      "@/shared/lib/connectivity"
     );
 
     const listener = vi.fn();
@@ -103,7 +103,7 @@ describe("getConnectivitySnapshot / subscribeConnectivity", () => {
 
   it("supports multiple independent subscribers", async () => {
     const { subscribeConnectivity: subscribe } = await import(
-      "@/lib/connectivity"
+      "@/shared/lib/connectivity"
     );
 
     const listenerA = vi.fn();

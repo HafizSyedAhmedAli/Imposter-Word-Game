@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { navigateInternal } from "@/lib/offline-navigation";
+import { navigateInternal } from "@/shared/lib/offline-navigation";
 
 /**
  * Drop-in replacement for next/navigation's `useRouter` for the game's

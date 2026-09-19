@@ -23,8 +23,8 @@ import {
   MAX_PLAYERS,
   validatePlayerName,
 } from "@/game/game-rules";
-import { generateId } from "@/lib/id";
-import { rotate } from "@/lib/shuffle";
+import { generateId } from "@/shared/lib/id";
+import { rotate } from "@/shared/lib/shuffle";
 import { getStoredGameSetup, storeGameSetup } from "@/lib/game-setup-store";
 
 export type PlayerActionResult = { ok: true } | { ok: false; error: string };

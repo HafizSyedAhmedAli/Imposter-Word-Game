@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { Trophy } from "lucide-react";
-import { playSound } from "@/lib/sound-engine";
-import { light } from "@/lib/haptics";
+import { playSound } from "@/shared/lib/sound-engine";
+import { light } from "@/shared/lib/haptics";
 
 /**
  * Small, additive section on the Final Results screen (spec section

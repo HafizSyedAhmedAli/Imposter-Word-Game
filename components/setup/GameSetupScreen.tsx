@@ -13,8 +13,8 @@ import DifficultySelector from "./DifficultySelector";
 import GameOptions from "./GameOptions";
 import ContinueButton from "./ContinueButton";
 import PrivacyNotice from "./PrivacyNotice";
-import { light } from "@/lib/haptics";
-import { playSound } from "@/lib/sound-engine";
+import { light } from "@/shared/lib/haptics";
+import { playSound } from "@/shared/lib/sound-engine";
 import { analytics } from "@/lib/analytics";
 import type { GameMode } from "@/game/game-types";
 

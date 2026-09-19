@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { POST, OPTIONS } from "@/app/api/round/generate/route";
+import { __resetRateLimitForTests } from "@/shared/lib/rate-limit";
 
 /**
  * Covers everything test/api/round-generate-hint.test.ts doesn't:
@@ -75,6 +76,7 @@ function promptFrom(
 
 beforeEach(() => {
   process.env.GEMINI_API_KEY = "test-key";
+  __resetRateLimitForTests();
 });
 
 afterEach(() => {

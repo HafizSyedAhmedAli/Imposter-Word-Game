@@ -6,7 +6,7 @@ import type { Category, Difficulty } from "@/game/game-types";
 import { CUSTOM_WORD_CATEGORIES } from "@/game/game-rules";
 import { MAX_CUSTOM_WORD_LENGTH } from "@/game/custom-word-rules";
 import DifficultySelector from "@/components/setup/DifficultySelector";
-import { playSound } from "@/lib/sound-engine";
+import { playSound } from "@/shared/lib/sound-engine";
 
 export type AddCustomWordOutcome = { ok: true } | { ok: false; error: string };
 

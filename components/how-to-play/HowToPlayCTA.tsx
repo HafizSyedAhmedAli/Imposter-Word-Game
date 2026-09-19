@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Play, ArrowLeft } from "lucide-react";
-import { playSound } from "@/lib/sound-engine";
+import { playSound } from "@/shared/lib/sound-engine";
 
 /**
  * "Start Playing" reuses the existing /setup route (same destination as

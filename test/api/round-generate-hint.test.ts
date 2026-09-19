@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { POST } from "@/app/api/round/generate/route";
+import { __resetRateLimitForTests } from "@/shared/lib/rate-limit";
 
 /**
  * Covers the Custom Words hint-only branch added to
@@ -36,6 +37,7 @@ function makeRequest(body: Record<string, unknown>) {
 
 beforeEach(() => {
   process.env.GEMINI_API_KEY = "test-key";
+  __resetRateLimitForTests();
 });
 
 afterEach(() => {

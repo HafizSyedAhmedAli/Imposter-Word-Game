@@ -16,13 +16,13 @@ import {
 } from "@/game/vote-flow";
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
 import { analytics } from "@/lib/analytics";
-import { light, medium } from "@/lib/haptics";
+import { light, medium } from "@/shared/lib/haptics";
 import {
   clearStoredRoundSession,
   getStoredRoundSession,
   storeRoundSession,
 } from "@/lib/round-session-store";
-import { playSound } from "@/lib/sound-engine";
+import { playSound } from "@/shared/lib/sound-engine";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AllVotesCastCard from "./AllVotesCastCard";

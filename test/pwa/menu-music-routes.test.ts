@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { MENU_ROUTES } from "@/components/pwa/MenuMusicController";
-import { APP_ROUTES } from "@/lib/app-routes";
+import { APP_ROUTES } from "@/shared/lib/app-routes";
 
 /**
  * Routes that are deliberately NOT part of the ambient menu flow --

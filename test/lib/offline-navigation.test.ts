@@ -3,8 +3,8 @@ import {
   isKnownAppRoute,
   navigateInternal,
   onBeforeHardNavigate,
-} from "@/lib/offline-navigation";
-import { APP_ROUTES } from "@/lib/app-routes";
+} from "@/shared/lib/offline-navigation";
+import { APP_ROUTES } from "@/shared/lib/app-routes";
 
 describe("isKnownAppRoute", () => {
   it("recognizes every route in APP_ROUTES", () => {

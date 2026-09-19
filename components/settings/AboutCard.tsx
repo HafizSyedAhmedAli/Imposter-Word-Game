@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ChevronRight, Info, ShieldCheck } from "lucide-react";
-import { playSound } from "@/lib/sound-engine";
+import { playSound } from "@/shared/lib/sound-engine";
 
 // Injected at build time from package.json (see next.config.ts) so this
 // never hardcodes a version number that could drift from the real one.

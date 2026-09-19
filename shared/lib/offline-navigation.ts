@@ -1,4 +1,4 @@
-import { APP_ROUTES } from "@/lib/app-routes";
+import { APP_ROUTES } from "@/shared/lib/app-routes";
 
 /**
  * Whether `path` is one of this app's own screens (as opposed to an

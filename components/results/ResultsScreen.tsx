@@ -17,7 +17,7 @@ import {
 import { isVotingComplete } from "@/game/vote-flow"; // add this import
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
 import { analytics } from "@/lib/analytics";
-import { medium } from "@/lib/haptics";
+import { medium } from "@/shared/lib/haptics";
 import {
   clearStoredRoundSession,
   getStoredRoundSession,

@@ -1,0 +1,163 @@
+From c691ae2e73674a8d37388128d1e500be34741f15 Mon Sep 17 00:00:00 2001
+From: migration <dev@local>
+Date: Sat, 19 Sep 2026 07:55:05 +0000
+Subject: [PATCH] fix: reset rate-limit buckets between tests to stop
+ cross-test 429 leakage
+
+---
+ shared/lib/rate-limit.ts             | 12 ++++
+ test/api/round-generate-hint.test.ts |  2 +
+ test/api/round-generate.test.ts      |  2 +
+ test/lib/rate-limit.test.ts          | 82 ++++++++++++++++++++++++++++
+ 4 files changed, 98 insertions(+)
+ create mode 100644 test/lib/rate-limit.test.ts
+
+diff --git a/shared/lib/rate-limit.ts b/shared/lib/rate-limit.ts
+index 3fae063..bf49365 100644
+--- a/shared/lib/rate-limit.ts
++++ b/shared/lib/rate-limit.ts
+@@ -85,3 +85,15 @@ export function getClientIp(request: Request): string {
+   if (realIp) return realIp.trim();
+   return "unknown";
+ }
++
++/**
++ * Clears every tracked bucket. Test-only: this module's state is a
++ * process-lifetime Map by design (see the file doc comment above), so
++ * without this, tests that call the rate-limited route repeatedly share
++ * one bucket keyed by "unknown" (no x-forwarded-for header in tests) and
++ * silently start getting 429s once a suite crosses the real limit. Never
++ * call this from application code.
++ */
++export function __resetRateLimitForTests(): void {
++  buckets.clear();
++}
+diff --git a/test/api/round-generate-hint.test.ts b/test/api/round-generate-hint.test.ts
+index e743e56..88384d3 100644
+--- a/test/api/round-generate-hint.test.ts
++++ b/test/api/round-generate-hint.test.ts
+@@ -1,5 +1,6 @@
+ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+ import { POST } from "@/app/api/round/generate/route";
++import { __resetRateLimitForTests } from "@/shared/lib/rate-limit";
+ 
+ /**
+  * Covers the Custom Words hint-only branch added to
+@@ -36,6 +37,7 @@ function makeRequest(body: Record<string, unknown>) {
+ 
+ beforeEach(() => {
+   process.env.GEMINI_API_KEY = "test-key";
++  __resetRateLimitForTests();
+ });
+ 
+ afterEach(() => {
+diff --git a/test/api/round-generate.test.ts b/test/api/round-generate.test.ts
+index 24826e0..4564cfd 100644
+--- a/test/api/round-generate.test.ts
++++ b/test/api/round-generate.test.ts
+@@ -1,5 +1,6 @@
+ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+ import { POST, OPTIONS } from "@/app/api/round/generate/route";
++import { __resetRateLimitForTests } from "@/shared/lib/rate-limit";
+ 
+ /**
+  * Covers everything test/api/round-generate-hint.test.ts doesn't:
+@@ -75,6 +76,7 @@ function promptFrom(
+ 
+ beforeEach(() => {
+   process.env.GEMINI_API_KEY = "test-key";
++  __resetRateLimitForTests();
+ });
+ 
+ afterEach(() => {
+diff --git a/test/lib/rate-limit.test.ts b/test/lib/rate-limit.test.ts
+new file mode 100644
+index 0000000..325af02
+--- /dev/null
++++ b/test/lib/rate-limit.test.ts
+@@ -0,0 +1,82 @@
++import { describe, it, expect, beforeEach } from "vitest";
++import {
++  rateLimit,
++  getClientIp,
++  __resetRateLimitForTests,
++} from "@/shared/lib/rate-limit";
++
++/**
++ * shared/lib/rate-limit.ts had zero direct test coverage before this file.
++ * Its module-level `buckets` Map is intentionally process-lifetime state
++ * (see the file's doc comment), which is exactly what let it leak across
++ * unrelated tests in test/api/round-generate.test.ts and
++ * round-generate-hint.test.ts -- 20+ POST calls across a test file shared
++ * one bucket (no x-forwarded-for header on Request objects built by
++ * `new Request(...)` in tests, so every call fell back to the "unknown"
++ * key), and once a run crossed the route's real 20-req/60s limit,
++ * later tests in the same file started getting silently rate-limited
++ * (429) instead of exercising the behavior they meant to test. Every
++ * test here resets the buckets first so each one starts from a clean
++ * window, and both API test files now do the same via
++ * __resetRateLimitForTests in their own beforeEach.
++ */
++
++beforeEach(() => {
++  __resetRateLimitForTests();
++});
++
++describe("rateLimit", () => {
++  it("allows requests up to the limit within the window", () => {
++    for (let i = 0; i < 5; i++) {
++      expect(rateLimit("key-a", 5, 60_000).allowed).toBe(true);
++    }
++  });
++
++  it("blocks the request that exceeds the limit, with a retryAfterSeconds", () => {
++    for (let i = 0; i < 5; i++) {
++      rateLimit("key-b", 5, 60_000);
++    }
++    const result = rateLimit("key-b", 5, 60_000);
++    expect(result.allowed).toBe(false);
++    expect(result.retryAfterSeconds).toBeGreaterThan(0);
++  });
++
++  it("tracks separate keys independently", () => {
++    for (let i = 0; i < 5; i++) rateLimit("key-c", 5, 60_000);
++    // A different key has its own bucket -- exhausting "key-c" above
++    // must not affect "key-d".
++    expect(rateLimit("key-d", 5, 60_000).allowed).toBe(true);
++  });
++
++  it("resets to a fresh window after __resetRateLimitForTests", () => {
++    for (let i = 0; i < 5; i++) rateLimit("key-e", 5, 60_000);
++    expect(rateLimit("key-e", 5, 60_000).allowed).toBe(false);
++
++    __resetRateLimitForTests();
++
++    expect(rateLimit("key-e", 5, 60_000).allowed).toBe(true);
++  });
++});
++
++describe("getClientIp", () => {
++  function requestWithHeaders(headers: Record<string, string>): Request {
++    return new Request("http://localhost/api/round/generate", { headers });
++  }
++
++  it("uses the first entry of x-forwarded-for when present", () => {
++    const ip = getClientIp(
++      requestWithHeaders({ "x-forwarded-for": "1.2.3.4, 5.6.7.8" }),
++    );
++    expect(ip).toBe("1.2.3.4");
++  });
++
++  it("falls back to x-real-ip when x-forwarded-for is absent", () => {
++    const ip = getClientIp(requestWithHeaders({ "x-real-ip": "9.9.9.9" }));
++    expect(ip).toBe("9.9.9.9");
++  });
++
++  it('falls back to "unknown" when neither header is present', () => {
++    const ip = getClientIp(requestWithHeaders({}));
++    expect(ip).toBe("unknown");
++  });
++});
+-- 
+2.43.0
+

@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { TimerReset } from "lucide-react";
-import { playSound, stopSound } from "@/lib/sound-engine";
+import { playSound, stopSound } from "@/shared/lib/sound-engine";
 
 const TICK_WINDOW_SECONDS = 10;
 

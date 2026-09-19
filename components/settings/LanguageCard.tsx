@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Check, Languages } from "lucide-react";
-import { light } from "@/lib/haptics";
+import { light } from "@/shared/lib/haptics";
 import {
   DEFAULT_SETTINGS,
   getSettings,

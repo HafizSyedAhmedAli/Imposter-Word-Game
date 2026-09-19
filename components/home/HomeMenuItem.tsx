@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ChevronRight, type LucideIcon } from "lucide-react";
-import { playSound } from "@/lib/sound-engine";
+import { playSound } from "@/shared/lib/sound-engine";
 
 export default function HomeMenuItem({
   href,
