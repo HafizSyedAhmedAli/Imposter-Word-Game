@@ -152,10 +152,49 @@ each exposing a single `index.ts` public API.
   `providers/custom-word-provider.ts` re-export from the slice
   (`AddCustomWordCard.tsx`, `game/game-engine.ts`, and two test files
   use them).
+- `entities/achievement` — the achievement definitions
+  (`ACHIEVEMENTS`, `ACHIEVEMENT_CATEGORY_LABELS`, `getAchievementById`),
+  the pure evaluation engine (`buildAchievementPlayerContexts`,
+  `evaluateAchievementsForPlayer`), the orchestration layer
+  (`processAchievementsForCompletedGame`, `getAchievementsSnapshot`,
+  `resetAchievements`), the `AchievementUnlockRecord` type, and the
+  unlock data access (`recordAchievementUnlock`, `getAchievementUnlocks`,
+  `getAchievementUnlocksForPlayer`, `clearAchievementUnlocks`). Moved from
+  `lib/achievements/{definitions,engine,store}.ts` and the Achievements
+  section of `lib/db.ts`. Public API: `@/entities/achievement` (barrel at
+  `entities/achievement/index.ts`) — internals live under
+  `entities/achievement/model/`.
+  **Not moved, on purpose:** the `achievementUnlocks` Dexie table
+  declaration (v8) stays in `lib/db.ts`, same reasoning as
+  `customWords` above.
+  **Bridge dependencies (temporary):** the engine and store depend on
+  the planned `entities/statistics` slice, whose code is still at its
+  pre-FSD locations -- `CompletedGameRecord` from `@/lib/db`,
+  `computePlayerStatistics`/`PlayerStatistics` from
+  `@/lib/statistics-aggregation`, and `getGameHistory` from
+  `@/lib/game-statistics-store`. This is the intended direction
+  (achievement -> statistics, never the reverse: nothing in those
+  modules imports achievements), so it stays acyclic once statistics is
+  a slice and these three imports just get repointed. Also imports
+  `getDb` from `@/lib/db` and `captureError` from `@/lib/monitoring`.
+  `RoundSession` comes directly from `@/entities/round`. `definitions`
+  and `engine` still import each other's *types* (as they did before the
+  move), which is erased at compile time.
+  **Bridge in the other direction (same runtime cycle as
+  `entities/custom-word`):** `lib/db.ts` imports the
+  `AchievementUnlockRecord` type from this slice for its
+  `Table<AchievementUnlockRecord>` declaration and re-exports the four
+  unlock functions and the type, so the direct `@/lib/db` importers
+  (`AchievementCategorySection.tsx` and two test files) keep working.
+  Benign for the same reason -- `getDb` is only touched when a function
+  is *called*. Three more thin bridges at the old paths,
+  `lib/achievements/definitions.ts`, `engine.ts`, and `store.ts`,
+  re-export from the slice (six components under
+  `components/achievements/` and `components/final-results/`,
+  `lib/reset-game-data.ts`, and four test files use them).
 
 ## Planned slices (not yet moved — see `../ARCHITECTURE.md`)
 
-- `entities/achievement` — `lib/achievements/*`
 - `entities/statistics` — `lib/statistics-aggregation.ts`, `statistics-record.ts`
 - `entities/voting-history` — `VotingHistoryEntry`, `VotingHistoryTallyEntry`,
   `VotingHistoryVerdict`

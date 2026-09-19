@@ -1,4 +1,4 @@
-// lib/achievements/engine.ts
+// entities/achievement/model/achievement-engine.ts
 import type { CompletedGameRecord } from "@/lib/db";
 import {
   computePlayerStatistics,
@@ -8,7 +8,17 @@ import {
   ACHIEVEMENTS,
   type AchievementDefinition,
   type AchievementEvaluation,
-} from "./definitions";
+} from "./achievement-definitions";
+
+/**
+ * NOTE on the imports above: `CompletedGameRecord` (lib/db.ts) and
+ * `computePlayerStatistics`/`PlayerStatistics`
+ * (lib/statistics-aggregation.ts) belong to the planned
+ * `entities/statistics` slice and are still the pre-FSD locations --
+ * see ../../README.md. Deliberate, temporary bridges; this slice depends
+ * on statistics (never the other way around), so the graph stays
+ * acyclic once that slice exists.
+ */
 
 /**
  * The pure "Achievement Evaluation" step of the pipeline:
@@ -24,7 +34,7 @@ import {
  * functions/data") or derived in one extra pass over the same
  * `CompletedGameRecord[]` for the handful of fields per-player lifetime
  * statistics doesn't already carry (full-house games, multi-imposter
- * wins, crew catch-assists -- see lib/achievements/definitions.ts's doc
+ * wins, crew catch-assists -- see ./achievement-definitions.ts's doc
  * comment for exactly what's available and why).
  *
  * Deterministic: the same `games` array always produces the same
@@ -46,7 +56,7 @@ export type AchievementPlayerContext = {
   tripleThreatWins: number;
   /** Completed games this player played as Crew where at least one
    * Imposter was caught that game (`impostersCaught >= 1`) -- see
-   * lib/achievements/definitions.ts's doc comment on "Imposter Hunter"/
+   * ./achievement-definitions.ts's doc comment on "Imposter Hunter"/
    * "Sharp Eyes" for why this is the honest available proxy for
    * "helped catch an Imposter", rather than per-vote attribution the
    * stored data doesn't have. */

@@ -10,6 +10,7 @@ import {
 import { generateId } from "@/shared/lib/id";
 import { captureError } from "./monitoring";
 import { getShownWordIds, rememberWordId } from "./recent-words";
+import type { AchievementUnlockRecord } from "@/entities/achievement";
 import type { CustomWordEntry } from "@/entities/custom-word";
 
 /**
@@ -78,8 +79,8 @@ export type SettingsRow = {
 };
 
 /**
- * NOTE: `CustomWordEntry` (and the custom-word CRUD/selection functions
- * further down) now live in `entities/custom-word` -- see
+ * NOTE: `CustomWordEntry` (and the custom-word CRUD/selection
+ * functions) now live in `entities/custom-word` -- see
  * entities/README.md. This file still declares the `customWords` Dexie
  * table itself (schema versions + migrations below) since it's the one
  * place every table is defined, so it imports the row type from the
@@ -168,34 +169,23 @@ export type CompletedGameRecord = {
 };
 
 /**
- * One (local player, achievement) unlock -- the Achievements feature's
- * only persisted state. Every achievement *condition* is derived purely
- * from `completedGames` (see lib/achievements/engine.ts) -- this table
- * exists only to (a) remember the moment an achievement was first
- * earned (`unlockedAt`, shown on the Achievements screen) and (b) let
- * lib/achievements/store.ts tell which achievements are genuinely NEW
- * after a given game, so the unlock notification never re-fires for one
- * already earned. It is never the source of truth for whether an
- * achievement is unlocked -- the Achievements screen always recomputes
- * that live from `completedGames`, so a failed/missing write here can
- * never make an actually-earned achievement look locked.
- *
- * Primary-keyed by `id` = `${normalizedName}::${achievementId}` -- the
- * same "put is naturally idempotent" trick `CompletedGameRecord` uses
- * (see its doc comment): recording the same unlock twice overwrites the
- * same row instead of creating a duplicate, with no separate dedupe
- * bookkeeping required.
+ * NOTE: `AchievementUnlockRecord` (and the achievement-unlock CRUD
+ * functions) now live in `entities/achievement` -- see
+ * entities/README.md. Same arrangement as the custom-word bridge
+ * above: this file still declares the `achievementUnlocks` Dexie table
+ * itself (v8 below), imports the row type from the slice, and
+ * re-exports it along with the functions so existing
+ * `import { ... } from "@/lib/db"` call sites keep working unchanged.
+ * Repoint each to `@/entities/achievement` as it's touched; these
+ * re-exports go away once none are left.
  */
-export type AchievementUnlockRecord = {
-  id: string;
-  achievementId: string;
-  /** Cross-game identity key -- same convention as
-   * `CompletedGamePlayerResult.normalizedName` above. */
-  normalizedName: string;
-  /** Display name as of the moment this achievement unlocked. */
-  displayName: string;
-  unlockedAt: number;
-};
+export type { AchievementUnlockRecord } from "@/entities/achievement";
+export {
+  recordAchievementUnlock,
+  getAchievementUnlocks,
+  getAchievementUnlocksForPlayer,
+  clearAchievementUnlocks,
+} from "@/entities/achievement";
 
 class ImposterWordDB extends Dexie {
   words!: Table<WordEntry, string>;
@@ -636,74 +626,4 @@ export async function getCompletedGames(): Promise<CompletedGameRecord[]> {
 export async function clearCompletedGames(): Promise<void> {
   const db = getDb();
   await db.completedGames.clear();
-}
-
-/* -------------------------------------------------------------------- */
-/* Achievements (Home -> Achievements)                                   */
-/*                                                                        */
-/* CRUD for locally-stored achievement unlock records. Like the          */
-/* Statistics section above, this module never decides whether an       */
-/* achievement is earned -- see lib/achievements/engine.ts (pure         */
-/* evaluation from `completedGames`) and lib/achievements/store.ts       */
-/* (orchestrates evaluation + persists newly-earned unlocks). This file  */
-/* only persists/reads/clears rows.                                      */
-/* -------------------------------------------------------------------- */
-
-/**
- * Saves one (player, achievement) unlock. A plain Dexie `put` against
- * the primary key (`record.id` = `${normalizedName}::${achievementId}`)
- * -- recording the same unlock twice is a no-op overwrite, same
- * reasoning as `recordCompletedGame` above.
- *
- * Best-effort and silent, same reasoning as `recordCompletedGame`: this
- * always runs after a game is already fully decided and (usually) after
- * the Final Results screen has already shown an unlock notification for
- * it -- a failed write must never surface an error on a screen whose
- * game is already over. Because achievement *state* is always
- * recomputed live from `completedGames` (see this table's doc comment
- * on `AchievementUnlockRecord`), a failed write here only means a
- * missing "unlocked on" timestamp and a possible repeat notification
- * next time -- never a real achievement silently failing to unlock.
- */
-export async function recordAchievementUnlock(
-  record: AchievementUnlockRecord,
-): Promise<void> {
-  try {
-    const db = getDb();
-    await db.achievementUnlocks.put(record);
-  } catch (error) {
-    captureError(error, { phase: "record-achievement-unlock" });
-  }
-}
-
-/** Every locally-stored achievement unlock, across every local player. */
-export async function getAchievementUnlocks(): Promise
-  AchievementUnlockRecord[]
-> {
-  const db = getDb();
-  return db.achievementUnlocks.toArray();
-}
-
-/** One local player's unlock history, keyed the same way
- * `computePlayerStatistics` groups players (trimmed, lowercased name). */
-export async function getAchievementUnlocksForPlayer(
-  normalizedName: string,
-): Promise<AchievementUnlockRecord[]> {
-  const db = getDb();
-  return db.achievementUnlocks
-    .where("normalizedName")
-    .equals(normalizedName)
-    .toArray();
-}
-
-/**
- * Deletes every stored achievement unlock -- the Achievements half of
- * "Reset Game Data" (see lib/reset-game-data.ts). Rethrows on failure,
- * same as `clearCompletedGames` above: a user-initiated reset must
- * report failure rather than silently leaving stale unlock history
- * (and stale "already notified" state) behind.
- */
-export async function clearAchievementUnlocks(): Promise<void> {
-  const db = getDb();
-  await db.achievementUnlocks.clear();
 }

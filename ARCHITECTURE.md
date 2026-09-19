@@ -78,5 +78,12 @@ to change without breaking consumers.
     and `lib/db.ts`. The `customWords` table declaration stays in
     `lib/db.ts`, which re-exports the moved functions as a temporary
     bridge (a benign runtime cycle, documented in `entities/README.md`).
-  - **Next:** `achievement`, `statistics`, `voting-history`, per the
-    migration plan tracked in project memory.
+  - `entities/achievement` (done) — achievement definitions, evaluation
+    engine, orchestration store, `AchievementUnlockRecord`, and the
+    unlock data access moved from `lib/achievements/*` and `lib/db.ts`.
+    Depends on the (not yet migrated) statistics code through temporary
+    bridges, in the intended direction only. The `achievementUnlocks`
+    table declaration stays in `lib/db.ts`, which re-exports the moved
+    functions (see `entities/README.md`).
+  - **Next:** `statistics`, `voting-history`, per the migration plan
+    tracked in project memory.

@@ -1,5 +1,3 @@
-// lib/statistics-aggregation.ts
-import type { CompletedGameRecord } from "./db";
 
 /**
  * The pure "Statistics Aggregator" step of the pipeline described in the
@@ -22,6 +20,8 @@ import type { CompletedGameRecord } from "./db";
  * rates (spec's "WIN RATE CALCULATIONS": never divide by an unrelated
  * total).
  */
+
+import { CompletedGameRecord } from "./completed-game-store";
 
 /** Safely turns a ratio into a whole-number percentage. Returns 0 -- not
  * NaN/Infinity -- when `denominator` is 0 (spec's "handle zero values

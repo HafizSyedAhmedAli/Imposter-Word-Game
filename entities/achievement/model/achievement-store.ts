@@ -1,31 +1,42 @@
-// lib/achievements/store.ts
-import type { RoundSession } from "@/game/game-types";
-import {
-  getAchievementUnlocks,
-  recordAchievementUnlock,
-  clearAchievementUnlocks,
-  type AchievementUnlockRecord,
-} from "@/lib/db";
+// entities/achievement/model/achievement-store.ts
+import type { RoundSession } from "@/entities/round";
 import { getGameHistory } from "@/lib/game-statistics-store";
 import { captureError } from "@/lib/monitoring";
+import type { AchievementDefinition } from "./achievement-definitions";
 import {
   buildAchievementPlayerContexts,
   evaluateAchievementsForPlayer,
   type AchievementPlayerContext,
-} from "./engine";
-import type { AchievementDefinition } from "./definitions";
+} from "./achievement-engine";
+import type { AchievementUnlockRecord } from "./achievement-types";
+import {
+  clearAchievementUnlocks,
+  getAchievementUnlocks,
+  recordAchievementUnlock,
+} from "./achievement-unlock-db";
+
+/**
+ * NOTE on the imports above: `getGameHistory`
+ * (lib/game-statistics-store.ts) belongs to the planned
+ * `entities/statistics` slice and `captureError` (lib/monitoring.ts)
+ * stays put until `shared/` can take it -- see ../../README.md.
+ * Deliberate, temporary bridges. `RoundSession` comes straight from
+ * `entities/round`'s public API.
+ */
 
 /**
  * Public entry point for the Achievements feature's persistence layer --
  * mirrors lib/game-statistics-store.ts's role for Statistics. Backed by
- * the `achievementUnlocks` Dexie table (lib/db.ts, v8).
+ * the `achievementUnlocks` Dexie table (declared in lib/db.ts, v8; read
+ * and written through ./achievement-unlock-db.ts).
  *
  * IMPORTANT: unlock *state* is never sourced from this table alone --
- * see lib/db.ts's `AchievementUnlockRecord` doc comment. It always
- * comes from re-evaluating `completedGames` live (via
- * lib/achievements/engine.ts). This table only remembers *when* each
- * achievement was first earned, and lets this module tell which
- * achievements are genuinely new after one specific game.
+ * see `AchievementUnlockRecord`'s doc comment in
+ * ./achievement-types.ts. It always comes from re-evaluating
+ * `completedGames` live (via ./achievement-engine.ts). This table only
+ * remembers *when* each achievement was first earned, and lets this
+ * module tell which achievements are genuinely new after one specific
+ * game.
  */
 
 function normalizeName(name: string): string {

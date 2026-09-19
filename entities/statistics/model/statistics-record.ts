@@ -1,12 +1,12 @@
 // lib/statistics-record.ts
-import type { RoundSession } from "@/game/game-types";
 import {
   getFinalPlayerResults,
   getFinalVotingHistory,
   getRoundSummary,
   type FinalOutcome,
 } from "@/game/final-results-flow";
-import type { CompletedGamePlayerResult, CompletedGameRecord } from "./db";
+import { CompletedGamePlayerResult, CompletedGameRecord } from "./completed-game-store";
+import { RoundSession } from "@/entities/round";
 
 /**
  * The pure "Statistics Recorder" step of the pipeline described in the

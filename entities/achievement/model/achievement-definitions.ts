@@ -1,4 +1,4 @@
-// lib/achievements/definitions.ts
+// entities/achievement/model/achievement-definitions.ts
 import {
   Crown,
   Eye,
@@ -13,7 +13,7 @@ import {
   Users,
   VenetianMask,
 } from "lucide-react";
-import type { AchievementPlayerContext } from "./engine";
+import type { AchievementPlayerContext } from "./achievement-engine";
 
 /**
  * Centralized Achievement definitions -- the single place every
@@ -98,7 +98,7 @@ export type AchievementDefinition = {
    * instead of an N/1 progress bar for these. */
   binary: boolean;
   /** Pure, deterministic evaluation against one local player's
-   * already-aggregated context (see lib/achievements/engine.ts). Never
+   * already-aggregated context (see ./achievement-engine.ts). Never
    * touches Dexie/IndexedDB itself. */
   evaluate: (ctx: AchievementPlayerContext) => AchievementEvaluation;
 };
