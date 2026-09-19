@@ -77,7 +77,7 @@ export default function GameRecoveryPrompt() {
     // Only the active game/session state is discarded here -- saved
     // words, custom words, settings, and statistics all live in
     // separate Dexie/localStorage stores (lib/db.ts,
-    // lib/settings-store.ts, lib/game-statistics-store.ts) and are
+    // entities/settings, lib/game-statistics-store.ts) and are
     // never touched by this action.
     clearActiveGameRecovery();
     setRecord(null);

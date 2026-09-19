@@ -6,7 +6,7 @@ import {
   getSettings,
   updateSettings,
   type GameSettings,
-} from "@/lib/settings-store";
+} from "@/entities/settings";
 import {
   playSound,
   setMusicEnabled,

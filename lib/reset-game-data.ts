@@ -1,7 +1,7 @@
 import { resetUserData, clearCustomWords } from "./db";
 import { resetStatistics } from "./game-statistics-store";
 import { resetAchievements } from "./achievements/store";
-import { resetSettings } from "./settings-store";
+import { resetSettings } from "@/entities/settings";
 import { clearRecentWords } from "./recent-words";
 import { clearStoredRoundSession } from "./round-session-store";
 
@@ -14,7 +14,7 @@ import { clearStoredRoundSession } from "./round-session-store";
  *   - IndexedDB (lib/db.ts)                -- saved custom words
  *   - IndexedDB (lib/db.ts)                -- local statistics / game history
  *   - IndexedDB (lib/db.ts)                -- achievement unlock history
- *   - IndexedDB (lib/settings-store.ts)    -- saved Sound/Haptics prefs
+ *   - IndexedDB (entities/settings)    -- saved Sound/Haptics prefs
  *   - sessionStorage (recent-words)        -- short-term repeat avoidance
  *   - sessionStorage (round-session-store) -- the in-progress round, if any
  *

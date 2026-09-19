@@ -1,6 +1,15 @@
-import { getDb } from "./db";
+import { getDb } from "@/lib/db";
 import type { GameLanguage } from "@/game/game-types";
 import { DEFAULT_LANGUAGE, LANGUAGES } from "@/game/game-rules";
+
+/**
+ * NOTE on the two imports above: `@/lib/db` and `@/game/*` are the
+ * pre-FSD locations and haven't moved (see ../../../shared/README.md --
+ * lib/db.ts stays put until its own domain-type coupling is resolved,
+ * and game/ hasn't been migrated to entities/features yet). This entity
+ * depends on them as a deliberate, temporary bridge; update these two
+ * imports once those layers move.
+ */
 
 /**
  * Device-local preferences shown on the Settings screen. Backed by the

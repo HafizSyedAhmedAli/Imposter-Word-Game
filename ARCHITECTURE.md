@@ -46,5 +46,9 @@ to change without breaking consumers.
   deliberate exceptions — `lib/analytics.ts`, `lib/monitoring.ts`, and
   `lib/db.ts` stay put for now since they carry domain-type imports that
   `shared/` isn't supposed to have).
-- **Next:** `entities/settings` pilot move, per the migration plan tracked in
-  project memory.
+- **Step 3 (done):** `entities/settings` pilot slice moved from
+  `lib/settings-store.ts` (see `entities/README.md` for the slice's two
+  temporary bridge dependencies on `@/lib/db` and `@/game/*`).
+- **Next:** remaining `entities/*` slices (`word`, `player`, `round`,
+  `game-session`, `achievement`, `statistics`, `custom-word`,
+  `voting-history`), per the migration plan tracked in project memory.

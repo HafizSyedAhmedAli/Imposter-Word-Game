@@ -137,7 +137,7 @@ export const DIFFICULTIES: {
 // Settings screen catalog (Language). Mirrors the CATEGORIES/DIFFICULTIES
 // pattern above -- the UI reads labels from here instead of hardcoding
 // them, and this is the single source of truth for which languages the
-// game actually supports (see lib/settings-store.ts's DEFAULT_SETTINGS
+// game actually supports (see entities/settings's DEFAULT_SETTINGS
 // and app/api/round/generate/route.ts's server-side allow-list).
 export const LANGUAGES: {
   id: GameLanguage;

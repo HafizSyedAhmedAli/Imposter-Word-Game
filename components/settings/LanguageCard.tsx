@@ -8,7 +8,7 @@ import {
   getSettings,
   updateSettings,
   type GameSettings,
-} from "@/lib/settings-store";
+} from "@/entities/settings";
 import { LANGUAGES } from "@/game/game-rules";
 import type { GameLanguage } from "@/game/game-types";
 
@@ -16,7 +16,7 @@ import type { GameLanguage } from "@/game/game-types";
  * Settings screen card for choosing the round content language (word +
  * hint). Mirrors PreferencesCard's load/optimistic-update pattern
  * exactly -- Dexie is the single source of truth (see
- * lib/settings-store.ts), and the local `settings` state is updated
+ * entities/settings), and the local `settings` state is updated
  * immediately so the tap feels instant, with the persisted write
  * happening in the background.
  *

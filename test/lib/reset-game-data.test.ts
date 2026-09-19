@@ -11,7 +11,7 @@ import {
   updateSettings,
   getSettings,
   DEFAULT_SETTINGS,
-} from "@/lib/settings-store";
+} from "@/entities/settings";
 import { recordFinalResult, getGameHistory } from "@/lib/game-statistics-store";
 import {
   processAchievementsForCompletedGame,

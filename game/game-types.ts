@@ -13,7 +13,7 @@ export type GameMode = "classic" | "double" | "triple" | "random";
 /**
  * The content language for a round's word/hint (and its fallback/cache
  * data). This is deliberately separate from any UI-localization concept
- * -- see lib/settings-store.ts for where the player's preference lives,
+ * -- see entities/settings for where the player's preference lives,
  * and game/game-engine.ts for how it gets fixed onto a RoundSession once
  * a round starts. Centralized here (rather than sprinkling raw string
  * literals across the codebase) so every layer -- settings, AI prompt,

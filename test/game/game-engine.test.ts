@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { prepareGameRound } from "@/game/game-engine";
 import { getDb, cacheAiWord } from "@/lib/db";
-import { updateSettings } from "@/lib/settings-store";
+import { updateSettings } from "@/entities/settings";
 import type { Player } from "@/game/game-types";
 import { DEFAULT_GAME_CONFIG } from "@/game/game-rules";
 

@@ -18,7 +18,7 @@ import { AiWordProvider } from "@/providers/ai-word-provider";
 import { IndexedDbCacheProvider } from "@/providers/indexeddb-cache-provider";
 import { FallbackWordProvider } from "@/providers/fallback-word-provider";
 import { resolveCustomWordHint } from "@/providers/custom-word-provider";
-import { getSettings } from "@/lib/settings-store";
+import { getSettings } from "@/entities/settings";
 import { analytics, toRoundSource } from "@/lib/analytics";
 
 export type PreparationStage = "word" | "hint" | "roles" | "finalizing";

@@ -5,7 +5,7 @@ import {
   updateSettings,
   resetSettings,
   DEFAULT_SETTINGS,
-} from "@/lib/settings-store";
+} from "@/entities/settings";
 
 afterEach(async () => {
   const db = getDb();

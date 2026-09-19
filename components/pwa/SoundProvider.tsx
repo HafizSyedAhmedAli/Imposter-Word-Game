@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { getSettings } from "@/lib/settings-store";
+import { getSettings } from "@/entities/settings";
 import { setHapticsEnabled } from "@/shared/lib/haptics";
 import {
   preloadSounds,
