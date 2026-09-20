@@ -8,14 +8,16 @@ import { useGameSetup } from "@/lib/game-setup-context";
 import { isPlayerCountValid, MAX_PLAYERS } from "@/features/play-round";
 import { error, light } from "@/shared/lib/haptics";
 import { playSound } from "@/shared/lib/sound-engine";
-import PlayersHeader from "./PlayersHeader";
+import {
+  PlayersHeader,
+  PlayerCount,
+  PlayerInput,
+  PlayerList,
+  RandomizePlayersToggle,
+  PlayerValidationMessage,
+  PlayersContinueButton,
+} from "@/features/manage-players";
 import GameConfigSummary from "./GameConfigSummary";
-import PlayerCount from "./PlayerCount";
-import PlayerInput from "./PlayerInput";
-import PlayerList from "./PlayerList";
-import RandomizePlayersToggle from "./RandomizePlayersToggle";
-import PlayerValidationMessage from "./PlayerValidationMessage";
-import PlayersContinueButton from "./PlayersContinueButton";
 
 export default function PlayersScreen() {
   const router = useRouter();

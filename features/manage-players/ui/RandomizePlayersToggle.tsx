@@ -1,4 +1,4 @@
-// components/players/RandomizePlayersToggle.tsx
+// features/manage-players/ui/RandomizePlayersToggle.tsx
 "use client";
 
 /**

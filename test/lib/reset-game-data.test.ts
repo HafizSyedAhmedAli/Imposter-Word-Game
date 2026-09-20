@@ -6,7 +6,7 @@ import {
   addCustomWord,
   getCustomWords,
 } from "@/lib/db";
-import { resetGameData } from "@/lib/reset-game-data";
+import { resetGameData } from "@/features/reset-game-data";
 import {
   updateSettings,
   getSettings,

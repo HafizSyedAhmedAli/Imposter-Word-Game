@@ -1,6 +1,6 @@
 // components/final-results/VotingHistoryRoundCard.tsx
 import { Equal, Skull } from "lucide-react";
-import PlayerAvatar from "@/components/players/PlayerAvatar";
+import PlayerAvatar from "@/shared/ui/PlayerAvatar";
 import type { Player } from "@/game/game-types";
 import type { VotingHistoryEntry } from "@/entities/voting-history";
 

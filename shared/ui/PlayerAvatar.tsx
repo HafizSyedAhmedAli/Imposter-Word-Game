@@ -1,6 +1,16 @@
 // Deterministic palette so a player's color stays stable while other
 // players are added/removed around them (keyed by seat position, not by
 // name, so it never depends on external images/network).
+//
+// Moved from `components/players/PlayerAvatar.tsx` into `shared/ui/`
+// (FSD migration step 6) -- unlike the rest of `components/players/`,
+// this component takes only a numeric `index`, no `Player` domain type,
+// so it carries no domain knowledge and is a genuine `shared/ui`
+// candidate per `shared/README.md`'s own "if/when extracted" note. It's
+// also reused well beyond the Players screen -- voting, pass, results,
+// and final-results cards all render it -- which is what makes it a
+// shared primitive rather than part of the `features/manage-players`
+// slice. All 8 consumers repointed to `@/shared/ui/PlayerAvatar`.
 const AVATAR_COLORS = [
   "#8b5cf6", // violet
   "#3b82f6", // blue

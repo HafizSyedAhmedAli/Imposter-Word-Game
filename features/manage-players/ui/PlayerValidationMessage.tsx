@@ -1,3 +1,4 @@
+// features/manage-players/ui/PlayerValidationMessage.tsx
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import type { GameMode } from "@/game/game-types";
 import {

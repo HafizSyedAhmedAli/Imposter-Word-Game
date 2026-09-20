@@ -1,6 +1,6 @@
 import { Check, SkipForward } from "lucide-react";
 import type { Player } from "@/game/game-types";
-import PlayerAvatar from "@/components/players/PlayerAvatar";
+import PlayerAvatar from "@/shared/ui/PlayerAvatar";
 
 /**
  * One selectable ballot row. Reuses the same selected-state treatment as

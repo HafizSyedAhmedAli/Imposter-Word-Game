@@ -1,3 +1,4 @@
+// features/manage-players/ui/PlayersContinueButton.tsx
 import { ArrowRight } from "lucide-react";
 
 export default function PlayersContinueButton({

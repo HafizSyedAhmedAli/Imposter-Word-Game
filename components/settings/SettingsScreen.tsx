@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import { warning } from "@/shared/lib/haptics";
 import { captureError } from "@/lib/monitoring";
-import { resetGameData } from "@/lib/reset-game-data";
+import { resetGameData } from "@/features/reset-game-data";
 import SettingsHeader from "./SettingsHeader";
 import PreferencesCard from "./PreferencesCard";
 import LanguageCard from "./LanguageCard";

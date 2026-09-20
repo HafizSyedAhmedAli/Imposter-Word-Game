@@ -1,7 +1,7 @@
 import MenuMusicController from "@/components/pwa/MenuMusicController";
 import NativeSplashScreenController from "@/components/pwa/NativeSplashScreenController";
 import PwaInstallAnalytics from "@/components/pwa/PwaInstallAnalytics";
-import ServiceWorkerRegister from "@/components/pwa/ServiceWorkerRegister";
+import { ServiceWorkerRegister } from "@/features/register-service-worker";
 import SoundProvider from "@/components/pwa/SoundProvider";
 import { GameSetupProvider } from "@/lib/game-setup-context";
 import PostHogProvider from "@/lib/posthog-provider";

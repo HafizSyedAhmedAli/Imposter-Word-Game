@@ -5,7 +5,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import type { Player } from "@/game/game-types";
 import { MAX_PLAYER_NAME_LENGTH } from "@/features/play-round";
 import type { PlayerActionResult } from "@/lib/game-setup-context";
-import PlayerAvatar from "./PlayerAvatar";
+import PlayerAvatar from "@/shared/ui/PlayerAvatar";
 
 export default function PlayerCard({
   player,

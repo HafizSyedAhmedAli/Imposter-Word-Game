@@ -1,5 +1,5 @@
 import { Player } from "@/game/game-types";
-import PlayerAvatar from "../players/PlayerAvatar";
+import PlayerAvatar from "@/shared/ui/PlayerAvatar";
 
 export default function DiscussionPlayersCard({
   players,

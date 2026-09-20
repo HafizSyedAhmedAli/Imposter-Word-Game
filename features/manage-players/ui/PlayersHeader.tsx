@@ -3,6 +3,16 @@ import { ArrowLeft, Users } from "lucide-react";
 import ConnectionStatus from "@/components/home/ConnectionStatus";
 import { playSound } from "@/shared/lib/sound-engine";
 
+/**
+ * `features/manage-players/ui/PlayersHeader.tsx` -- along with the rest
+ * of this slice's `ui/` files, moved from `components/players/` as the
+ * `features/manage-players` slice (FSD migration step 6): "add/remove/
+ * reorder/validate players" per the migration plan. Logic and JSX
+ * unchanged apart from import-path fixes; see `../../README.md` for the
+ * full move (in particular, why `PlayerAvatar` went to `shared/ui/`
+ * instead of into this slice, and why `PlayersScreen.tsx`/
+ * `GameConfigSummary.tsx` stayed in `components/players/` for now).
+ */
 export default function PlayersHeader() {
   return (
     <header className="flex items-start justify-between gap-3">

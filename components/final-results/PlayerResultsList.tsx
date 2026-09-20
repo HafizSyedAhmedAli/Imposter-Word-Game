@@ -1,6 +1,6 @@
 // components/final-results/PlayerResultsList.tsx
 import { Skull, Users } from "lucide-react";
-import PlayerAvatar from "@/components/players/PlayerAvatar";
+import PlayerAvatar from "@/shared/ui/PlayerAvatar";
 import type { FinalPlayerResult } from "@/features/play-round";
 
 /**
