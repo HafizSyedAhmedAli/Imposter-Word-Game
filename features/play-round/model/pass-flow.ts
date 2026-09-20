@@ -1,4 +1,5 @@
-import type { Player, PlayerRole, RoundSession } from "./game-types";
+import type { Player } from "@/entities/player";
+import type { PlayerRole, RoundSession } from "@/entities/round";
 
 /**
  * Screen 5's own state machine. Kept separate from `RoundStatus`

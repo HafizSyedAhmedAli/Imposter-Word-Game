@@ -1,5 +1,5 @@
 // components/final-results/WinnerHero.tsx
-import type { FinalOutcome } from "@/game/final-results-flow";
+import type { FinalOutcome } from "@/features/play-round";
 
 /**
  * The top-of-screen celebration beat (spec's "WINNER HERO" + "WIN

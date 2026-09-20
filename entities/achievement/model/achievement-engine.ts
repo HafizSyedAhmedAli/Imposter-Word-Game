@@ -3,7 +3,7 @@ import type { CompletedGameRecord } from "@/lib/db";
 import {
   computePlayerStatistics,
   type PlayerStatistics,
-} from "@/lib/statistics-aggregation";
+} from "@/entities/statistics";
 import {
   ACHIEVEMENTS,
   type AchievementDefinition,

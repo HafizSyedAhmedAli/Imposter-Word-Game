@@ -1,5 +1,6 @@
 // game/vote-flow.ts
-import type { Player, RoundSession } from "./game-types";
+import type { Player } from "@/entities/player";
+import type { RoundSession } from "@/entities/round";
 import { getActivePlayers, isEliminated } from "./elimination";
 
 /**

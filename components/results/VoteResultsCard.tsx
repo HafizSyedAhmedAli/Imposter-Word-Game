@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { BarChart3 } from "lucide-react";
 import PlayerAvatar from "@/components/players/PlayerAvatar";
-import type { VoteTally } from "@/game/results-flow";
+import type { VoteTally } from "@/features/play-round";
 
 /**
  * One player's row + animated bar. The bar mounts at 0% and grows to its

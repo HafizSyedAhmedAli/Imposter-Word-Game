@@ -1,5 +1,6 @@
 // game/final-results-flow.ts
-import type { Player, RoundSession } from "./game-types";
+import type { Player } from "@/entities/player";
+import type { RoundSession } from "@/entities/round";
 import { getModeDisplayName } from "./game-rules";
 import { getEliminatedPlayerIds, isEliminated } from "./elimination";
 import {

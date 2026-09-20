@@ -7,7 +7,7 @@ import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
 import {
   getDiscussionDuration,
   getSpeakingOrder,
-} from "@/game/discussion-flow";
+} from "@/features/play-round";
 import type { RoundSession } from "@/game/game-types";
 import {
   clearStoredRoundSession,

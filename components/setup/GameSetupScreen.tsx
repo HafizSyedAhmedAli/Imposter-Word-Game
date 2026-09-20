@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import { useGameSetup } from "@/lib/game-setup-context";
-import { validateGameConfig } from "@/game/game-rules";
+import { validateGameConfig } from "@/features/play-round";
 import SetupHeader from "./SetupHeader";
 import SetupSection from "./SetupSection";
 import GameModeSelector from "./GameModeSelector";

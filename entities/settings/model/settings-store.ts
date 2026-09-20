@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/db";
 import type { GameLanguage } from "@/game/game-types";
-import { DEFAULT_LANGUAGE, LANGUAGES } from "@/game/game-rules";
+import { DEFAULT_LANGUAGE, LANGUAGES } from "@/game/game-types";
 
 /**
  * NOTE on the two imports above: `@/lib/db` and `@/game/*` are the

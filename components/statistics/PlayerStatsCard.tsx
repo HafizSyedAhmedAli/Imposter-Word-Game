@@ -1,4 +1,4 @@
-import type { PlayerStatistics } from "@/lib/statistics-aggregation";
+import type { PlayerStatistics } from "@/entities/statistics";
 
 // Same deterministic, seat-agnostic palette convention as
 // components/players/PlayerAvatar.tsx, but keyed by a hash of the

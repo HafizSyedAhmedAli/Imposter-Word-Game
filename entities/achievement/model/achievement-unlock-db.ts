@@ -52,7 +52,7 @@ export async function recordAchievementUnlock(
 }
 
 /** Every locally-stored achievement unlock, across every local player. */
-export async function getAchievementUnlocks(): Promise
+export async function getAchievementUnlocks(): Promise<
   AchievementUnlockRecord[]
 > {
   const db = getDb();

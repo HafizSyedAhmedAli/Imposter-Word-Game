@@ -5,7 +5,7 @@ import {
   MAX_PLAYERS,
   getGameConfigCategoryLabel,
   getModeDisplayName,
-} from "@/game/game-rules";
+} from "@/features/play-round";
 
 /**
  * Read-only summary shown throughout preparation. Intentionally mirrors

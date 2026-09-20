@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { buildCompletedGameRecord } from "@/lib/statistics-record";
+import { buildCompletedGameRecord } from "@/entities/statistics";
 import { baseSession, multiImposterSession } from "../helpers/fixtures";
-import type { RoundSession, VotingHistoryEntry } from "@/game/game-types";
+import type { RoundSession } from "@/game/game-types";
+import type { VotingHistoryEntry } from "@/entities/voting-history";
 
 /**
  * Pure, no-IndexedDB tests for the "Statistics Recorder" step -- see

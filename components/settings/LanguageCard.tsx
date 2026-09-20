@@ -9,7 +9,7 @@ import {
   updateSettings,
   type GameSettings,
 } from "@/entities/settings";
-import { LANGUAGES } from "@/game/game-rules";
+import { LANGUAGES } from "@/game/game-types";
 import type { GameLanguage } from "@/game/game-types";
 
 /**

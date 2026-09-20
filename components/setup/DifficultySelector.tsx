@@ -1,5 +1,5 @@
 import type { Difficulty } from "@/game/game-types";
-import { DIFFICULTIES } from "@/game/game-rules";
+import { DIFFICULTIES } from "@/features/play-round";
 import DifficultyCard from "./DifficultyCard";
 
 export default function DifficultySelector({

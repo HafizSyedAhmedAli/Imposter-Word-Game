@@ -57,9 +57,9 @@ to change without breaking consumers.
   - `entities/round` (done) — round-domain types and validation logic
     moved from `game/game-types.ts` and `game/round-validation.ts`,
     both of which now re-export from this slice as temporary bridges.
-    Also bridges the other way, temporarily importing
-    `GameLanguage`/`VotingHistoryEntry` back from `game/game-types.ts`
-    until `voting-history` exists (see `entities/README.md`).
+    Still bridges `GameLanguage` back from `game/game-types.ts`
+    (`VotingHistoryEntry` no longer needs one -- see `entities/statistics`
+    and `entities/voting-history` entries below).
   - `entities/game-session` (done) — `GameMode`, `Difficulty`,
     `TimerSettings`, `GameOptions`, `GameConfig`, `GameSession` moved
     from `game/game-types.ts`, which now re-exports them as a
@@ -81,9 +81,36 @@ to change without breaking consumers.
   - `entities/achievement` (done) — achievement definitions, evaluation
     engine, orchestration store, `AchievementUnlockRecord`, and the
     unlock data access moved from `lib/achievements/*` and `lib/db.ts`.
-    Depends on the (not yet migrated) statistics code through temporary
-    bridges, in the intended direction only. The `achievementUnlocks`
-    table declaration stays in `lib/db.ts`, which re-exports the moved
-    functions (see `entities/README.md`).
-  - **Next:** `statistics`, `voting-history`, per the migration plan
-    tracked in project memory.
+    The `achievementUnlocks` table declaration stays in `lib/db.ts`,
+    which re-exports the moved functions (see `entities/README.md`).
+  - `entities/statistics` (done) — `CompletedGamePlayerResult`,
+    `CompletedGameRecord`, their CRUD, `statistics-aggregation.ts`,
+    `statistics-record.ts`, and `game-statistics-store.ts` moved from
+    `lib/db.ts`/`lib/`. The `completedGames` table declaration stays in
+    `lib/db.ts`, same bridge pattern as `custom-word`. This is what let
+    `entities/achievement` drop its own bridge and import this slice
+    directly instead of going through `lib/statistics-aggregation`/
+    `lib/game-statistics-store`.
+  - `entities/voting-history` (done) — `VotingHistoryEntry`,
+    `VotingHistoryTallyEntry`, `VotingHistoryVerdict` moved from
+    `game/game-types.ts`, which now re-exports them as a temporary
+    bridge. Pure types only; the orchestration logic that builds these
+    lives in `features/play-round/model/results-flow.ts` (see below).
+    This closes out every `entities/*` slice in the original plan.
+  - `features/play-round` (done) -- the nine `game/*-flow.ts` +
+    `game-engine.ts`/`game-rules.ts`/`role-assignment.ts`/`elimination.ts`
+    orchestration files, moved as a single slice (highest-risk, saved
+    for last on purpose). Surfaced two real runtime circular imports in
+    the process, both fixed -- see `features/README.md` for the full
+    trace (`LANGUAGES`/`DEFAULT_LANGUAGE` relocated to
+    `game/game-types.ts`; `entities/statistics` deep-imports
+    `final-results-flow.ts` directly instead of the barrel). 48
+    external consumers repointed. Also fixed a pre-existing, unrelated
+    `next build` failure in `components/pwa/MenuMusicController.tsx`
+    (`usePathname()` can return `null`) while getting this slice's
+    `next build` gate green.
+  - **Next:** the remaining independent `features/*` slices
+    (`manage-players`, `configure-game`, `reveal-role`, `cast-vote`,
+    `manage-custom-words`, `install-pwa`, `register-service-worker`,
+    `toggle-preferences`, `reset-game-data`, `recover-active-game`),
+    per the migration plan tracked in project memory.

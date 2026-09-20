@@ -1,6 +1,6 @@
 // components/final-results/FinalRoundSummaryCard.tsx
 import { ClipboardList } from "lucide-react";
-import type { RoundSummary } from "@/game/final-results-flow";
+import type { RoundSummary } from "@/features/play-round";
 
 /**
  * "ROUND SUMMARY" -- the compact config recap at the bottom of Screen 9.

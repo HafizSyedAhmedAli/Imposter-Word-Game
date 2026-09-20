@@ -1,6 +1,7 @@
 // game/discussion-flow.ts
 import { getActivePlayers } from "./elimination";
-import type { Player, RoundSession } from "./game-types";
+import type { Player } from "@/entities/player";
+import type { RoundSession } from "@/entities/round";
 
 /**
  * Screen 6's own logic helpers. Kept separate from `RoundStatus`

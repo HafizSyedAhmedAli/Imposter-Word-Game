@@ -18,7 +18,7 @@ import {
   getCurrentPlayerRole,
   isFinalPlayer,
   type PassState,
-} from "@/game/pass-flow";
+} from "@/features/play-round";
 import PassPromptCard from "./PassPromptCard";
 import PrivateRevealPrompt from "./PrivateRevealPrompt";
 import PlayerRevealCard from "./PlayerRevealCard";

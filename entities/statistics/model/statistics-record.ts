@@ -1,10 +1,22 @@
 // lib/statistics-record.ts
+// Deep import (not the "@/features/play-round" barrel) deliberately:
+// that barrel's `export *` re-exports every model file, including
+// game-engine.ts, which instantiates its word providers as top-level
+// module side effects. Importing the barrel here would force
+// game-engine.ts to load as a side effect of loading THIS file, and
+// since game-engine.ts's own dependency chain eventually reaches back
+// into entities/statistics (via lib/db.ts's re-export bridge), that's
+// a real runtime circular import -- observed as "IndexedDbCacheProvider
+// is not a constructor" depending on which module happened to start
+// the cycle first. final-results-flow.ts itself has no such side
+// effects and no path back to game-engine.ts or entities/statistics,
+// so importing it directly is safe.
 import {
   getFinalPlayerResults,
   getFinalVotingHistory,
   getRoundSummary,
   type FinalOutcome,
-} from "@/game/final-results-flow";
+} from "@/features/play-round/model/final-results-flow";
 import { CompletedGamePlayerResult, CompletedGameRecord } from "./completed-game-store";
 import { RoundSession } from "@/entities/round";
 

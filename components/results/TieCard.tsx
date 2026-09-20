@@ -1,7 +1,7 @@
 // components/results/TieCard.tsx
 import { Equal } from "lucide-react";
 import PlayerAvatar from "@/components/players/PlayerAvatar";
-import type { VoteTally } from "@/game/results-flow";
+import type { VoteTally } from "@/features/play-round";
 
 /**
  * Spec is explicit: never silently pick a winner on a tie. This card is

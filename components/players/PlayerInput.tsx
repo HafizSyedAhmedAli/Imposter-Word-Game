@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Plus, User } from "lucide-react";
-import { MAX_PLAYER_NAME_LENGTH } from "@/game/game-rules";
+import { MAX_PLAYER_NAME_LENGTH } from "@/features/play-round";
 import { playSound } from "@/shared/lib/sound-engine";
 
 export default function PlayerInput({

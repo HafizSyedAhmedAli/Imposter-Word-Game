@@ -1,5 +1,6 @@
 // game/elimination.ts
-import type { Player, RoundSession } from "./game-types";
+import type { Player } from "@/entities/player";
+import type { RoundSession } from "@/entities/round";
 
 /**
  * Shared elimination helpers. Lives in its own module (not inside

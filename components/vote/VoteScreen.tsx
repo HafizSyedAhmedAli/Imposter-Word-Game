@@ -13,7 +13,7 @@ import {
   skipVote,
   submitVote,
   type VoteScreenState,
-} from "@/game/vote-flow";
+} from "@/features/play-round";
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
 import { analytics } from "@/lib/analytics";
 import { light, medium } from "@/shared/lib/haptics";

@@ -3,7 +3,8 @@
 
 import { useEffect, useRef } from "react";
 import { ArrowLeft, History } from "lucide-react";
-import type { Player, VotingHistoryEntry } from "@/game/game-types";
+import type { Player } from "@/game/game-types";
+import type { VotingHistoryEntry } from "@/entities/voting-history";
 import VotingHistoryRoundCard from "./VotingHistoryRoundCard";
 
 /**

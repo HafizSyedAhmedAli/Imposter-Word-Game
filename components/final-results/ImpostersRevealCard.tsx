@@ -1,7 +1,7 @@
 // components/final-results/ImpostersRevealCard.tsx
 import { Skull } from "lucide-react";
 import PlayerAvatar from "@/components/players/PlayerAvatar";
-import type { FinalPlayerResult } from "@/game/final-results-flow";
+import type { FinalPlayerResult } from "@/features/play-round";
 
 /**
  * "WHO WERE THE IMPOSTERS?" -- the first screen allowed to reveal every

@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import { useGameSetup } from "@/lib/game-setup-context";
-import { getImposterCount, isPlayerCountValid } from "@/game/game-rules";
+import { getImposterCount, isPlayerCountValid } from "@/features/play-round";
 import type { RoundSession } from "@/game/game-types";
-import { prepareGameRound, type PreparationStage } from "@/game/game-engine";
+import { prepareGameRound, type PreparationStage } from "@/features/play-round";
 import {
   clearStoredRoundSession,
   getStoredRoundSession,

@@ -20,14 +20,14 @@ import {
   clearStoredRoundSession,
   getStoredRoundSession,
 } from "@/lib/round-session-store";
-import { recordFinalResult } from "@/lib/game-statistics-store";
+import { recordFinalResult } from "@/entities/statistics";
 import {
   processAchievementsForCompletedGame,
   type UnlockedAchievementEvent,
 } from "@/lib/achievements/store";
 import { analytics } from "@/lib/analytics";
-import { isVotingComplete } from "@/game/vote-flow";
-import { getHighestVoteCount } from "@/game/results-flow";
+import { isVotingComplete } from "@/features/play-round";
+import { getHighestVoteCount } from "@/features/play-round";
 import type { RoundSession } from "@/game/game-types";
 import {
   getFinalImposters,
@@ -37,7 +37,7 @@ import {
   getFinalVotingHistory,
   getRoundSummary,
   getWinReason,
-} from "@/game/final-results-flow";
+} from "@/features/play-round";
 import { light, success } from "@/shared/lib/haptics";
 import { playSound } from "@/shared/lib/sound-engine";
 import { useLeaveRoundBackGuard } from "@/lib/use-leave-round-back-guard";

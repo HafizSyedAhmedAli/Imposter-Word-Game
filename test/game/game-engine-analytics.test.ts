@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb, cacheAiWord } from "@/lib/db";
-import { DEFAULT_GAME_CONFIG } from "@/game/game-rules";
+import { DEFAULT_GAME_CONFIG } from "@/features/play-round";
 import type { Player } from "@/game/game-types";
 
 // Mocks the analytics wrapper itself (not posthog-js) -- this file is
@@ -27,7 +27,7 @@ vi.mock("@/lib/analytics", async () => {
   };
 });
 
-const { prepareGameRound } = await import("@/game/game-engine");
+const { prepareGameRound } = await import("@/features/play-round");
 
 const PLAYER_NAMES = ["Ahmed", "Asmed", "Mali", "Hafsa", "Bareera"];
 

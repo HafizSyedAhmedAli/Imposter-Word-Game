@@ -12,7 +12,7 @@ import {
   getSettings,
   DEFAULT_SETTINGS,
 } from "@/entities/settings";
-import { recordFinalResult, getGameHistory } from "@/lib/game-statistics-store";
+import { recordFinalResult, getGameHistory } from "@/entities/statistics";
 import {
   processAchievementsForCompletedGame,
   getAchievementsSnapshot,

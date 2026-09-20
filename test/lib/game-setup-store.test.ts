@@ -4,7 +4,7 @@ import {
   storeGameSetup,
   clearStoredGameSetup,
 } from "@/lib/game-setup-store";
-import { DEFAULT_GAME_CONFIG } from "@/game/game-rules";
+import { DEFAULT_GAME_CONFIG } from "@/features/play-round";
 
 describe("game-setup-store", () => {
   it("returns null when nothing is stored", () => {

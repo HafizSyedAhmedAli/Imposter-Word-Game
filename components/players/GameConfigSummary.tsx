@@ -5,7 +5,7 @@ import {
   getGameConfigCategoryLabel,
   getImposterCount,
   getModeDisplayName,
-} from "@/game/game-rules";
+} from "@/features/play-round";
 
 export default function GameConfigSummary({ config }: { config: GameConfig }) {
   const modeName = getModeDisplayName(config.mode);

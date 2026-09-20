@@ -1,4 +1,4 @@
-import { MAX_PLAYERS } from "@/game/game-rules";
+import { MAX_PLAYERS } from "@/features/play-round";
 
 export default function PlayerCount({ count }: { count: number }) {
   const pct = Math.min(100, (count / MAX_PLAYERS) * 100);

@@ -1,7 +1,8 @@
 // components/final-results/VotingHistoryRoundCard.tsx
 import { Equal, Skull } from "lucide-react";
 import PlayerAvatar from "@/components/players/PlayerAvatar";
-import type { Player, VotingHistoryEntry } from "@/game/game-types";
+import type { Player } from "@/game/game-types";
+import type { VotingHistoryEntry } from "@/entities/voting-history";
 
 /**
  * Seat index for a recorded player id, in the same `players` order used

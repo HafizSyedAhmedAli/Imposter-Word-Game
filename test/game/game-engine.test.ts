@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { prepareGameRound } from "@/game/game-engine";
+import { prepareGameRound } from "@/features/play-round";
 import { getDb, cacheAiWord } from "@/lib/db";
 import { updateSettings } from "@/entities/settings";
 import type { Player } from "@/game/game-types";
-import { DEFAULT_GAME_CONFIG } from "@/game/game-rules";
+import { DEFAULT_GAME_CONFIG } from "@/features/play-round";
 
 const PLAYER_NAMES = [
   "Ahmed",

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb, addCustomWord, deleteCustomWord } from "@/lib/db";
-import { DEFAULT_GAME_CONFIG, CUSTOM_CATEGORY } from "@/game/game-rules";
+import { DEFAULT_GAME_CONFIG, CUSTOM_CATEGORY } from "@/features/play-round";
 import type { Player } from "@/game/game-types";
 import { clearRecentWords } from "@/lib/recent-words";
 
@@ -19,7 +19,7 @@ vi.mock("@/lib/analytics", async () => {
   };
 });
 
-const { prepareGameRound } = await import("@/game/game-engine");
+const { prepareGameRound } = await import("@/features/play-round");
 
 const PLAYER_NAMES = ["Ahmed", "Asmed", "Mali", "Hafsa", "Bareera"];
 

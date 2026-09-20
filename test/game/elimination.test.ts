@@ -3,7 +3,7 @@ import {
   getEliminatedPlayerIds,
   isEliminated,
   getActivePlayers,
-} from "@/game/elimination";
+} from "@/features/play-round";
 import type { RoundSession } from "@/game/game-types";
 import { baseSession } from "../helpers/fixtures";
 

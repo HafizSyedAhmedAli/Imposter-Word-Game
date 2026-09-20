@@ -1,5 +1,5 @@
 import { resetUserData, clearCustomWords } from "./db";
-import { resetStatistics } from "./game-statistics-store";
+import { resetStatistics } from "@/entities/statistics";
 import { resetAchievements } from "./achievements/store";
 import { resetSettings } from "@/entities/settings";
 import { clearRecentWords } from "./recent-words";

@@ -1,18 +1,16 @@
 // entities/round/model/round-types.ts
 import type { Player } from "@/entities/player";
 import type { GameConfig } from "@/entities/game-session";
-import type { GameLanguage, VotingHistoryEntry } from "@/game/game-types";
+import type { GameLanguage } from "@/game/game-types";
+import type { VotingHistoryEntry } from "@/entities/voting-history";
 
 /**
- * NOTE on the imports above: `GameLanguage` and `VotingHistoryEntry`
- * are still defined in the pre-FSD `game/game-types.ts` -- see
- * ../../README.md. `GameLanguage` hasn't been assigned a slice yet,
- * and `VotingHistoryEntry` belongs to the planned `entities/voting-history`
- * slice. This entity depends on both as a deliberate, temporary bridge;
- * update these imports once that slice moves. `GameConfig` no longer
- * needs a bridge -- it's imported directly from `entities/game-session`
- * now that that slice exists (a normal, sparing cross-slice import
- * within the entities layer, not a bridge).
+ * NOTE on the imports above: `GameLanguage` is still defined in the
+ * pre-FSD `game/game-types.ts` -- see ../../README.md. It hasn't been
+ * assigned a slice yet. `GameConfig` and `VotingHistoryEntry` no longer
+ * need bridges -- both are imported directly from their own entity
+ * slices now that those exist (normal, sparing cross-slice imports
+ * within the entities layer, not bridges).
  */
 
 /**

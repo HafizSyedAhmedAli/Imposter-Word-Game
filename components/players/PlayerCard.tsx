@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import type { Player } from "@/game/game-types";
-import { MAX_PLAYER_NAME_LENGTH } from "@/game/game-rules";
+import { MAX_PLAYER_NAME_LENGTH } from "@/features/play-round";
 import type { PlayerActionResult } from "@/lib/game-setup-context";
 import PlayerAvatar from "./PlayerAvatar";
 

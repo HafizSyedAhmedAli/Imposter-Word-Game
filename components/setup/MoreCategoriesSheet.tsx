@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { X, Check } from "lucide-react";
 import type { Category } from "@/game/game-types";
-import { MORE_CATEGORIES } from "@/game/game-rules";
+import { MORE_CATEGORIES } from "@/features/play-round";
 
 export default function MoreCategoriesSheet({
   open,

@@ -1,5 +1,5 @@
 import { Users } from "lucide-react";
-import type { PlayerStatistics } from "@/lib/statistics-aggregation";
+import type { PlayerStatistics } from "@/entities/statistics";
 import PlayerStatsCard from "./PlayerStatsCard";
 
 /**

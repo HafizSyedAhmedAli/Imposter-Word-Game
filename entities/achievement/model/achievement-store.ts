@@ -1,6 +1,6 @@
 // entities/achievement/model/achievement-store.ts
 import type { RoundSession } from "@/entities/round";
-import { getGameHistory } from "@/lib/game-statistics-store";
+import { getGameHistory } from "@/entities/statistics";
 import { captureError } from "@/lib/monitoring";
 import type { AchievementDefinition } from "./achievement-definitions";
 import {

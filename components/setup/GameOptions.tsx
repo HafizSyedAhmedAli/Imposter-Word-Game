@@ -6,7 +6,7 @@ import type {
 import {
   DISCUSSION_TIMER_OPTIONS,
   VOTING_TIMER_OPTIONS,
-} from "@/game/game-rules";
+} from "@/features/play-round";
 import TimerOption from "./TimerOption";
 
 export default function GameOptions({

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import { useGameSetup } from "@/lib/game-setup-context";
-import { isPlayerCountValid, MAX_PLAYERS } from "@/game/game-rules";
+import { isPlayerCountValid, MAX_PLAYERS } from "@/features/play-round";
 import { error, light } from "@/shared/lib/haptics";
 import { playSound } from "@/shared/lib/sound-engine";
 import PlayersHeader from "./PlayersHeader";

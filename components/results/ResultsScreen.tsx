@@ -13,8 +13,8 @@ import {
   getVerdict,
   getVoteTally,
   recordVotingHistoryEntry,
-} from "@/game/results-flow";
-import { isVotingComplete } from "@/game/vote-flow"; // add this import
+} from "@/features/play-round";
+import { isVotingComplete } from "@/features/play-round"; // add this import
 import { markActiveGameRoute } from "@/lib/active-game-recovery";
 import { analytics } from "@/lib/analytics";
 import { medium } from "@/shared/lib/haptics";

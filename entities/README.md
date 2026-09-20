@@ -38,15 +38,13 @@ each exposing a single `index.ts` public API.
   `entities/round/index.ts`) — internals live under
   `entities/round/model/`.
   **Bridge dependencies (temporary, in both directions):**
-  `RoundSession` needs `GameLanguage` (not yet assigned a slice) and
-  `VotingHistoryEntry` (planned `entities/voting-history`), both still
+  `RoundSession` still needs `GameLanguage` (not yet assigned a slice),
   imported from `@/game/game-types`, which in turn now re-exports this
   slice's types back out as its own temporary bridge, the same
-  reversed pattern used for `entities/player`. `GameConfig` no longer
-  needs a bridge -- once `entities/game-session` moved (below), this
-  slice was repointed to import it directly from
-  `@/entities/game-session` (an ordinary, sparing cross-slice import
-  within the entities layer). `game/round-validation.ts` similarly
+  reversed pattern used for `entities/player`. `GameConfig` and
+  `VotingHistoryEntry` no longer need bridges -- both are imported
+  directly from their own entity slices now that those exist (ordinary,
+  sparing cross-slice imports within the entities layer). `game/round-validation.ts` similarly
   re-exports this slice's validation functions so its ~7 existing
   consumers (`app/api/round/generate/route.ts`,
   `providers/ai-word-provider.ts`, `providers/custom-word-provider.ts`,
@@ -167,15 +165,14 @@ each exposing a single `index.ts` public API.
   **Not moved, on purpose:** the `achievementUnlocks` Dexie table
   declaration (v8) stays in `lib/db.ts`, same reasoning as
   `customWords` above.
-  **Bridge dependencies (temporary):** the engine and store depend on
-  the planned `entities/statistics` slice, whose code is still at its
-  pre-FSD locations -- `CompletedGameRecord` from `@/lib/db`,
-  `computePlayerStatistics`/`PlayerStatistics` from
-  `@/lib/statistics-aggregation`, and `getGameHistory` from
-  `@/lib/game-statistics-store`. This is the intended direction
+  **Bridge dependencies:** `CompletedGameRecord` still comes from `@/lib/db`
+  (that type's own bridge, documented under `entities/statistics` below --
+  same acceptable pattern `entities/word` uses for `@/lib/db`'s
+  `getRandomCachedWord`). `computePlayerStatistics`/`PlayerStatistics` and
+  `getGameHistory` are no longer a bridge -- both slices exist now, so
+  the store/engine import them directly from `@/entities/statistics`
   (achievement -> statistics, never the reverse: nothing in those
-  modules imports achievements), so it stays acyclic once statistics is
-  a slice and these three imports just get repointed. Also imports
+  modules imports achievements, so the graph stays acyclic). Also imports
   `getDb` from `@/lib/db` and `captureError` from `@/lib/monitoring`.
   `RoundSession` comes directly from `@/entities/round`. `definitions`
   and `engine` still import each other's *types* (as they did before the
@@ -192,11 +189,47 @@ each exposing a single `index.ts` public API.
   re-export from the slice (six components under
   `components/achievements/` and `components/final-results/`,
   `lib/reset-game-data.ts`, and four test files use them).
-
-## Planned slices (not yet moved — see `../ARCHITECTURE.md`)
-
-- `entities/statistics` — `lib/statistics-aggregation.ts`, `statistics-record.ts`
+- `entities/statistics` — `CompletedGamePlayerResult`, `CompletedGameRecord`
+  (moved from `lib/db.ts`, alongside their `recordCompletedGame`/
+  `getCompletedGames`/`clearCompletedGames` CRUD, into
+  `model/completed-game-store.ts`), plus `statistics-aggregation.ts`,
+  `statistics-record.ts`, and `game-statistics-store.ts`. Public API:
+  `@/entities/statistics` (barrel at `entities/statistics/index.ts`) —
+  internals live under `entities/statistics/model/`.
+  **Not moved, on purpose:** the `completedGames` Dexie table
+  declaration itself stays in `lib/db.ts`, same reasoning as
+  `entities/custom-word`'s `customWords` table. `getDb` is imported
+  from there.
+  **Bridge dependencies (temporary):** `completed-game-store.ts` imports
+  `Category`/`Difficulty`/`GameMode` from `@/game/game-types` (not yet
+  assigned a slice) and `getDb`/`captureError` from `@/lib/db` /
+  `@/lib/monitoring`. `statistics-record.ts` and `game-statistics-store.ts`
+  still import `FinalOutcome` (and, in `statistics-record.ts`,
+  `getFinalPlayerResults`/`getFinalVotingHistory`/`getRoundSummary`) from
+  `@/game/final-results-flow` -- `features/play-round` territory, not
+  something this slice can resolve. `RoundSession` doesn't need a bridge:
+  both files import it directly from `@/entities/round`.
+  **Bridge in the other direction:** `lib/db.ts` imports
+  `CompletedGameRecord` from this slice for its own
+  `Table<CompletedGameRecord>` declaration (type-only, erased) and
+  re-exports the type plus the three CRUD functions, same reversed
+  pattern as `entities/custom-word`, so its remaining consumers keep
+  working unchanged. This is what let `entities/achievement` (above)
+  drop its own bridge to `@/lib/statistics-aggregation`/
+  `@/lib/game-statistics-store` and import this slice directly.
 - `entities/voting-history` — `VotingHistoryEntry`, `VotingHistoryTallyEntry`,
-  `VotingHistoryVerdict`
+  `VotingHistoryVerdict`. Pure types, no functions or data access --
+  the logic that builds/appends an entry onto a `RoundSession`
+  (`getVotingHistory`/`recordVotingHistoryEntry`) lives in
+  `features/play-round/model/results-flow.ts`, not this slice. Public
+  API: `@/entities/voting-history` (barrel at
+  `entities/voting-history/index.ts`).
+  **Bridge in the other direction:** `game/game-types.ts` re-exports
+  the three types from this slice, same reversed pattern used for
+  `entities/player`/`entities/round`/`entities/game-session`, so its
+  remaining consumers keep working unchanged.
+
+This closes out every `entities/*` slice identified in the original
+migration plan. Next layer up: `features/*` (see `../features/README.md`).
 
 Import from other layers: `shared/` only.

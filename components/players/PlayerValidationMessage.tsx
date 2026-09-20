@@ -5,7 +5,7 @@ import {
   getMinimumPlayersForMode,
   getModeDisplayName,
   getPlayerCountStatus,
-} from "@/game/game-rules";
+} from "@/features/play-round";
 
 export default function PlayerValidationMessage({
   mode,

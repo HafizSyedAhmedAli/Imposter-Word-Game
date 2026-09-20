@@ -8,7 +8,7 @@ import {
   CUSTOM_CATEGORY,
   CUSTOM_WORD_CATEGORIES,
   MORE_CATEGORIES,
-} from "@/game/game-rules";
+} from "@/features/play-round";
 import { getCustomWords } from "@/lib/db";
 import AppLink from "@/components/pwa/AppLink";
 import CategoryCard from "./CategoryCard";

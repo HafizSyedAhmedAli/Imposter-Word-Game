@@ -1,11 +1,12 @@
-import type { RoundSession } from "@/game/game-types";
-import type { FinalOutcome } from "@/game/final-results-flow";
+// entities/statistics/model/game-statistics-store.ts
+import type { RoundSession } from "@/entities/round";
+import type { FinalOutcome } from "@/features/play-round";
 import {
   clearCompletedGames,
   getCompletedGames,
   recordCompletedGame,
   type CompletedGameRecord,
-} from "./db";
+} from "./completed-game-store";
 import { buildCompletedGameRecord } from "./statistics-record";
 import {
   computeGlobalStatistics,

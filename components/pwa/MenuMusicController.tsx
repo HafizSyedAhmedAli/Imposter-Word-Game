@@ -47,7 +47,7 @@ export default function MenuMusicController() {
   const wasInMenuRef = useRef(false);
 
   useEffect(() => {
-    const isMenuRoute = MENU_ROUTES.has(pathname);
+    const isMenuRoute = MENU_ROUTES.has(pathname ?? "");
 
     // Always consume the flag, even on branches that don't use it, so a
     // stale "yes" from an earlier hard reload never leaks into some

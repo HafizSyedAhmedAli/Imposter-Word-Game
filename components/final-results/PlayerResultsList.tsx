@@ -1,7 +1,7 @@
 // components/final-results/PlayerResultsList.tsx
 import { Skull, Users } from "lucide-react";
 import PlayerAvatar from "@/components/players/PlayerAvatar";
-import type { FinalPlayerResult } from "@/game/final-results-flow";
+import type { FinalPlayerResult } from "@/features/play-round";
 
 /**
  * "PLAYER RESULTS" -- every player's complete public outcome, in the

@@ -1,11 +1,6 @@
-import type {
-  Category,
-  Difficulty,
-  GameConfig,
-  GameLanguage,
-  GameMode,
-  Player,
-} from "./game-types";
+import type { Category } from "@/game/game-types";
+import type { Difficulty, GameConfig, GameMode } from "@/entities/game-session";
+import type { Player } from "@/entities/player";
 
 /**
  * Central definitions for game setup. The Setup UI reads from this module
@@ -134,29 +129,12 @@ export const DIFFICULTIES: {
   { id: "hard", title: "HARD", description: "Subtle, tricky hints" },
 ];
 
-// Settings screen catalog (Language). Mirrors the CATEGORIES/DIFFICULTIES
-// pattern above -- the UI reads labels from here instead of hardcoding
-// them, and this is the single source of truth for which languages the
-// game actually supports (see entities/settings's DEFAULT_SETTINGS
-// and app/api/round/generate/route.ts's server-side allow-list).
-export const LANGUAGES: {
-  id: GameLanguage;
-  label: string;
-  description: string;
-}[] = [
-  {
-    id: "english",
-    label: "English",
-    description: "Words and hints in English",
-  },
-  {
-    id: "roman-urdu",
-    label: "Roman Urdu",
-    description: "Hints in Roman Urdu, written with English letters",
-  },
-];
-
-export const DEFAULT_LANGUAGE: GameLanguage = "english";
+// Settings screen catalog (Language) moved to game/game-types.ts,
+// alongside `GameLanguage` itself -- entities/settings needs it too,
+// and importing it from here (a features/ slice) into an entities/
+// slice would be both a layer-direction violation and a real runtime
+// circular import (this file's own game-engine.ts imports
+// `getSettings` from entities/settings).
 
 export const DISCUSSION_TIMER_OPTIONS = [30, 45, 60, 90, 120] as const;
 export const VOTING_TIMER_OPTIONS = [15, 30, 45, 60, 90] as const;

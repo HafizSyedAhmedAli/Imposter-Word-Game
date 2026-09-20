@@ -2,7 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 import type { CustomWordEntry } from "@/lib/db";
-import { CUSTOM_WORD_CATEGORIES, DIFFICULTIES } from "@/game/game-rules";
+import { CUSTOM_WORD_CATEGORIES, DIFFICULTIES } from "@/features/play-round";
 
 function categoryLabel(id: string): string {
   return CUSTOM_WORD_CATEGORIES.find((c) => c.id === id)?.label ?? id;

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { Plus, Type } from "lucide-react";
 import type { Category, Difficulty } from "@/game/game-types";
-import { CUSTOM_WORD_CATEGORIES } from "@/game/game-rules";
+import { CUSTOM_WORD_CATEGORIES } from "@/features/play-round";
 import { MAX_CUSTOM_WORD_LENGTH } from "@/game/custom-word-rules";
 import DifficultySelector from "@/components/setup/DifficultySelector";
 import { playSound } from "@/shared/lib/sound-engine";

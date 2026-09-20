@@ -29,6 +29,36 @@ export function isGameLanguage(value: unknown): value is GameLanguage {
   return value === ENGLISH || value === ROMAN_URDU;
 }
 
+// Settings screen catalog (Language). Mirrors the CATEGORIES/DIFFICULTIES
+// pattern in features/play-round/model/game-rules.ts -- the UI reads
+// labels from here instead of hardcoding them, and this is the single
+// source of truth for which languages the game actually supports (see
+// entities/settings's DEFAULT_SETTINGS and
+// app/api/round/generate/route.ts's server-side allow-list). Lives here
+// rather than in features/play-round because entities/settings needs
+// it too, and an entities/ slice importing from a features/ slice would
+// be both a layer-direction violation and a real circular import
+// (features/play-round's game-engine.ts imports `getSettings` from
+// entities/settings).
+export const LANGUAGES: {
+  id: GameLanguage;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: "english",
+    label: "English",
+    description: "Words and hints in English",
+  },
+  {
+    id: "roman-urdu",
+    label: "Roman Urdu",
+    description: "Hints in Roman Urdu, written with English letters",
+  },
+];
+
+export const DEFAULT_LANGUAGE: GameLanguage = "english";
+
 // Category is deliberately kept open-ended (`| string`) so that additional
 // categories added later via the "More" sheet, or loaded from a local
 // category catalog, don't require a type change here.
@@ -95,24 +125,18 @@ export type {
   RoundSession,
 } from "@/entities/round";
 
-/** One player's vote count within a single recorded voting round. */
-export type VotingHistoryTallyEntry = {
-  playerId: string;
-  playerName: string;
-  votes: number;
-};
-
-/** The outcome of a single recorded voting round -- mirrors `Verdict`
- *  in game/results-flow.ts, but by player id/name rather than a full
- *  `Player` object (see `VotingHistoryEntry`'s comment for why). */
-export type VotingHistoryVerdict =
-  | { type: "tie"; tiedPlayerIds: string[] }
-  | { type: "imposter-caught"; eliminatedPlayerId: string }
-  | { type: "wrong-player"; eliminatedPlayerId: string };
-
-/** One completed voting round, as shown on the Voting History view. */
-export type VotingHistoryEntry = {
-  round: number;
-  tally: VotingHistoryTallyEntry[];
-  verdict: VotingHistoryVerdict;
-};
+/* -------------------------------------------------------------------- */
+/* Voting History (Results / Final Results)                              */
+/*                                                                       */
+/* NOTE: these types now live in `entities/voting-history` (see         */
+/* entities/README.md) -- this file re-exports them as a temporary      */
+/* bridge so the many existing call sites across components/, game/,    */
+/* and lib/ that still import them from "@/game/game-types" keep        */
+/* working unchanged. Repoint each to `@/entities/voting-history` as    */
+/* it's touched; these re-exports go away once none are left.           */
+/* -------------------------------------------------------------------- */
+export type {
+  VotingHistoryTallyEntry,
+  VotingHistoryVerdict,
+  VotingHistoryEntry,
+} from "@/entities/voting-history";

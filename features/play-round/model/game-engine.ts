@@ -1,23 +1,22 @@
 // game/game-engine.ts
-import {
-  ENGLISH,
-  type Category,
-  type Difficulty,
-  type GameConfig,
-  type GameLanguage,
-  type GeneratedRoundContent,
-  type Player,
-  type RoundSession,
-} from "./game-types";
+import { ENGLISH, type Category, type GameLanguage } from "@/game/game-types";
+import type { Difficulty, GameConfig } from "@/entities/game-session";
+import type { GeneratedRoundContent, RoundSession } from "@/entities/round";
+import type { Player } from "@/entities/player";
 import { CUSTOM_CATEGORY, getImposterCount } from "./game-rules";
 import { assignRoles } from "./role-assignment";
 import { generateId } from "@/shared/lib/id";
-import { cacheAiWord, getRandomCustomWord } from "@/lib/db";
+import { cacheAiWord } from "@/lib/db";
 import { getRecentWordText, rememberWordText } from "@/lib/recent-words";
-import { AiWordProvider } from "@/providers/ai-word-provider";
-import { IndexedDbCacheProvider } from "@/providers/indexeddb-cache-provider";
-import { FallbackWordProvider } from "@/providers/fallback-word-provider";
-import { resolveCustomWordHint } from "@/providers/custom-word-provider";
+import {
+  AiWordProvider,
+  IndexedDbCacheProvider,
+  FallbackWordProvider,
+} from "@/entities/word";
+import {
+  getRandomCustomWord,
+  resolveCustomWordHint,
+} from "@/entities/custom-word";
 import { getSettings } from "@/entities/settings";
 import { analytics, toRoundSource } from "@/lib/analytics";
 

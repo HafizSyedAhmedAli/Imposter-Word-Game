@@ -1,4 +1,5 @@
-import type { Player, PlayerRole } from "./game-types";
+import type { Player } from "@/entities/player";
+import type { PlayerRole } from "@/entities/round";
 import { shuffle } from "@/shared/lib/shuffle";
 
 /**

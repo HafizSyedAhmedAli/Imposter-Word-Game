@@ -1,5 +1,5 @@
 import type { GameMode } from "@/game/game-types";
-import { GAME_MODES } from "@/game/game-rules";
+import { GAME_MODES } from "@/features/play-round";
 import GameModeCard from "./GameModeCard";
 
 export default function GameModeSelector({

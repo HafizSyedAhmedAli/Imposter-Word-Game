@@ -1,5 +1,5 @@
 import { Trophy } from "lucide-react";
-import type { GlobalStatistics } from "@/lib/statistics-aggregation";
+import type { GlobalStatistics } from "@/entities/statistics";
 
 /**
  * The compact overview at the top of the Statistics screen: Games
