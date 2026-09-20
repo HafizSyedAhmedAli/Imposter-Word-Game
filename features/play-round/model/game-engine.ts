@@ -154,7 +154,7 @@ async function getRoundContent(
  *
  * `customWordCategory` narrows the draw to one of the player's saved
  * categories (Setup screen's Custom Words toggle -- see
- * components/setup/CategorySelector.tsx and
+ * features/configure-game/ui/CategorySelector.tsx and
  * `GameConfig.customWordCategory`); `undefined` searches every saved
  * custom word, same as before this parameter existed.
  *

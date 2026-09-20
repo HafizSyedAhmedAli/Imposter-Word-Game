@@ -38,7 +38,7 @@ export const CATEGORIES: { id: Category; label: string }[] = [
 //
 // Custom Words is deliberately NOT listed here -- it has its own
 // dedicated toggle at the top of the Setup screen's category section
-// (components/setup/CategorySelector.tsx) instead of living as just
+// (features/configure-game/ui/CategorySelector.tsx) instead of living as just
 // another entry in this sheet, since selecting it swaps the entire
 // category row to the player's own saved-word categories rather than
 // picking a single value the way every other entry here does.

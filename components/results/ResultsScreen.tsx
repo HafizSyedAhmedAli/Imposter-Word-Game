@@ -1,7 +1,7 @@
 "use client";
 
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
-import LeaveRoundDialog from "@/components/pass/LeaveRoundDialog";
+import LeaveRoundDialog from "@/shared/ui/LeaveRoundDialog";
 import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
 import type { RoundSession } from "@/game/game-types";
 import {
@@ -15,14 +15,14 @@ import {
   recordVotingHistoryEntry,
 } from "@/features/play-round";
 import { isVotingComplete } from "@/features/play-round"; // add this import
-import { markActiveGameRoute } from "@/lib/active-game-recovery";
-import { analytics } from "@/lib/analytics";
-import { medium } from "@/shared/lib/haptics";
 import {
   clearStoredRoundSession,
   getStoredRoundSession,
+  markActiveGameRoute,
   storeRoundSession,
-} from "@/lib/round-session-store";
+} from "@/entities/round";
+import { analytics } from "@/lib/analytics";
+import { medium } from "@/shared/lib/haptics";
 import { ArrowRight, Sparkles, Trophy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";

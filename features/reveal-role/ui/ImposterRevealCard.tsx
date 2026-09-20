@@ -1,4 +1,4 @@
-// components/pass/ImposterRevealCard.tsx
+// features/reveal-role/ui/ImposterRevealCard.tsx
 "use client";
 
 import { useEffect, useState } from "react";

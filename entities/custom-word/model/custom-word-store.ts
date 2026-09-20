@@ -142,7 +142,7 @@ export async function updateCustomWordHint(
  *
  * `category`, when given, narrows the pool to that one category first
  * (Setup screen's Custom Words toggle -- see
- * components/setup/CategorySelector.tsx and
+ * features/configure-game/ui/CategorySelector.tsx and
  * `GameConfig.customWordCategory`). Same forgiving spirit as the
  * difficulty match above: if narrowing to `category` would leave zero
  * candidates (e.g. the player deleted every word in that category from
@@ -184,7 +184,7 @@ export async function getRandomCustomWord(
 
 /**
  * Deletes every saved custom word -- the Custom Words half of "Reset
- * Game Data" (see lib/reset-game-data.ts). Rethrows on failure, same as
+ * Game Data" (see features/reset-game-data/model/reset-game-data.ts). Rethrows on failure, same as
  * `resetUserData` in lib/db.ts, since it's part of the same
  * user-initiated, must-report-failure reset action.
  */

@@ -2,7 +2,7 @@
 "use client";
 
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
-import LeaveRoundDialog from "@/components/pass/LeaveRoundDialog";
+import LeaveRoundDialog from "@/shared/ui/LeaveRoundDialog";
 import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
 import {
   getDiscussionDuration,
@@ -12,7 +12,8 @@ import type { RoundSession } from "@/game/game-types";
 import {
   clearStoredRoundSession,
   getStoredRoundSession,
-} from "@/lib/round-session-store";
+  markActiveGameRoute,
+} from "@/entities/round";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import DiscussionControls from "./DiscussionControls";
@@ -20,7 +21,6 @@ import DiscussionPlayersCard from "./DiscussionPlayersCard";
 import DiscussionStatusCard from "./DiscussionStatusCard";
 import DiscussionTimer from "./DiscussionTimer";
 import DiscussionTipsCard from "./DiscussionTipsCard";
-import { markActiveGameRoute } from "@/lib/active-game-recovery";
 import { analytics } from "@/lib/analytics";
 import { playSound } from "@/shared/lib/sound-engine";
 import { useLeaveRoundBackGuard } from "@/lib/use-leave-round-back-guard";

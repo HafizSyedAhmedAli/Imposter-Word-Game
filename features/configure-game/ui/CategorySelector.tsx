@@ -9,7 +9,7 @@ import {
   CUSTOM_WORD_CATEGORIES,
   MORE_CATEGORIES,
 } from "@/features/play-round";
-import { getCustomWords } from "@/lib/db";
+import { getCustomWords } from "@/entities/custom-word";
 import AppLink from "@/components/pwa/AppLink";
 import CategoryCard from "./CategoryCard";
 import MoreCategoriesSheet from "./MoreCategoriesSheet";
@@ -33,7 +33,7 @@ export default function CategorySelector({
   const isFromMoreSheet = MORE_CATEGORIES.some((c) => c.id === category);
 
   // Which of the player's saved custom-word categories actually have at
-  // least one word saved -- read fresh from IndexedDB (lib/db.ts) on
+  // least one word saved -- read fresh from IndexedDB (entities/custom-word) on
   // every mount of this screen, since Settings -> Custom Words can add
   // or delete words between visits here. `null` while that first read
   // is in flight, distinct from `[]` (confirmed empty), so the toggle
@@ -73,7 +73,7 @@ export default function CategorySelector({
       // No saved custom words yet: still flip into Custom Words mode so
       // the empty-state message below renders, but with no specific
       // category selected. If the player continues anyway with no
-      // words saved, getRandomCustomWord (lib/db.ts) finds none and
+      // words saved, getRandomCustomWord (entities/custom-word) finds none and
       // game-engine.ts falls through to the normal 3-tier pipeline --
       // never an unplayable round.
       onChange(CUSTOM_CATEGORY);

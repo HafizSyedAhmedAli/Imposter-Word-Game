@@ -117,7 +117,7 @@ export async function updateSettings(
 
 /**
  * Clears the saved row so settings fall back to defaults. Part of
- * "Reset Game Data" (see lib/reset-game-data.ts) -- best-effort and
+ * "Reset Game Data" (see features/reset-game-data/model/reset-game-data.ts) -- best-effort and
  * silent like the other reset steps in that file, since a failed clear
  * here shouldn't be reported as the whole reset having failed.
  */

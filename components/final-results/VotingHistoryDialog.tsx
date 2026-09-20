@@ -11,7 +11,7 @@ import VotingHistoryRoundCard from "./VotingHistoryRoundCard";
  * Read-only review of every completed voting round from this game,
  * opened from the Final Results screen's "Voting History" option. Built
  * on the native <dialog> element for the same reason
- * components/pass/LeaveRoundDialog.tsx is: showModal() gives focus
+ * shared/ui/LeaveRoundDialog.tsx is: showModal() gives focus
  * trapping, an inert background, and Escape-to-close for free per the
  * HTML spec. Unlike that dialog, this one can hold an unbounded number
  * of rounds, so it fills the viewport and scrolls its own content

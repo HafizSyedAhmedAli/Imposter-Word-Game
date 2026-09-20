@@ -2,10 +2,11 @@
 
 import { useRef, useState } from "react";
 import { Plus, Type } from "lucide-react";
-import type { Category, Difficulty } from "@/game/game-types";
+import type { Category } from "@/game/game-types";
+import type { Difficulty } from "@/entities/game-session";
 import { CUSTOM_WORD_CATEGORIES } from "@/features/play-round";
-import { MAX_CUSTOM_WORD_LENGTH } from "@/game/custom-word-rules";
-import DifficultySelector from "@/components/setup/DifficultySelector";
+import { MAX_CUSTOM_WORD_LENGTH } from "@/entities/custom-word";
+import { DifficultySelector } from "@/features/configure-game";
 import { playSound } from "@/shared/lib/sound-engine";
 
 export type AddCustomWordOutcome = { ok: true } | { ok: false; error: string };

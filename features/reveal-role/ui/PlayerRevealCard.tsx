@@ -1,4 +1,4 @@
-// components/pass/PlayerRevealCard.tsx
+// features/reveal-role/ui/PlayerRevealCard.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -17,6 +17,14 @@ export default function PlayerRevealCard({
   onHide: () => void;
 }) {
   const [wordVisible, setWordVisible] = useState(false);
+  // Separate from `wordVisible` on purpose: the word starts unblurring at
+  // (DELAY - TRANSITION) ms so it is fully readable at DELAY ms, but the
+  // "HIDE & PASS PHONE" button must enable at exactly DELAY ms -- the same
+  // moment ImposterRevealCard's REVEAL_HOLD_MS enables its own. Tying the
+  // button to `wordVisible` made the crew card's button enable
+  // TRANSITION ms earlier than the imposter's, a timing tell. Guarded by
+  // test/features/reveal-role/reveal-symmetry.test.tsx.
+  const [canHide, setCanHide] = useState(false);
   // Drives the progress bar under "Your secret word". Starts at 0% and
   // is flipped to 100% one frame after mount so the browser registers
   // the 0% starting width before the width transition begins -- without
@@ -38,10 +46,14 @@ export default function PlayerRevealCard({
     const timer = setTimeout(() => {
       setWordVisible(true);
     }, CREW_REVEAL_DELAY_MS - CREW_REVEAL_TRANSITION_MS);
+    const hideTimer = setTimeout(() => {
+      setCanHide(true);
+    }, CREW_REVEAL_DELAY_MS);
 
     return () => {
       cancelAnimationFrame(raf);
       clearTimeout(timer);
+      clearTimeout(hideTimer);
     };
   }, []);
 
@@ -98,7 +110,7 @@ export default function PlayerRevealCard({
       <button
         type="button"
         onClick={onHide}
-        disabled={!wordVisible}
+        disabled={!canHide}
         className="flex w-full items-center justify-center gap-2 rounded-2xl border border-iw-gold-600/40 bg-gradient-to-b from-iw-gold-100 via-iw-gold-400 to-iw-gold-500 px-6 py-4 font-display text-base font-bold text-iw-gold-ink shadow-[0_16px_32px_-14px_rgba(255,184,0,0.6)] transition-all duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] cursor-pointer  disabled:pointer-events-none disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:translate-y-0"
       >
         <EyeOff className="h-5 w-5" strokeWidth={2.5} aria-hidden="true" />

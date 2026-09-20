@@ -4,7 +4,7 @@
 // lives in `entities/achievement` (see entities/README.md). Existing
 // `import { ... } from "@/lib/achievements/store"` call sites
 // (components/achievements/*, components/final-results/FinalResultsScreen.tsx,
-// lib/reset-game-data.ts, tests) keep working unchanged. Repoint each to
+// features/reset-game-data, tests) keep working unchanged. Repoint each to
 // `@/entities/achievement` as it's touched; this file goes away once none
 // are left.
 export {

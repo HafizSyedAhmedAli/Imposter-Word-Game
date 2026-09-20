@@ -10,8 +10,9 @@ import { prepareGameRound, type PreparationStage } from "@/features/play-round";
 import {
   clearStoredRoundSession,
   getStoredRoundSession,
+  markActiveGameRoute,
   storeRoundSession,
-} from "@/lib/round-session-store";
+} from "@/entities/round";
 import RoundPreparationHeader from "./RoundPreparationHeader";
 import GameSummaryCard from "./GameSummaryCard";
 import PreparationAnimation from "./PreparationAnimation";
@@ -19,7 +20,6 @@ import PreparationProgress from "./PreparationProgress";
 import PreparationStatus from "./PreparationStatus";
 import RoundSourceIndicator from "./RoundSourceIndicator";
 import RoundErrorRecovery from "./RoundErrorRecovery";
-import { markActiveGameRoute } from "@/lib/active-game-recovery";
 import { analytics, toRoundSource } from "@/lib/analytics";
 import { captureError, setGameContext } from "@/lib/monitoring";
 

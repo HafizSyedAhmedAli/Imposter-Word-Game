@@ -18,11 +18,18 @@ import type {
   TimerSettings,
 } from "@/game/game-types";
 import {
-  CUSTOM_CATEGORY,
   DEFAULT_GAME_CONFIG,
   MAX_PLAYERS,
   validatePlayerName,
 } from "@/features/play-round";
+import {
+  withCategory,
+  withCustomWordCategory,
+  withDifficulty,
+  withDiscussionTimer,
+  withMode,
+  withVotingTimer,
+} from "@/features/configure-game";
 import { generateId } from "@/shared/lib/id";
 import { rotate } from "@/shared/lib/shuffle";
 import { getStoredGameSetup, storeGameSetup } from "@/lib/game-setup-store";
@@ -38,7 +45,7 @@ type GameSetupContextValue = {
    * player's saved custom-word categories to draw from, in one atomic
    * update -- see `GameConfig.customWordCategory`'s doc comment. Used
    * only by the Setup screen's Custom Words toggle
-   * (components/setup/CategorySelector.tsx); every other category
+   * (features/configure-game/ui/CategorySelector.tsx); every other category
    * selection goes through `setCategory` above instead.
    */
   selectCustomWordCategory: (category: Category) => void;
@@ -140,48 +147,32 @@ export function GameSetupProvider({ children }: { children: React.ReactNode }) {
     storeGameSetup({ config, players, randomizeEnabled });
   }, [config, players, randomizeEnabled, isHydrated]);
 
+  // Config transitions themselves live in features/configure-game
+  // (model/config-updates.ts) -- this provider only owns the state
+  // container and persistence, not the rules for how a selection
+  // changes a `GameConfig`.
   const setMode = useCallback((mode: GameMode) => {
-    setConfig((prev) => ({ ...prev, mode }));
+    setConfig((prev) => withMode(prev, mode));
   }, []);
 
   const setCategory = useCallback((category: Category) => {
-    // Any selection made through the normal category row/"More" sheet
-    // means the player has left Custom Words mode -- always clear a
-    // stale `customWordCategory` here so it can never linger onto a
-    // later `CUSTOM_CATEGORY` selection it wasn't actually chosen for.
-    setConfig((prev) => ({ ...prev, category, customWordCategory: undefined }));
+    setConfig((prev) => withCategory(prev, category));
   }, []);
 
   const selectCustomWordCategory = useCallback((category: Category) => {
-    setConfig((prev) => ({
-      ...prev,
-      category: CUSTOM_CATEGORY,
-      customWordCategory: category,
-    }));
+    setConfig((prev) => withCustomWordCategory(prev, category));
   }, []);
 
   const setDifficulty = useCallback((difficulty: Difficulty) => {
-    setConfig((prev) => ({ ...prev, difficulty }));
+    setConfig((prev) => withDifficulty(prev, difficulty));
   }, []);
 
   const setDiscussionTimer = useCallback((patch: Partial<TimerSettings>) => {
-    setConfig((prev) => ({
-      ...prev,
-      options: {
-        ...prev.options,
-        discussionTimer: { ...prev.options.discussionTimer, ...patch },
-      },
-    }));
+    setConfig((prev) => withDiscussionTimer(prev, patch));
   }, []);
 
   const setVotingTimer = useCallback((patch: Partial<TimerSettings>) => {
-    setConfig((prev) => ({
-      ...prev,
-      options: {
-        ...prev.options,
-        votingTimer: { ...prev.options.votingTimer, ...patch },
-      },
-    }));
+    setConfig((prev) => withVotingTimer(prev, patch));
   }, []);
 
   const resetConfig = useCallback(() => {

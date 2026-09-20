@@ -1,5 +1,5 @@
 import { Lock, Smartphone } from "lucide-react";
-import type { Player } from "@/game/game-types";
+import type { Player } from "@/entities/player";
 import PlayerAvatar from "@/shared/ui/PlayerAvatar";
 
 export default function PassPromptCard({

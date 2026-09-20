@@ -81,7 +81,7 @@ export async function getStatisticsSnapshot(): Promise<{
 
 /**
  * Clears every stored completed-game record. Part of "Reset Game Data"
- * (see lib/reset-game-data.ts) -- rethrows on failure, same as
+ * (see features/reset-game-data/model/reset-game-data.ts) -- rethrows on failure, same as
  * `resetUserData`/`clearCustomWords`, since a user-initiated reset must
  * report failure rather than silently leaving stale statistics behind.
  */

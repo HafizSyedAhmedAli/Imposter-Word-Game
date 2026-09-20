@@ -148,7 +148,7 @@ test.describe("Achievements", () => {
   }) => {
     test.slow();
 
-    // Regression coverage for a real bug: lib/reset-game-data.ts once
+    // Regression coverage for a real bug: features/reset-game-data/model/reset-game-data.ts once
     // shipped with an unresolved merge conflict that silently dropped
     // the `resetAchievements()` call, so achievement history survived a
     // reset. test/lib/reset-game-data.test.ts now catches that at the

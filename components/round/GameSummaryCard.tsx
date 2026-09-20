@@ -9,7 +9,7 @@ import {
 
 /**
  * Read-only summary shown throughout preparation. Intentionally mirrors
- * components/players/GameConfigSummary.tsx but adds the player count and
+ * features/configure-game/ui/GameConfigSummary.tsx but adds the player count and
  * the *resolved* imposter count (not a config-time guess) -- this is safe
  * to show because it never reveals which specific players are imposters
  * (see Screen 4 spec, section 22).

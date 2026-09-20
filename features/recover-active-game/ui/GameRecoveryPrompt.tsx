@@ -5,20 +5,18 @@ import { useRouter } from "next/navigation";
 import {
   clearActiveGameRecovery,
   getRecoverableActiveGame,
-} from "@/lib/active-game-recovery";
-import {
   getStoredRoundSession,
   storeRoundSession,
-} from "@/lib/round-session-store";
+} from "@/entities/round";
 
 /**
  * Screen 1 (Home) mounts this alongside its normal content. It renders
  * nothing until its mount effect confirms there's actually an unfinished
  * game to recover -- most launches never show anything here.
  *
- * Deliberately checks localStorage (lib/active-game-recovery.ts), not
+ * Deliberately checks localStorage (entities/round/model/active-game-recovery.ts), not
  * sessionStorage: sessionStorage already survives refresh/offline/lock
- * on its own (see lib/round-session-store.ts), so if it's empty here,
+ * on its own (see entities/round/model/round-session-store.ts), so if it's empty here,
  * this really is a fresh launch after a full close, which is the one
  * gap this component exists to cover.
  */

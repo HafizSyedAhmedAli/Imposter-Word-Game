@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { History, Home, RotateCcw } from "lucide-react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
-import LeaveRoundDialog from "@/components/pass/LeaveRoundDialog";
+import LeaveRoundDialog from "@/shared/ui/LeaveRoundDialog";
 import VoteResultsCard from "@/components/results/VoteResultsCard";
 import WinnerHero from "./WinnerHero";
 import SecretRevealCard from "./SecretRevealCard";
@@ -16,10 +16,7 @@ import FinalRoundSummaryCard from "./FinalRoundSummaryCard";
 import VotingHistoryDialog from "./VotingHistoryDialog";
 import AchievementsUnlockedBanner from "./AchievementsUnlockedBanner";
 import AchievementUnlockToast from "@/components/achievements/AchievementUnlockToast";
-import {
-  clearStoredRoundSession,
-  getStoredRoundSession,
-} from "@/lib/round-session-store";
+import { clearStoredRoundSession, getStoredRoundSession } from "@/entities/round";
 import { recordFinalResult } from "@/entities/statistics";
 import {
   processAchievementsForCompletedGame,

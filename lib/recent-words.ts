@@ -147,7 +147,7 @@ export function rememberWordText(word: string): void {
 /**
  * Clears all three recent-word trackers above (including the uncapped
  * shown-word-ids set). Part of "Reset Game Data" (see
- * lib/reset-game-data.ts) -- without this, a reset round could still
+ * features/reset-game-data/model/reset-game-data.ts) -- without this, a reset round could still
  * feel non-random immediately afterwards, since these "don't repeat"
  * lists would otherwise survive the reset untouched. `recentWordText`
  * lives in `localStorage` (see its doc comment above) while the other

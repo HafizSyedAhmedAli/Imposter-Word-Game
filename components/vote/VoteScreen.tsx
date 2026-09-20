@@ -1,7 +1,7 @@
 "use client";
 
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
-import LeaveRoundDialog from "@/components/pass/LeaveRoundDialog";
+import LeaveRoundDialog from "@/shared/ui/LeaveRoundDialog";
 import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
 import type { RoundSession } from "@/game/game-types";
 import {
@@ -14,23 +14,25 @@ import {
   submitVote,
   type VoteScreenState,
 } from "@/features/play-round";
-import { markActiveGameRoute } from "@/lib/active-game-recovery";
-import { analytics } from "@/lib/analytics";
-import { light, medium } from "@/shared/lib/haptics";
 import {
   clearStoredRoundSession,
   getStoredRoundSession,
+  markActiveGameRoute,
   storeRoundSession,
-} from "@/lib/round-session-store";
+} from "@/entities/round";
+import { analytics } from "@/lib/analytics";
+import { light, medium } from "@/shared/lib/haptics";
 import { playSound } from "@/shared/lib/sound-engine";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import AllVotesCastCard from "./AllVotesCastCard";
-import ConfirmVoteCard from "./ConfirmVoteCard";
-import VoteRecordedCard from "./VoteRecordedCard";
-import VoteSelectionCard from "./VoteSelectionCard";
-import VotingPassPromptCard from "./VotingPassPromptCard";
-import VotingTimer from "./VotingTimer";
+import {
+  AllVotesCastCard,
+  ConfirmVoteCard,
+  VoteRecordedCard,
+  VoteSelectionCard,
+  VotingPassPromptCard,
+  VotingTimer,
+} from "@/features/cast-vote";
 import { useLeaveRoundBackGuard } from "@/lib/use-leave-round-back-guard";
 
 export default function VoteScreen() {

@@ -1,7 +1,7 @@
 "use client";
 
 import { PenSquare } from "lucide-react";
-import type { CustomWordEntry } from "@/lib/db";
+import type { CustomWordEntry } from "@/entities/custom-word";
 import CustomWordCard from "./CustomWordCard";
 
 export default function CustomWordList({

@@ -13,7 +13,7 @@ const WILL_DELETE = [
 
 /**
  * A true modal dialog for the destructive "Reset Game Data" action.
- * Structurally identical to components/pass/LeaveRoundDialog.tsx (native
+ * Structurally identical to shared/ui/LeaveRoundDialog.tsx (native
  * <dialog> + showModal() for a free focus trap, Escape routed through
  * onCancel, focus restored on close) -- see that file's doc comment for
  * why this pattern is used instead of a library. Deliberately mounted

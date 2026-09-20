@@ -1,4 +1,4 @@
-import type { RoundSession } from "@/game/game-types";
+import type { RoundSession } from "./round-types";
 import type { AppRoute } from "@/shared/lib/app-routes";
 
 const STORAGE_KEY = "iw:active-game-recovery";

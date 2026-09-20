@@ -1,14 +1,12 @@
 import { describe, it, expect } from "vitest";
 import {
-  getStoredRoundSession,
-  storeRoundSession,
-  clearStoredRoundSession,
-} from "@/lib/round-session-store";
-import {
-  getRecoverableActiveGame,
   clearActiveGameRecovery,
+  clearStoredRoundSession,
+  getRecoverableActiveGame,
+  getStoredRoundSession,
   markActiveGameRoute,
-} from "@/lib/active-game-recovery";
+  storeRoundSession,
+} from "@/entities/round";
 import { baseSession } from "../helpers/fixtures";
 
 describe("round-session-store", () => {

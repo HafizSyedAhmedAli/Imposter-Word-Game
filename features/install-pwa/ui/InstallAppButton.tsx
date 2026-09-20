@@ -1,7 +1,7 @@
 "use client";
 
 import { Download, Share } from "lucide-react";
-import { useInstallPrompt } from "@/lib/use-install-prompt";
+import { useInstallPrompt } from "../model/use-install-prompt";
 
 /**
  * Renders nothing unless installation is actually possible or useful:

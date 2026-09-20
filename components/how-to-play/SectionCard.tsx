@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 
 /**
  * Shared chrome for every How to Play section -- same card treatment as
- * components/settings/AboutCard.tsx and PreferencesCard.tsx (rounded-3xl
+ * components/settings/AboutCard.tsx and
+ * features/toggle-preferences/ui/PreferencesCard.tsx (rounded-3xl
  * border, translucent surface, `animate-iw-fade-up` entrance). Centralizing
  * it here means every section in this screen looks and animates
  * identically without copy-pasting the wrapper markup into 10+ files.

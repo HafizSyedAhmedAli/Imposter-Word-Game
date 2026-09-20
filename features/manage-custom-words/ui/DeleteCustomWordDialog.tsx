@@ -5,7 +5,7 @@ import { Trash2 } from "lucide-react";
 
 /**
  * A true modal dialog for deleting a single saved custom word.
- * Structurally identical to components/pass/LeaveRoundDialog.tsx and
+ * Structurally identical to shared/ui/LeaveRoundDialog.tsx and
  * components/settings/ResetGameDataDialog.tsx (native <dialog> +
  * showModal() for a free focus trap, Escape routed through onCancel,
  * focus restored on close) -- see LeaveRoundDialog's doc comment for

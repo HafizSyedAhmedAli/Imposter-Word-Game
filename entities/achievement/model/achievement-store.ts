@@ -165,7 +165,7 @@ export async function getAchievementsSnapshot(): Promise<AchievementsSnapshot> {
 
 /**
  * Clears every stored achievement unlock. Part of "Reset Game Data"
- * (see lib/reset-game-data.ts) -- rethrows on failure, same as
+ * (see features/reset-game-data/model/reset-game-data.ts) -- rethrows on failure, same as
  * `resetStatistics`, since a user-initiated reset must report failure
  * rather than silently leaving stale unlock history behind.
  */

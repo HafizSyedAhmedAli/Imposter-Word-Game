@@ -18,10 +18,7 @@ import {
   getAchievementsSnapshot,
 } from "@/lib/achievements/store";
 import { rememberWordId, getRecentWordIds } from "@/lib/recent-words";
-import {
-  storeRoundSession,
-  getStoredRoundSession,
-} from "@/lib/round-session-store";
+import { getStoredRoundSession, storeRoundSession } from "@/entities/round";
 import { baseSession } from "../helpers/fixtures";
 
 afterEach(async () => {

@@ -6,12 +6,12 @@ import {
   CheckCircle2,
   MonitorSmartphone,
 } from "lucide-react";
-import { useInstallPrompt } from "@/lib/use-install-prompt";
+import { useInstallPrompt } from "../model/use-install-prompt";
 
 /**
  * The "Install App" section of Settings. Never fakes an outcome --
  * every branch here reflects a real, currently-observable browser
- * state from useInstallPrompt (lib/use-install-prompt.ts):
+ * state from useInstallPrompt (../model/use-install-prompt.ts):
  *
  *   installed          -> "App Installed" (no button, nothing to do)
  *   canInstall         -> real button wired to the native prompt

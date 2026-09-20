@@ -555,7 +555,7 @@ export async function getRandomCachedWord(
 
 /**
  * Deletes all locally-cached AI rounds -- the data layer half of
- * "Reset Game Data" (see lib/reset-game-data.ts, which also clears
+ * "Reset Game Data" (see features/reset-game-data/model/reset-game-data.ts, which also clears
  * statistics and session-scoped tracking). Only ever touches this
  * table: built-in words live entirely outside IndexedDB (see
  * lib/fallback-words.ts), so there is nothing here that needs to be
@@ -618,7 +618,7 @@ export async function getCompletedGames(): Promise<CompletedGameRecord[]> {
 
 /**
  * Deletes every stored completed-game record -- the Statistics half of
- * "Reset Game Data" (see lib/reset-game-data.ts). Rethrows on failure,
+ * "Reset Game Data" (see features/reset-game-data/model/reset-game-data.ts). Rethrows on failure,
  * same as `resetUserData`/`clearCustomWords` above: this is a
  * user-initiated action that must report success or failure, not fail
  * silently and leave stale statistics behind.

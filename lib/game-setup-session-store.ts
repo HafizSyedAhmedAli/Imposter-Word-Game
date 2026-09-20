@@ -10,7 +10,7 @@ export type StoredGameSetup = {
 /**
  * sessionStorage-backed persistence for the in-progress `GameConfig` +
  * `players` list (Setup -> Players -> Round). This mirrors
- * lib/round-session-store.ts exactly, and exists for the same reason a
+ * entities/round/model/round-session-store.ts exactly, and exists for the same reason a
  * hard refresh needs to survive: an offline navigation between /setup,
  * /players and /round has to be a full document navigation (see
  * lib/offline-navigation.ts), which remounts GameSetupProvider from

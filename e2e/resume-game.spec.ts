@@ -7,7 +7,7 @@ test.describe("Resume game", () => {
   }) => {
     await startGameWithPlayers(page);
 
-    // sessionStorage-backed recovery (lib/round-session-store.ts) --
+    // sessionStorage-backed recovery (entities/round/model/round-session-store.ts) --
     // a same-tab reload should land right back on the same in-round
     // screen, not bounce to Home.
     await page.reload();
@@ -21,7 +21,7 @@ test.describe("Resume game", () => {
   }) => {
     await startGameWithPlayers(page);
 
-    // localStorage-backed recovery (lib/active-game-recovery.ts) --
+    // localStorage-backed recovery (entities/round/model/active-game-recovery.ts) --
     // simulates the app being fully closed and relaunched by opening a
     // brand-new tab that shares the same storage state.
     const newPage = await context.newPage();

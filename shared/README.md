@@ -31,6 +31,8 @@ Word, or any other game concept lives here. If a file needs to import from
   pretenses; each entity slice will wrap just its own table access once
   entities exist, and `db.ts` itself either moves once those wrappers make it
   domain-agnostic, or stays as a documented infrastructure exception.
-- `shared/ui/` — any UI primitives with no domain meaning (if/when extracted)
+- `shared/ui/` — UI with no domain meaning. Currently: `PlayerAvatar`
+  (numeric `index` only) and `LeaveRoundDialog` (`onCancel`/`onConfirm`
+  only; shared by the five in-round screens).
 
 Import from other layers: **none**. Nothing above `shared/` may be imported here.

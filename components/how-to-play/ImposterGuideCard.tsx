@@ -1,5 +1,5 @@
 /**
- * Example visual deliberately mirrors components/pass/ImposterRevealCard.tsx
+ * Example visual deliberately mirrors features/reveal-role/ui/ImposterRevealCard.tsx
  * (same colors, badge, and hint treatment) for the same reason
  * CrewGuideCard.tsx mirrors PlayerRevealCard.tsx.
  */

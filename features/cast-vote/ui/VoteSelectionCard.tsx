@@ -1,10 +1,10 @@
 import { Check, SkipForward } from "lucide-react";
-import type { Player } from "@/game/game-types";
+import type { Player } from "@/entities/player";
 import PlayerAvatar from "@/shared/ui/PlayerAvatar";
 
 /**
  * One selectable ballot row. Reuses the same selected-state treatment as
- * `components/setup/GameModeCard.tsx` (violet ring + check badge) so
+ * `features/configure-game/ui/GameModeCard.tsx` (violet ring + check badge) so
  * this private screen still feels like it belongs to the rest of the
  * app, per spec's "Visual Design" section.
  */

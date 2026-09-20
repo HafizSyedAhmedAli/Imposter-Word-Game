@@ -8,8 +8,9 @@ import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
 import {
   clearStoredRoundSession,
   getStoredRoundSession,
+  markActiveGameRoute,
   storeRoundSession,
-} from "@/lib/round-session-store";
+} from "@/entities/round";
 import type { RoundSession } from "@/game/game-types";
 import {
   advanceToNextPlayer,
@@ -19,13 +20,14 @@ import {
   isFinalPlayer,
   type PassState,
 } from "@/features/play-round";
-import PassPromptCard from "./PassPromptCard";
-import PrivateRevealPrompt from "./PrivateRevealPrompt";
-import PlayerRevealCard from "./PlayerRevealCard";
-import ImposterRevealCard from "./ImposterRevealCard";
-import AllPlayersReadyCard from "./AllPlayersReadyCard";
-import LeaveRoundDialog from "./LeaveRoundDialog";
-import { markActiveGameRoute } from "@/lib/active-game-recovery";
+import {
+  AllPlayersReadyCard,
+  ImposterRevealCard,
+  PassPromptCard,
+  PlayerRevealCard,
+  PrivateRevealPrompt,
+} from "@/features/reveal-role";
+import LeaveRoundDialog from "@/shared/ui/LeaveRoundDialog";
 import { analytics } from "@/lib/analytics";
 import { light } from "@/shared/lib/haptics";
 import { playSound } from "@/shared/lib/sound-engine";

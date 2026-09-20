@@ -109,8 +109,43 @@ to change without breaking consumers.
     `next build` failure in `components/pwa/MenuMusicController.tsx`
     (`usePathname()` can return `null`) while getting this slice's
     `next build` gate green.
-  - **Next:** the remaining independent `features/*` slices
-    (`manage-players`, `configure-game`, `reveal-role`, `cast-vote`,
-    `manage-custom-words`, `install-pwa`, `register-service-worker`,
-    `toggle-preferences`, `reset-game-data`, `recover-active-game`),
-    per the migration plan tracked in project memory.
+  - `features/reset-game-data`, `features/register-service-worker`,
+    `features/manage-players` (done) -- see `features/README.md`.
+  - `features/configure-game` (done) -- the four Setup selectors, their
+    internal cards, and `GameConfigSummary` moved from
+    `components/setup/` / `components/players/`, plus the six pure
+    `GameConfig` transitions extracted from `GameSetupProvider` into
+    `model/config-updates.ts`. `GameSetupProvider` and
+    `lib/game-setup-store.ts` deliberately stay in `lib/` for now (one
+    provider / one storage key / one hydration flag shared by
+    `manage-players` and this slice); the eventual home is
+    `entities/game-session`, which needs `DEFAULT_GAME_CONFIG`,
+    `CUSTOM_CATEGORY`, `MAX_PLAYERS` and `validatePlayerName` moved out
+    of `features/play-round` first -- see `features/README.md`.
+  - `features/reveal-role` (done) -- the five pass-the-phone reveal
+    cards moved from `components/pass/`; `LeaveRoundDialog` went to
+    `shared/ui/` (used by five screens). `PassPhoneScreen` stays for
+    steps 7-8. See `features/README.md`.
+  - `features/cast-vote` (done) -- the vote-screen cards and
+    `VotingTimer` moved from `components/vote/`; `VoteScreen` stays for
+    steps 7-8. See `features/README.md`.
+  - `features/manage-custom-words` (done) -- the Custom Words screen's
+    cards, list, header and delete dialog moved from
+    `components/settings/custom-words/`; `CustomWordsScreen` stays for
+    steps 7-8. See `features/README.md`.
+  - `features/install-pwa` (done) -- install button/card, `appinstalled`
+    analytics and `useInstallPrompt`; also deleted the leftover
+    `components/pwa/ServiceWorkerRegister.tsx` copy. See
+    `features/README.md`.
+  - `features/toggle-preferences` (done) -- `PreferencesCard`,
+    `LanguageCard` and `SettingsToggleRow` moved from
+    `components/settings/`. See `features/README.md` (which also flags
+    the `ResetGameDataCard`/`ResetGameDataDialog` follow-up).
+  - `features/recover-active-game` (done) -- `GameRecoveryPrompt` moved
+    from `components/home/`; the session/recovery storage
+    (`round-session-store`, `active-game-recovery`) moved into
+    `entities/round`, since it is `RoundSession` data access and the
+    store's mirror call would otherwise point upward. Adds a test
+    guarding "recovery never auto-resumes". Deleted the leftover
+    `lib/reset-game-data.ts` copy. See `features/README.md`.
+  - **Step 6 is complete.** Next: step 7 (`widgets/*`).

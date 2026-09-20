@@ -1,6 +1,6 @@
 import MenuMusicController from "@/components/pwa/MenuMusicController";
 import NativeSplashScreenController from "@/components/pwa/NativeSplashScreenController";
-import PwaInstallAnalytics from "@/components/pwa/PwaInstallAnalytics";
+import { PwaInstallAnalytics } from "@/features/install-pwa";
 import { ServiceWorkerRegister } from "@/features/register-service-worker";
 import SoundProvider from "@/components/pwa/SoundProvider";
 import { GameSetupProvider } from "@/lib/game-setup-context";

@@ -8,7 +8,7 @@ import { analytics } from "@/lib/analytics";
  * ServiceWorkerRegister/SoundProvider/MenuMusicController) so the real
  * browser `appinstalled` event is captured regardless of which screen
  * the player happens to be on -- `useInstallPrompt`'s own listener
- * (lib/use-install-prompt.ts) only exists while a component using that
+ * (features/install-pwa/model/use-install-prompt.ts) only exists while a component using that
  * hook (InstallAppButton, on the Settings screen) is mounted, which
  * isn't a reliable place to observe a lifetime, one-time event like
  * this.

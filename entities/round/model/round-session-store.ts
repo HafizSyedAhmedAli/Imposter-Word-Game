@@ -1,4 +1,4 @@
-import type { RoundSession } from "@/game/game-types";
+import type { RoundSession } from "./round-types";
 import {
   clearActiveGameRecovery,
   mirrorActiveGameSession,
@@ -34,7 +34,7 @@ export function storeRoundSession(session: RoundSession): void {
     // Best-effort -- an in-memory session (component state) still works
     // for the current page's lifetime, it just won't survive a refresh.
   }
-  // Mirror into localStorage (lib/active-game-recovery.ts) so the game
+  // Mirror into localStorage (entities/round/model/active-game-recovery.ts) so the game
   // is still detectable after a full app close, not just a refresh --
   // sessionStorage alone can't survive that. Runs even if the
   // sessionStorage write above failed, so recovery still works.

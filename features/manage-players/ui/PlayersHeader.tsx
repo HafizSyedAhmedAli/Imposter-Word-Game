@@ -10,8 +10,8 @@ import { playSound } from "@/shared/lib/sound-engine";
  * reorder/validate players" per the migration plan. Logic and JSX
  * unchanged apart from import-path fixes; see `../../README.md` for the
  * full move (in particular, why `PlayerAvatar` went to `shared/ui/`
- * instead of into this slice, and why `PlayersScreen.tsx`/
- * `GameConfigSummary.tsx` stayed in `components/players/` for now).
+ * instead of into this slice, and why `PlayersScreen.tsx` stayed in
+ * `components/players/` for now).
  */
 export default function PlayersHeader() {
   return (

@@ -73,7 +73,7 @@ export async function getAchievementUnlocksForPlayer(
 
 /**
  * Deletes every stored achievement unlock -- the Achievements half of
- * "Reset Game Data" (see lib/reset-game-data.ts). Rethrows on failure,
+ * "Reset Game Data" (see features/reset-game-data/model/reset-game-data.ts). Rethrows on failure,
  * same as `clearCompletedGames` in lib/db.ts: a user-initiated reset
  * must report failure rather than silently leaving stale unlock history
  * (and stale "already notified" state) behind.

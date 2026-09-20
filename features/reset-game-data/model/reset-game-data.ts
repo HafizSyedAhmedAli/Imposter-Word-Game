@@ -3,7 +3,7 @@ import { resetStatistics } from "@/entities/statistics";
 import { resetAchievements } from "@/lib/achievements/store";
 import { resetSettings } from "@/entities/settings";
 import { clearRecentWords } from "@/lib/recent-words";
-import { clearStoredRoundSession } from "@/lib/round-session-store";
+import { clearStoredRoundSession } from "@/entities/round";
 
 /**
  * The single entry point for "Reset Game Data" (Settings screen). Wipes
@@ -56,6 +56,8 @@ import { clearStoredRoundSession } from "@/lib/round-session-store";
  * temporary bridges, same as the rest of this migration). The two calls
  * that already had a slice -- `resetStatistics`/`resetSettings` --
  * already imported via `@/entities/*` and needed no change.
+ * (Since then `clearStoredRoundSession` also moved to `@/entities/round`
+ * with the `recover-active-game` step, so it is no longer a bridge.)
  */
 export async function resetGameData(): Promise<void> {
   if (inFlight) return inFlight;

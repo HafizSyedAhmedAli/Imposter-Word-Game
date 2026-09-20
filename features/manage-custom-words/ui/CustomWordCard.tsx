@@ -1,7 +1,7 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
-import type { CustomWordEntry } from "@/lib/db";
+import type { CustomWordEntry } from "@/entities/custom-word";
 import { CUSTOM_WORD_CATEGORIES, DIFFICULTIES } from "@/features/play-round";
 
 function categoryLabel(id: string): string {

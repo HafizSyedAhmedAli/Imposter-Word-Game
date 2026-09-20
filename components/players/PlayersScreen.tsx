@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import { useGameSetup } from "@/lib/game-setup-context";
 import { isPlayerCountValid, MAX_PLAYERS } from "@/features/play-round";
+import { GameConfigSummary } from "@/features/configure-game";
 import { error, light } from "@/shared/lib/haptics";
 import { playSound } from "@/shared/lib/sound-engine";
 import {
@@ -17,7 +18,6 @@ import {
   PlayerValidationMessage,
   PlayersContinueButton,
 } from "@/features/manage-players";
-import GameConfigSummary from "./GameConfigSummary";
 
 export default function PlayersScreen() {
   const router = useRouter();

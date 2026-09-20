@@ -3,7 +3,7 @@
 
 /**
  * Same structure as CategorySelector's Custom Words toggle
- * (components/setup/CategorySelector.tsx): a full-width row button,
+ * (features/configure-game/ui/CategorySelector.tsx): a full-width row button,
  * label + description on the left, switch on the right. Track/knob
  * classes are copied verbatim from there.
  *

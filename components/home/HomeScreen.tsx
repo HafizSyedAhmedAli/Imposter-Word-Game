@@ -2,7 +2,7 @@
 
 import { BarChart3, BookOpenText, Trophy, Users } from "lucide-react";
 import GameLogo from "./GameLogo";
-import GameRecoveryPrompt from "./GameRecoveryPrompt";
+import { GameRecoveryPrompt } from "@/features/recover-active-game";
 import HomeFooter from "./HomeFooter";
 import HomeHeader from "./HomeHeader";
 import HomeMenuItem from "./HomeMenuItem";

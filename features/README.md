@@ -142,14 +142,251 @@ inside one specific screen (not reusable as a standalone capability), it's a
   later-added `randomizeEnabled` field) with zero remaining importers —
   worth deleting in a separate cleanup pass.
 
-## Planned slices (not yet moved — see `../ARCHITECTURE.md`)
+- `features/configure-game` — mode / category / difficulty / timer
+  selection on the Setup screen. Moved from `components/setup/` and
+  `components/players/`: `GameModeSelector`, `CategorySelector`,
+  `DifficultySelector`, `GameOptions` (the four selectors the Setup
+  screen composes), their internal cards (`GameModeCard`,
+  `CategoryCard`, `DifficultyCard`, `MoreCategoriesSheet`,
+  `TimerOption`, `mascots/*`), and `GameConfigSummary` (the read-only
+  config recap on the Players screen — this resolves the deferral noted
+  in the `manage-players` entry above). Everything under `ui/` moved
+  with no content change apart from `CategorySelector`'s
+  `getCustomWords` import, repointed from the `@/lib/db` bridge
+  straight to `@/entities/custom-word`.
+  Public API: `@/features/configure-game` (barrel at
+  `features/configure-game/index.ts`) — the five components above plus
+  the six pure config transitions below. `CategoryCard`,
+  `DifficultyCard`, `GameModeCard`, `MoreCategoriesSheet`,
+  `TimerOption` and the mascots are deliberately **not** exported;
+  each is rendered by exactly one selector.
+  **New `model/config-updates.ts`:** `withMode`, `withCategory`,
+  `withCustomWordCategory`, `withDifficulty`, `withDiscussionTimer`,
+  `withVotingTimer` — pure `GameConfig -> GameConfig` functions
+  extracted from the inline `setConfig((prev) => ...)` callbacks in
+  `GameSetupProvider`. Behaviour is identical; the point is that the
+  `customWordCategory` invariant (any normal category selection clears
+  it, only `withCustomWordCategory` sets it) now lives in this slice
+  and is unit-tested without mounting React
+  (`test/features/configure-game/config-updates.test.ts`).
+  **Deliberately NOT moved: `GameSetupProvider` /
+  `lib/game-setup-store.ts`.** With both `manage-players` and this
+  slice done, the actual coupling is clear: the config half and the
+  players half share one provider, one `sessionStorage` key
+  (`iw:game-setup`) and one `isHydrated` flag, and
+  `RoundPreparationScreen` reads both halves plus `isHydrated` in a
+  single recovery effect — splitting them means changing hydration
+  ordering, not just moving files. Moving the provider into either
+  feature would also force the other to import it sideways
+  (feature -> feature). Its correct home is `entities/game-session`
+  (it is the in-progress `GameSession`), but that first needs
+  `DEFAULT_GAME_CONFIG`, `CUSTOM_CATEGORY`, `MAX_PLAYERS` and
+  `validatePlayerName` relocated out of `features/play-round` — an
+  entity can't import from a feature. Tracked as its own follow-up
+  step; until then the provider keeps consuming this slice's
+  transitions (`lib/` -> `features/` is fine, `lib/` is not a layer).
+  **Cross-slice imports (sparing, same as `manage-players`):**
+  `@/features/play-round` for the static catalogs (`GAME_MODES`,
+  `CATEGORIES`, `MORE_CATEGORIES`, `DIFFICULTIES`, timer option
+  lists, `CUSTOM_CATEGORY`, `getGameConfigCategoryLabel`). Consumer
+  repointed: `components/setup/GameSetupScreen.tsx`,
+  `components/players/PlayersScreen.tsx`,
+  `features/manage-custom-words/ui/AddCustomWordCard.tsx` (the last
+  one imports `DifficultySelector`, now a feature -> feature import
+  since `manage-custom-words` has moved; see its entry below).
+  `SetupHeader`, `SetupSection`, `ContinueButton`, `PrivacyNotice`
+  and `GameSetupScreen` stay in `components/setup/` — screen-composed
+  pieces for the `/setup` route, i.e. `widgets/`/`pages/` (steps 7-8).
 
-- `features/configure-game` — category/difficulty/mode/timer selection
-- `features/reveal-role` — private role reveal during pass-the-phone
-- `features/cast-vote` — vote selection + confirmation
-- `features/manage-custom-words` — custom words CRUD
-- `features/install-pwa` — install prompt
-- `features/toggle-preferences` — language/preferences toggles
-- `features/recover-active-game`
+- `features/reveal-role` — the private role reveal during
+  pass-the-phone. Moved five files from `components/pass/` into `ui/`,
+  content unchanged apart from one import: `PassPromptCard`,
+  `PrivateRevealPrompt`, `PlayerRevealCard`, `ImposterRevealCard`,
+  `AllPlayersReadyCard` (`PassPromptCard`'s `Player` import now comes
+  straight from `@/entities/player` instead of the `@/game/game-types`
+  bridge). Public API: `@/features/reveal-role` (barrel at
+  `features/reveal-role/index.ts`, all five as named exports).
+  **The crew/imposter anti-tell invariant is unchanged and now lives
+  in one slice:** `PlayerRevealCard` and `ImposterRevealCard` keep their
+  own separate `CREW_REVEAL_DELAY_MS` / `REVEAL_HOLD_MS` literals (both
+  3000 ms) on purpose -- `ImposterRevealCard` must never gain a `word`
+  prop -- so any edit to one card's timing, progress markup or sound
+  must be mirrored in the other. The barrel's header comment repeats
+  this.
+  **Also moved, out of this slice:** `components/pass/LeaveRoundDialog.tsx`
+  went to `shared/ui/LeaveRoundDialog.tsx`. It takes only
+  `onCancel`/`onConfirm` (no domain types) and is rendered by five
+  screens (Pass Phone, Discussion, Voting, Results, Final Results), so
+  it is a `shared/ui` primitive, same reasoning as `PlayerAvatar`
+  above. All five consumers repointed.
+  **Stays put:** `components/pass/PassPhoneScreen.tsx` -- the `/pass`
+  route's screen orchestrator (round-session reads, pass-state machine,
+  analytics, leave-guard), i.e. a `pages/`/`widgets/` concern (steps
+  7-8). `lib/use-leave-round-back-guard.ts` also stays in `lib/`: it has
+  no domain knowledge (Capacitor + history only) and is a natural
+  `shared/lib` candidate, but it's a separate move from this slice.
+  Consumer repointed: `components/pass/PassPhoneScreen.tsx`.
+
+- `features/cast-vote` — private vote selection + confirmation
+  during the Voting screen. Moved seven files from `components/vote/`
+  into `ui/`, content unchanged apart from one import
+  (`VoteSelectionCard`'s `Player` now comes from `@/entities/player`
+  instead of the `@/game/game-types` bridge): `VotingPassPromptCard`,
+  `VoteSelectionCard`, `ConfirmVoteCard`, `VoteRecordedCard`,
+  `AllVotesCastCard`, `VotingTimer`, `TimesUpCard`. Public API:
+  `@/features/cast-vote` (barrel at `features/cast-vote/index.ts`, the
+  first six as named exports).
+  **`TimesUpCard` is not exported because nothing renders it** -- it was
+  already dead in `components/vote/` (`VoteScreen` handles expiry via
+  `VotingTimer`'s `onExpire`); it moved with its folder rather than
+  being deleted here, since removal wasn't part of this change. Safe to
+  delete in a cleanup pass.
+  **Stays put:** `components/vote/VoteScreen.tsx` -- the `/voting`
+  route's orchestrator (round-session reads, vote-flow state,
+  analytics, leave-guard), a `pages/`/`widgets/` concern (steps 7-8).
+  Consumer repointed: `components/vote/VoteScreen.tsx`. The vote
+  logic itself (`vote-flow.ts`) already lives in `features/play-round`.
+
+- `features/manage-custom-words` — the Settings -> Custom Words
+  screen's UI: add a word, list saved words, delete one. Moved five
+  files from `components/settings/custom-words/` into `ui/`:
+  `AddCustomWordCard`, `CustomWordCard`, `CustomWordList`,
+  `CustomWordsHeader`, `DeleteCustomWordDialog` (the header moved for
+  the same reason `PlayersHeader` went into `manage-players`).
+  Public API: `@/features/manage-custom-words` (barrel at
+  `features/manage-custom-words/index.ts`; `CustomWordCard` is internal
+  to `CustomWordList` and not exported; the `AddCustomWordOutcome` type
+  is).
+  Import repoints made while touching these files, all to their owning
+  entity instead of a bridge: `CustomWordEntry` and
+  `MAX_CUSTOM_WORD_LENGTH` -> `@/entities/custom-word` (was `@/lib/db` /
+  `@/game/custom-word-rules`), `Difficulty` -> `@/entities/game-session`.
+  `CustomWordsScreen` got the same treatment for its
+  `addCustomWord`/`deleteCustomWord`/`getCustomWords` imports.
+  `game/custom-word-rules.ts` now has only test consumers left.
+  **Cross-slice import, deliberate:** `AddCustomWordCard` renders
+  `@/features/configure-game`'s `DifficultySelector` (same feature ->
+  feature exception as `manage-players` -> `play-round`). It is a plain
+  props-driven component with no setup-flow dependency, so duplicating
+  it would only create drift; revisit if a third consumer appears
+  (then it becomes a `shared/ui` question).
+  **Stays put:** `components/settings/custom-words/CustomWordsScreen.tsx`
+  (the `/settings/custom-words` orchestrator: load/add/delete state,
+  haptics, error capture -- steps 7-8) and
+  `components/settings/CustomWordsCard.tsx` (just the link row on the
+  Settings screen, composed there like the other Settings cards).
+  `DeleteCustomWordDialog` is structurally identical to
+  `shared/ui/LeaveRoundDialog` and `ResetGameDataDialog` (native
+  `<dialog>`); left as three copies, not merged in this move.
+
+- `features/install-pwa` — the "Install App" capability: the home
+  footer button, the Settings "Install App" card, the `appinstalled`
+  analytics listener, and the browser install-prompt hook behind them.
+  Moved: `lib/use-install-prompt.ts` -> `model/use-install-prompt.ts`
+  (unchanged), and into `ui/`: `components/pwa/InstallAppButton.tsx`,
+  `components/settings/InstallAppCard.tsx` (the Settings card holds the
+  full installed / native-prompt / iOS-steps / fallback state machine,
+  so it is this capability's UI, unlike the plain link row
+  `CustomWordsCard` which stays with Settings), and
+  `components/pwa/PwaInstallAnalytics.tsx` (mounted once in the root
+  layout, renders nothing). The two UIs now import the hook by relative
+  path (`../model/use-install-prompt`), and comment paths were updated.
+  Public API: `@/features/install-pwa` (barrel at
+  `features/install-pwa/index.ts`: `InstallAppButton`, `InstallAppCard`,
+  `PwaInstallAnalytics`); `useInstallPrompt` is internal. Consumers
+  repointed: `components/home/HomeFooter.tsx`,
+  `components/settings/SettingsScreen.tsx`, `app/layout.tsx`.
+  **Cleanup found in passing:** `components/pwa/ServiceWorkerRegister.tsx`
+  was still on disk, an unimported leftover copy from the
+  `register-service-worker` move (that slice's own file is what
+  `app/layout.tsx` uses). Deleted here; also fixed the one stale path to
+  it in `public/sw-template.js`'s comment.
+  **Stays in `components/pwa/` (not install-related, app-level
+  infrastructure):** `MenuMusicController` (the test in
+  `test/pwa/menu-music-routes.test.ts` imports `MENU_ROUTES` from it),
+  `NativeSplashScreenController`, `SoundProvider`, and `AppLink` (an
+  offline-navigation `<Link>` wrapper with no domain knowledge, a
+  `shared/ui` candidate; its only consumer today is `CategorySelector`).
+
+- `features/toggle-preferences` — the Settings screen's preference
+  controls: sound / music / haptics toggles and the round-content
+  language picker. Moved three files from `components/settings/` into
+  `ui/`, content unchanged: `PreferencesCard`, `LanguageCard`,
+  `SettingsToggleRow` (the full-row switch `PreferencesCard` is built
+  from; its only consumer). Public API: `@/features/toggle-preferences`
+  (barrel at `features/toggle-preferences/index.ts`: `PreferencesCard`,
+  `LanguageCard`; `SettingsToggleRow` is internal). The data side
+  (`GameSettings`, `getSettings`/`updateSettings`) is the already-built
+  `@/entities/settings`, which both cards import from directly; only
+  `LANGUAGES`/`GameLanguage` still come from the `@/game/game-types`
+  bridge. Consumer repointed: `components/settings/SettingsScreen.tsx`.
+  **Stays in `components/settings/` (screen chrome / other capabilities):**
+  `SettingsScreen` (route orchestrator, steps 7-8), `SettingsHeader`,
+  `AboutCard`, `CustomWordsCard` (link rows).
+  **Flagged, not done here:** `ResetGameDataCard` and
+  `ResetGameDataDialog` are the UI for the already-migrated
+  `features/reset-game-data` slice but still sit in
+  `components/settings/`, and `ResetGameDataCard` imports the
+  `ResetStatus` type *from* `SettingsScreen` (a child importing from its
+  parent screen). Moving them into that slice needs `ResetStatus`
+  relocated first; worth its own small step.
+
+- `features/recover-active-game` — the "Game in Progress" prompt on
+  Home. Moved `components/home/GameRecoveryPrompt.tsx` ->
+  `features/recover-active-game/ui/GameRecoveryPrompt.tsx`; public API
+  `@/features/recover-active-game` (barrel: `GameRecoveryPrompt`).
+  Consumer repointed: `components/home/HomeScreen.tsx`.
+  **The pass-the-phone rule is unchanged and now test-guarded:**
+  recovery must always require a deliberate tap -- auto-resuming could
+  put a role/word on screen in front of the wrong player. The prompt is a
+  modal with no neutral dismiss (Escape is default-prevented) and
+  restores nothing until "RESUME GAME" is pressed
+  (`test/features/recover-active-game/recovery-prompt.test.tsx`).
+  **The storage side moved into `entities/round`, not into this
+  feature.** `lib/round-session-store.ts` ->
+  `entities/round/model/round-session-store.ts` and
+  `lib/active-game-recovery.ts` ->
+  `entities/round/model/active-game-recovery.ts` (both content-unchanged
+  apart from importing `RoundSession` from `./round-types` instead of
+  the `@/game/game-types` bridge; their relative `./active-game-recovery`
+  import kept working because they moved together). Why: this is data
+  access for `RoundSession`, and `storeRoundSession()` is the single
+  choke point that keeps the localStorage mirror in sync -- if the
+  mirror lived in a feature, the round-session store (an entity, lower
+  layer) would have to import upward. Public API additions on
+  `@/entities/round`: `getStoredRoundSession`, `storeRoundSession`,
+  `clearStoredRoundSession`, `getRecoverableActiveGame`,
+  `markActiveGameRoute`, `clearActiveGameRecovery`, type
+  `ActiveGameRoute` (`mirrorActiveGameSession` stays internal). Every
+  consumer was repointed directly, no `lib/` bridge left behind: the
+  six in-round screens (`RoundPreparationScreen`, `PassPhoneScreen`,
+  `DiscussionScreen`, `VoteScreen`, `ResultsScreen`,
+  `FinalResultsScreen`), `features/reset-game-data`, and two test files.
+  **Second leftover duplicate deleted:** `lib/reset-game-data.ts` was
+  still on disk (an unimported copy from the `reset-game-data` move --
+  its relative `./round-session-store` import would have broken here).
+  Comment paths that pointed at it were updated.
+  **Still in `lib/`:** `use-leave-round-back-guard.ts` (Capacitor +
+  history only, a `shared/lib` candidate).
+
+## Step 6 is complete -- follow-ups noted along the way
+
+None of these block step 7; each is a small, separate move:
+
+- Relocate `GameSetupProvider` / `lib/game-setup-store.ts` into
+  `entities/game-session`, after `DEFAULT_GAME_CONFIG`,
+  `CUSTOM_CATEGORY`, `MAX_PLAYERS` and `validatePlayerName` move out of
+  `features/play-round` (see the `configure-game` entry).
+- Move `ResetGameDataCard` / `ResetGameDataDialog` into
+  `features/reset-game-data`, after relocating the `ResetStatus` type
+  out of `SettingsScreen` (see `toggle-preferences`).
+- `lib/use-leave-round-back-guard.ts` -> `shared/lib` (see
+  `reveal-role` / `recover-active-game`).
+- `components/pwa/AppLink.tsx` -> `shared/ui` (see `install-pwa`).
+- Delete the unused `features/cast-vote/ui/TimesUpCard.tsx` and the
+  unused `lib/game-setup-session-store.ts`.
+- Three near-identical native `<dialog>` copies (`LeaveRoundDialog`,
+  `DeleteCustomWordDialog`, `ResetGameDataDialog`) could share one
+  primitive.
 
 Import from other layers: `entities/`, `shared/`.

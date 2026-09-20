@@ -53,6 +53,14 @@ each exposing a single `index.ts` public API.
   with `game/game-types.ts` doesn't create a runtime cycle -- but
   update the rest once `voting-history` exists and each consumer is
   repointed to `@/entities/round`.
+- `entities/round` (addition, `recover-active-game` step) -- also owns
+  persistence of the in-progress `RoundSession`: `getStoredRoundSession`
+  / `storeRoundSession` / `clearStoredRoundSession` (sessionStorage) and
+  the localStorage recovery mirror behind them (`getRecoverableActiveGame`,
+  `markActiveGameRoute`, `clearActiveGameRecovery`, 24 h expiry). Moved
+  from `lib/round-session-store.ts` and `lib/active-game-recovery.ts`;
+  see `../features/README.md`'s `recover-active-game` entry for why this
+  lives here and not in the feature.
 - `entities/game-session` — `GameMode`, `Difficulty`, `TimerSettings`,
   `GameOptions`, `GameConfig`, `GameSession`. Moved from
   `game/game-types.ts`. Public API: `@/entities/game-session` (barrel
@@ -60,9 +68,12 @@ each exposing a single `index.ts` public API.
   `entities/game-session/model/`. There's no session-storage layer
   moved along with it: `lib/game-setup-store.ts` (which persists
   `GameConfig` + `Player[]` to `sessionStorage`) is tightly coupled to
-  the Setup -> Players -> Round screen flow, so it's left for the
-  planned `features/configure-game` slice (see `../ARCHITECTURE.md`'s
-  step 6) rather than pulled in here. Also found in passing:
+  the Setup -> Players -> Round screen flow, so it wasn't pulled in
+  here. `features/configure-game` has since been built and
+  deliberately did not take it either (see its entry in
+  `../features/README.md`): the eventual home is this slice, blocked
+  on moving `DEFAULT_GAME_CONFIG`/`CUSTOM_CATEGORY`/`MAX_PLAYERS`/
+  `validatePlayerName` out of `features/play-round` first. Also found in passing:
   `lib/game-setup-session-store.ts` is dead code (not imported
   anywhere, superseded by `lib/game-setup-store.ts`) -- left untouched
   since removing it wasn't part of this change.
@@ -88,7 +99,7 @@ each exposing a single `index.ts` public API.
     row type and `updateCustomWordHint`, so it moved with
     `entities/custom-word` (below), not this slice.
   - `lib/recent-words.ts` — the session-storage "already shown" tracker
-    is also imported by `lib/db.ts` and `lib/reset-game-data.ts`, so it
+    is also imported by `lib/db.ts` and `features/reset-game-data/model/reset-game-data.ts`, so it
     stays put as a bridge (`entities/word` imports it from
     `@/lib/recent-words`) until `lib/db.ts` moves.
   - `Category` — it was flagged above as a candidate for this slice, but
@@ -138,7 +149,7 @@ each exposing a single `index.ts` public API.
   `Table<CustomWordEntry>` declaration (type-only, erased) and
   re-exports the six functions and both types from this slice so its
   ~12 existing consumers (four Settings/Setup components,
-  `game/game-engine.ts`, `lib/reset-game-data.ts`, and four test files)
+  `game/game-engine.ts`, `features/reset-game-data/model/reset-game-data.ts`, and four test files)
   keep working unchanged. Unlike the type-only bridges above, the
   function re-exports are a real runtime cycle (`lib/db.ts` <->
   `entities/custom-word`). It's benign -- every function only touches
@@ -188,7 +199,7 @@ each exposing a single `index.ts` public API.
   `lib/achievements/definitions.ts`, `engine.ts`, and `store.ts`,
   re-export from the slice (six components under
   `components/achievements/` and `components/final-results/`,
-  `lib/reset-game-data.ts`, and four test files use them).
+  `features/reset-game-data/model/reset-game-data.ts`, and four test files use them).
 - `entities/statistics` — `CompletedGamePlayerResult`, `CompletedGameRecord`
   (moved from `lib/db.ts`, alongside their `recordCompletedGame`/
   `getCompletedGames`/`clearCompletedGames` CRUD, into
