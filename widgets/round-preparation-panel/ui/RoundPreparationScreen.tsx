@@ -1,5 +1,17 @@
 "use client";
 
+/**
+ * Moved from `components/round/` as the `widgets/round-preparation-panel`
+ * slice (FSD migration step 7), along with its six supporting files
+ * (`GameSummaryCard`, `PreparationAnimation`, `PreparationProgress`,
+ * `PreparationStatus`, `RoundSourceIndicator`, `RoundErrorRecovery`) --
+ * none had consumers outside this directory, so the whole screen moved
+ * as one unit, same as `discussion-panel`/`final-results-panel`.
+ * `RoundPreparationHeader` had already moved to `@/shared/ui/` back in
+ * the `vote-panel`/`pass-phone-panel` slice (it was one of the six
+ * screens using it even then), so no new `shared/ui/` extraction was
+ * needed here. See `../../README.md`. `app/round/page.tsx` repointed.
+ */
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";

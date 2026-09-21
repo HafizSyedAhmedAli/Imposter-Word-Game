@@ -1,4 +1,4 @@
-import FinalResultsScreen from "@/components/final-results/FinalResultsScreen";
+import { FinalResultsScreen } from "@/widgets/final-results-panel";
 
 export default function FinalResultsPage() {
   return <FinalResultsScreen />;

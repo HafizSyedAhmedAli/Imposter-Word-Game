@@ -1,4 +1,10 @@
-// components/results/VoteResultsCard.tsx
+// shared/ui/VoteResultsCard.tsx
+//
+// Moved from `components/results/VoteResultsCard.tsx` during the
+// `widgets/results-panel` slice (FSD migration step 7): used by both
+// `results-panel` and the not-yet-migrated `components/final-results/
+// FinalResultsScreen.tsx`, so it belongs here rather than in either
+// widget -- see `widgets/README.md`.
 "use client";
 
 import { useEffect, useState } from "react";

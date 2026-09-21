@@ -1,13 +1,29 @@
 // components/final-results/FinalResultsScreen.tsx
 "use client";
 
+/**
+ * Moved from `components/final-results/` as the
+ * `widgets/final-results-panel` slice (FSD migration step 7), along
+ * with its eight supporting files (`AchievementsUnlockedBanner`,
+ * `FinalRoundSummaryCard`, `ImpostersRevealCard`, `PlayerResultsList`,
+ * `SecretRevealCard`, `VotingHistoryDialog`, `VotingHistoryRoundCard`,
+ * `WinnerHero`) -- none had consumers outside this directory, so the
+ * whole screen moved as one unit, same as `discussion-panel`.
+ * `VoteResultsCard` had already moved out to `@/shared/ui/` during the
+ * `results-panel` slice (it's shared with `ResultsScreen`), and
+ * `RoundPreparationHeader`/`LeaveRoundDialog` were already there from
+ * earlier slices, so no new `shared/ui/` extractions were needed here.
+ * `AchievementUnlockToast` stays in `components/achievements/` --
+ * that's the not-yet-migrated `achievements-panel` slice's territory.
+ * See `../../README.md`. `app/final-results/page.tsx` repointed.
+ */
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { History, Home, RotateCcw } from "lucide-react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import RoundPreparationHeader from "@/shared/ui/RoundPreparationHeader";
 import LeaveRoundDialog from "@/shared/ui/LeaveRoundDialog";
-import VoteResultsCard from "@/components/results/VoteResultsCard";
+import VoteResultsCard from "@/shared/ui/VoteResultsCard";
 import WinnerHero from "./WinnerHero";
 import SecretRevealCard from "./SecretRevealCard";
 import ImpostersRevealCard from "./ImpostersRevealCard";

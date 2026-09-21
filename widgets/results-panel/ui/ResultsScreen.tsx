@@ -1,5 +1,18 @@
 "use client";
 
+/**
+ * Moved from `components/results/ResultsScreen.tsx` as the
+ * `widgets/results-panel` slice (FSD migration step 7). Its three
+ * supporting cards (`MostVotedCard`, `TieCard`, `VerdictCard`) had no
+ * other consumers, so they moved alongside it, same as
+ * `discussion-panel`'s cards. `VoteResultsCard` is different: it's
+ * also used by the not-yet-migrated `components/final-results/
+ * FinalResultsScreen.tsx`, so -- same reasoning as
+ * `RoundPreparationHeader` -- it moved to `@/shared/ui/VoteResultsCard`
+ * instead of into this widget, with both real consumers repointed now
+ * rather than leaving `final-results-panel` on a stale path. See
+ * `../../README.md`. `app/results/page.tsx` repointed.
+ */
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import LeaveRoundDialog from "@/shared/ui/LeaveRoundDialog";
 import RoundPreparationHeader from "@/shared/ui/RoundPreparationHeader";
@@ -29,7 +42,7 @@ import { useEffect, useState } from "react";
 import MostVotedCard from "./MostVotedCard";
 import TieCard from "./TieCard";
 import VerdictCard from "./VerdictCard";
-import VoteResultsCard from "./VoteResultsCard";
+import VoteResultsCard from "@/shared/ui/VoteResultsCard";
 import { useLeaveRoundBackGuard } from "@/lib/use-leave-round-back-guard";
 
 export default function ResultsScreen() {

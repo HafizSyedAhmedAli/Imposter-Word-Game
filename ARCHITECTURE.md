@@ -162,6 +162,10 @@ to change without breaking consumers.
     had already been claimed by a `features/*` slice, unlike
     vote/pass). None of the five cards were reused elsewhere. See
     `widgets/README.md`.
+  - `widgets/round-preparation-panel` (done) -- `RoundPreparationScreen`
+    and its six supporting files, moved as one unit from
+    `components/round/` (none had consumers elsewhere).
+    `RoundPreparationHeader` was already in `shared/ui/` from the
+    `vote-panel`/`pass-phone-panel` slice. See `widgets/README.md`.
   - **Next:** `results-panel`, `final-results-panel`,
-    `round-preparation-panel`, `statistics-panel`,
-    `achievements-panel`.
+    `statistics-panel`, `achievements-panel`.

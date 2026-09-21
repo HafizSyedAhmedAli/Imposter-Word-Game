@@ -45,10 +45,32 @@ capabilities (that's `features/`), not full routes (that's `pages/`).
   `@/widgets/discussion-panel` (barrel re-exporting `DiscussionScreen`).
   `app/game/page.tsx` repointed.
 
+- `widgets/results-panel` — `ResultsScreen` plus its two exclusive
+  supporting cards (`MostVotedCard`, `TieCard`, `VerdictCard`), moved
+  from `components/results/` as one unit, same as `discussion-panel`.
+  `VoteResultsCard` was the odd one out: it's also used by the
+  not-yet-migrated `components/final-results/FinalResultsScreen.tsx`,
+  so -- same reasoning as `RoundPreparationHeader` -- it moved to
+  `shared/ui/VoteResultsCard.tsx` instead of into this widget, with
+  both real consumers (this widget and `FinalResultsScreen`) repointed
+  now rather than leaving `final-results-panel` on a stale path.
+  Public API: `@/widgets/results-panel` (barrel re-exporting
+  `ResultsScreen`). `app/results/page.tsx` repointed.
+
+- `widgets/round-preparation-panel` — `RoundPreparationScreen` plus its
+  six supporting files (`GameSummaryCard`, `PreparationAnimation`,
+  `PreparationProgress`, `PreparationStatus`, `RoundSourceIndicator`,
+  `RoundErrorRecovery`), moved from `components/round/` as one unit --
+  none had consumers outside that directory, same situation as
+  `discussion-panel`. `RoundPreparationHeader` was already in
+  `shared/ui/` from the `vote-panel`/`pass-phone-panel` slice, so no
+  new extraction was needed here. Public API:
+  `@/widgets/round-preparation-panel` (barrel re-exporting
+  `RoundPreparationScreen`). `app/round/page.tsx` repointed.
+
 ## Planned slices (not yet moved — see `../ARCHITECTURE.md`)
 
-- `widgets/results-panel`, `widgets/final-results-panel`
-- `widgets/round-preparation-panel`
+- `widgets/final-results-panel`
 - `widgets/statistics-panel`, `widgets/achievements-panel`
 
 Import from other layers: `features/`, `entities/`, `shared/`.
