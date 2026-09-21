@@ -13,7 +13,7 @@ import {
   markActiveGameRoute,
   storeRoundSession,
 } from "@/entities/round";
-import RoundPreparationHeader from "./RoundPreparationHeader";
+import RoundPreparationHeader from "@/shared/ui/RoundPreparationHeader";
 import GameSummaryCard from "./GameSummaryCard";
 import PreparationAnimation from "./PreparationAnimation";
 import PreparationProgress from "./PreparationProgress";

@@ -1,10 +1,20 @@
-// components/pass/PassPhoneScreen.tsx
+// widgets/pass-phone-panel/ui/PassPhoneScreen.tsx
 "use client";
 
+/**
+ * Moved from `components/pass/PassPhoneScreen.tsx` as the
+ * `widgets/pass-phone-panel` slice (FSD migration step 7) -- unchanged
+ * apart from import-path fixes (`RoundPreparationHeader` ->
+ * `@/shared/ui/RoundPreparationHeader`). With `features/reveal-role`
+ * and `shared/ui/LeaveRoundDialog` already extracted (step 6), nothing
+ * but this screen orchestrator itself was left in `components/pass/` to
+ * move -- see `../../README.md`. `app/pass/page.tsx` repointed to
+ * `@/widgets/pass-phone-panel`.
+ */
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
-import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
+import RoundPreparationHeader from "@/shared/ui/RoundPreparationHeader";
 import {
   clearStoredRoundSession,
   getStoredRoundSession,

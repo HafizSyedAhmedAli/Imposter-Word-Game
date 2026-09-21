@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { History, Home, RotateCcw } from "lucide-react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
-import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
+import RoundPreparationHeader from "@/shared/ui/RoundPreparationHeader";
 import LeaveRoundDialog from "@/shared/ui/LeaveRoundDialog";
 import VoteResultsCard from "@/components/results/VoteResultsCard";
 import WinnerHero from "./WinnerHero";

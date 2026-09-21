@@ -148,4 +148,20 @@ to change without breaking consumers.
     store's mirror call would otherwise point upward. Adds a test
     guarding "recovery never auto-resumes". Deleted the leftover
     `lib/reset-game-data.ts` copy. See `features/README.md`.
-  - **Step 6 is complete.** Next: step 7 (`widgets/*`).
+  - **Step 6 is complete.**
+- **Step 7 (in progress):** `widgets/*`, moved one at a time.
+  - `widgets/vote-panel`, `widgets/pass-phone-panel` (done) -- with
+    `features/cast-vote`/`features/reveal-role` already extracted in
+    step 6, each of these was just its one remaining screen-orchestrator
+    file. Surfaced a shared dependency, `RoundPreparationHeader`, used
+    by six screens with no domain type of its own -- moved to
+    `shared/ui/` (all six consumers repointed) instead of duplicating
+    it into a widget. See `widgets/README.md`.
+  - `widgets/discussion-panel` (done) -- `DiscussionScreen` and its five
+    supporting cards, moved as one unit from `components/game/` (none
+    had already been claimed by a `features/*` slice, unlike
+    vote/pass). None of the five cards were reused elsewhere. See
+    `widgets/README.md`.
+  - **Next:** `results-panel`, `final-results-panel`,
+    `round-preparation-panel`, `statistics-panel`,
+    `achievements-panel`.

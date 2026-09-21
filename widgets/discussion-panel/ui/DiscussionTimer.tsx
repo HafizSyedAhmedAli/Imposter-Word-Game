@@ -1,4 +1,4 @@
-// components/game/DiscussionTimer.tsx
+// widgets/discussion-panel/ui/DiscussionTimer.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";

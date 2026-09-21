@@ -1,4 +1,4 @@
-// components/game/DiscussionStatusCard.tsx
+// widgets/discussion-panel/ui/DiscussionStatusCard.tsx
 import { MessagesSquare } from "lucide-react";
 
 /**

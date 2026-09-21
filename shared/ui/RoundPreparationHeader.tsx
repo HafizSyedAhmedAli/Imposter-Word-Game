@@ -1,6 +1,17 @@
 import { ArrowLeft } from "lucide-react";
 import ConnectionStatus from "@/components/home/ConnectionStatus";
 
+/**
+ * Moved from `components/round/RoundPreparationHeader.tsx` into
+ * `shared/ui/` (FSD migration step 7) -- takes only an `onBack`
+ * callback, no domain type, so it carries no domain knowledge (same
+ * reasoning as `PlayerAvatar`/`LeaveRoundDialog`, already in
+ * `shared/ui/`). Used by six in-round screens: `RoundPreparationScreen`,
+ * `PassPhoneScreen`, `DiscussionScreen`, `VoteScreen`, `ResultsScreen`,
+ * `FinalResultsScreen` -- all repointed to `@/shared/ui/RoundPreparationHeader`.
+ * (`HowToPlayHeader.tsx` only *mentions* this component in a comment; it
+ * was never an importer and needed no change.)
+ */
 export default function RoundPreparationHeader({
   onBack,
 }: {

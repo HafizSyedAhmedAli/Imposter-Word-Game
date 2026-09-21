@@ -2,7 +2,7 @@
 
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import LeaveRoundDialog from "@/shared/ui/LeaveRoundDialog";
-import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
+import RoundPreparationHeader from "@/shared/ui/RoundPreparationHeader";
 import type { RoundSession } from "@/game/game-types";
 import {
   applyVerdict,

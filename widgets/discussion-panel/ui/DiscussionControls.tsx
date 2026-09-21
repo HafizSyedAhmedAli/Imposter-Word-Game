@@ -1,4 +1,4 @@
-// components/game/DiscussionControls.tsx
+// widgets/discussion-panel/ui/DiscussionControls.tsx
 import { ArrowRight } from "lucide-react";
 
 /**

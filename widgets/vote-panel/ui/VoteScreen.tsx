@@ -1,8 +1,17 @@
 "use client";
 
+/**
+ * Moved from `components/vote/VoteScreen.tsx` as the `widgets/vote-panel`
+ * slice (FSD migration step 7) -- unchanged apart from import-path fixes
+ * (`RoundPreparationHeader` -> `@/shared/ui/RoundPreparationHeader`).
+ * With `features/cast-vote` already extracted (step 6), nothing but
+ * this screen orchestrator itself was left in `components/vote/` to
+ * move -- see `../../README.md`. `app/voting/page.tsx` repointed to
+ * `@/widgets/vote-panel`.
+ */
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import LeaveRoundDialog from "@/shared/ui/LeaveRoundDialog";
-import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
+import RoundPreparationHeader from "@/shared/ui/RoundPreparationHeader";
 import type { RoundSession } from "@/game/game-types";
 import {
   getCurrentVoter,

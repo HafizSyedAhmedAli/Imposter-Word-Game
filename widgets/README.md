@@ -3,14 +3,50 @@
 Composed UI blocks tied to a specific screen's layout — not independent
 capabilities (that's `features/`), not full routes (that's `pages/`).
 
-Planned slices (not yet moved — see `../ARCHITECTURE.md`):
+## Done
 
-- `widgets/discussion-panel` — `DiscussionScreen` + its Controls/Players/
-  Status/Timer/Tips cards
-- `widgets/pass-phone-panel` — `PassPhoneScreen` + AllPlayersReady/
-  PassPrompt/LeaveRoundDialog cards
-- `widgets/vote-panel` — `VoteScreen` + AllVotesCast/TimesUp/VoteRecorded/
-  VotingTimer cards
+- `widgets/vote-panel` — `VoteScreen`, moved from
+  `components/vote/VoteScreen.tsx` unchanged apart from import fixes.
+  With `features/cast-vote` already extracted (step 6), nothing but
+  this screen orchestrator itself was left to move -- there was no
+  separate "panel" composition beyond the screen. Public API:
+  `@/widgets/vote-panel` (barrel re-exporting `VoteScreen` as a named
+  export). `app/voting/page.tsx` repointed.
+
+- `widgets/pass-phone-panel` — `PassPhoneScreen`, moved from
+  `components/pass/PassPhoneScreen.tsx` unchanged apart from import
+  fixes. Same situation as `vote-panel`: `features/reveal-role` and
+  `shared/ui/LeaveRoundDialog` already covered everything else in
+  `components/pass/`. Public API: `@/widgets/pass-phone-panel` (barrel
+  re-exporting `PassPhoneScreen`). `app/pass/page.tsx` repointed.
+
+  **Both slices surfaced the same shared dependency:** both screens
+  (plus four more not yet migrated -- `DiscussionScreen`,
+  `ResultsScreen`, `RoundPreparationScreen`, `FinalResultsScreen`)
+  imported `components/round/RoundPreparationHeader.tsx`. It takes only
+  an `onBack` callback, no domain type, so -- same reasoning as
+  `PlayerAvatar`/`LeaveRoundDialog` -- it moved to
+  `shared/ui/RoundPreparationHeader.tsx` instead of into either widget,
+  with all six real consumers repointed now rather than leaving the
+  other four on a stale path for whichever future widget slice gets to
+  them. (`components/how-to-play/HowToPlayHeader.tsx` only *mentions*
+  it in a comment and was never an importer.)
+
+- `widgets/discussion-panel` — `DiscussionScreen` plus its five
+  supporting cards (`DiscussionControls`, `DiscussionPlayersCard`,
+  `DiscussionStatusCard`, `DiscussionTimer`, `DiscussionTipsCard`),
+  moved from `components/game/` as one unit -- unlike `vote-panel`/
+  `pass-phone-panel`, none of these six files had already been claimed
+  by a `features/*` slice in step 6, so there was no single leftover
+  orchestrator file; the whole screen and its cards moved together.
+  Checked each of the five cards for reuse elsewhere before moving
+  (none found), so none needed a `shared/ui/` detour the way
+  `PlayerAvatar`/`RoundPreparationHeader` did. Public API:
+  `@/widgets/discussion-panel` (barrel re-exporting `DiscussionScreen`).
+  `app/game/page.tsx` repointed.
+
+## Planned slices (not yet moved — see `../ARCHITECTURE.md`)
+
 - `widgets/results-panel`, `widgets/final-results-panel`
 - `widgets/round-preparation-panel`
 - `widgets/statistics-panel`, `widgets/achievements-panel`

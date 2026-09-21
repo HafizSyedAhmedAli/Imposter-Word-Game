@@ -96,7 +96,7 @@ test.describe("Language setting (Roman Urdu)", () => {
       expect(bodyText).not.toMatch(NON_LATIN_SCRIPT);
 
       // The imposter is shown the (Roman Urdu) hint; crew players are
-      // shown the word itself -- see components/pass/PassPhoneScreen.tsx.
+      // shown the word itself -- see widgets/pass-phone-panel/ui/PassPhoneScreen.tsx.
       // Whichever card is showing, it must reflect the Roman Urdu
       // content our mock returned, never an English hint sentence.
       const imposterCard = page.getByText("Iske slice bana kar khate hain.", {

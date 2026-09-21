@@ -1,9 +1,26 @@
-// components/game/DiscussionScreen.tsx
+// widgets/discussion-panel/ui/DiscussionScreen.tsx
 "use client";
 
+/**
+ * Moved from `components/game/DiscussionScreen.tsx` as the
+ * `widgets/discussion-panel` slice (FSD migration step 7), along with
+ * its five supporting cards (`DiscussionControls`, `DiscussionPlayersCard`,
+ * `DiscussionStatusCard`, `DiscussionTimer`, `DiscussionTipsCard`) --
+ * unlike `vote-panel`/`pass-phone-panel`, none of these had already
+ * been claimed by a `features/*` slice, so the whole screen moved as
+ * one unit. Unchanged apart from import-path fixes (this file's five
+ * `./`-relative imports needed no change since all six files moved
+ * together; only `RoundPreparationHeader` -- already
+ * `@/shared/ui/RoundPreparationHeader` from the previous widget move --
+ * was checked and needed no further fix). None of the five cards are
+ * reused elsewhere (checked before moving), so none went to
+ * `shared/ui/` the way `PlayerAvatar`/`RoundPreparationHeader` did. See
+ * `../../README.md`. `app/game/page.tsx` repointed to
+ * `@/widgets/discussion-panel`.
+ */
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import LeaveRoundDialog from "@/shared/ui/LeaveRoundDialog";
-import RoundPreparationHeader from "@/components/round/RoundPreparationHeader";
+import RoundPreparationHeader from "@/shared/ui/RoundPreparationHeader";
 import {
   getDiscussionDuration,
   getSpeakingOrder,
