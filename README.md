@@ -4,6 +4,8 @@ A pass-the-phone social deduction party game. Most players get a secret word
 one "imposter" doesn't. Everyone discusses, votes, and tries to catch the
 imposter before they catch on.
 
+🎮 Play Imposter Word, free on Google Play: [play.google.com/store/apps/details?id=com.hafizsyedahmedali.imposterword](https://play.google.com/store/apps/details?id=com.hafizsyedahmedali.imposterword)
+
 Built as a Next.js PWA, packaged for Android via Capacitor.
 
 ## Tech stack
