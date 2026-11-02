@@ -1,4 +1,4 @@
-import DiscussionScreen from "@/components/game/DiscussionScreen";
+import { DiscussionScreen } from "@/widgets/discussion-panel";
 
 export default function GamePage() {
   return <DiscussionScreen />;

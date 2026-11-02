@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Play } from "lucide-react";
-import { playSound } from "@/lib/sound-engine";
+import { playSound } from "@/shared/lib/sound-engine";
 
 export default function PrimaryPlayButton() {
   return (

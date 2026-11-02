@@ -2,14 +2,14 @@ import { describe, it, expect } from "vitest";
 import {
   getDiscussionDuration,
   getSpeakingOrder,
-} from "@/game/discussion-flow";
+} from "@/features/play-round";
 import {
   getCurrentPlayer,
   getCurrentPlayerRole,
   isFinalPlayer,
   advanceToNextPlayer,
   beginDiscussion,
-} from "@/game/pass-flow";
+} from "@/features/play-round";
 import { baseSession } from "../helpers/fixtures";
 
 describe("discussion-flow", () => {

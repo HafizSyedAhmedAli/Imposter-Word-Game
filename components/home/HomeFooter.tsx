@@ -1,5 +1,5 @@
 import { Heart } from "lucide-react";
-import InstallAppButton from "@/components/pwa/InstallAppButton";
+import { InstallAppButton } from "@/features/install-pwa";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION;
 

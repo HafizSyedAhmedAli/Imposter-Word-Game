@@ -1,7 +1,7 @@
 "use client";
 
 import { Wifi, WifiOff } from "lucide-react";
-import { useOnlineStatus } from "@/lib/use-online-status";
+import { useOnlineStatus } from "@/shared/lib/use-online-status";
 
 /**
  * Lightweight, non-blocking connectivity indicator.

@@ -1,4 +1,4 @@
-import RoundPreparationScreen from "@/components/round/RoundPreparationScreen";
+import { RoundPreparationScreen } from "@/widgets/round-preparation-panel";
 
 export default function RoundPage() {
   return <RoundPreparationScreen />;

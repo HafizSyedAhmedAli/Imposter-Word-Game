@@ -6,22 +6,19 @@ import {
   addCustomWord,
   getCustomWords,
 } from "@/lib/db";
-import { resetGameData } from "@/lib/reset-game-data";
+import { resetGameData } from "@/features/reset-game-data";
 import {
   updateSettings,
   getSettings,
   DEFAULT_SETTINGS,
-} from "@/lib/settings-store";
-import { recordFinalResult, getGameHistory } from "@/lib/game-statistics-store";
+} from "@/entities/settings";
+import { recordFinalResult, getGameHistory } from "@/entities/statistics";
 import {
   processAchievementsForCompletedGame,
   getAchievementsSnapshot,
 } from "@/lib/achievements/store";
 import { rememberWordId, getRecentWordIds } from "@/lib/recent-words";
-import {
-  storeRoundSession,
-  getStoredRoundSession,
-} from "@/lib/round-session-store";
+import { getStoredRoundSession, storeRoundSession } from "@/entities/round";
 import { baseSession } from "../helpers/fixtures";
 
 afterEach(async () => {

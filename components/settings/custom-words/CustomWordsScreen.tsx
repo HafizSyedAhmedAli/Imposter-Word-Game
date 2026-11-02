@@ -2,21 +2,23 @@
 
 import { useEffect, useState } from "react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
-import CustomWordsHeader from "./CustomWordsHeader";
-import AddCustomWordCard, {
+import {
+  AddCustomWordCard,
+  CustomWordList,
+  CustomWordsHeader,
+  DeleteCustomWordDialog,
   type AddCustomWordOutcome,
-} from "./AddCustomWordCard";
-import CustomWordList from "./CustomWordList";
-import DeleteCustomWordDialog from "./DeleteCustomWordDialog";
+} from "@/features/manage-custom-words";
 import {
   addCustomWord,
   deleteCustomWord,
   getCustomWords,
   type CustomWordEntry,
-} from "@/lib/db";
-import type { Category, Difficulty } from "@/game/game-types";
-import { success, warning } from "@/lib/haptics";
-import { playSound } from "@/lib/sound-engine";
+} from "@/entities/custom-word";
+import type { Category } from "@/game/game-types";
+import type { Difficulty } from "@/entities/game-session";
+import { success, warning } from "@/shared/lib/haptics";
+import { playSound } from "@/shared/lib/sound-engine";
 import { captureError } from "@/lib/monitoring";
 
 export default function CustomWordsScreen() {

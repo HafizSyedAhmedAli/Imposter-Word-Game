@@ -105,7 +105,7 @@ self.addEventListener("install", (event) => {
   event.waitUntil(precacheAll(PRECACHE_URLS));
   // Intentionally NOT calling self.skipWaiting() here. An update should
   // sit in "waiting" until the user is done with their current game and
-  // explicitly asks to refresh (see components/pwa/ServiceWorkerRegister.tsx),
+  // explicitly asks to refresh (see features/register-service-worker/ui/ServiceWorkerRegister.tsx),
   // or until every tab is closed and reopened. This avoids yanking the
   // app out from under an active round.
 });

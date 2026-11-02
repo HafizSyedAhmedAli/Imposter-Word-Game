@@ -48,7 +48,7 @@ test.describe("Custom Words", () => {
     await page.waitForURL("**/setup");
 
     // Custom Words has its own toggle at the top of the category
-    // section (components/setup/CategorySelector.tsx) -- switching it
+    // section (features/configure-game/ui/CategorySelector.tsx) -- switching it
     // on swaps the row to the categories the player has actually saved
     // words under. The word above was saved under "Food" (the default
     // category in AddCustomWordCard), so that's the chip this test

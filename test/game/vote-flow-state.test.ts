@@ -11,7 +11,7 @@ import {
   isVotingComplete,
   getVotingDuration,
   SKIP_VOTE,
-} from "@/game/vote-flow";
+} from "@/features/play-round";
 import { baseSession } from "../helpers/fixtures";
 
 /**

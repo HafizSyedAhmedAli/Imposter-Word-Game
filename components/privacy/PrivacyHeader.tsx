@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import ConnectionStatus from "@/components/home/ConnectionStatus";
-import { playSound } from "@/lib/sound-engine";
+import { playSound } from "@/shared/lib/sound-engine";
 
 /**
  * Same shell as HowToPlayHeader/SettingsHeader: back arrow left, centered

@@ -5,7 +5,7 @@ import {
   getGameHistory,
   getStatisticsSnapshot,
   resetStatistics,
-} from "@/lib/game-statistics-store";
+} from "@/entities/statistics";
 import { baseSession, multiImposterSession } from "../helpers/fixtures";
 
 // `getDb()` returns a module-level singleton Dexie instance backed by

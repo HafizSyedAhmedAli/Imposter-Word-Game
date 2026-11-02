@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { FALLBACK_WORDS, getRandomFallbackWord } from "@/lib/fallback-words";
 import { rememberWordId, getRecentWordIds } from "@/lib/recent-words";
-import { CATEGORIES, DIFFICULTIES } from "@/game/game-rules";
+import { CATEGORIES, DIFFICULTIES } from "@/features/play-round";
 import type { Category, Difficulty } from "@/game/game-types";
 
 describe("FALLBACK_WORDS", () => {

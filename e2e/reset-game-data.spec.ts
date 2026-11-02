@@ -31,7 +31,7 @@ test.describe("Reset Game Data", () => {
     await expect(page.getByText(/game data reset successfully/i)).toBeVisible();
 
     // NOTE: the on-screen toggle itself does not flip back immediately
-    // here. components/settings/PreferencesCard.tsx loads settings once
+    // here. features/toggle-preferences/ui/PreferencesCard.tsx loads settings once
     // in a mount-only effect (empty dependency array) and has no
     // subscription to resetGameData() completing, so the already-
     // rendered toggle keeps showing its pre-reset value until this

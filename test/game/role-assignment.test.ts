@@ -1,6 +1,6 @@
 // test/game/role-assignment.test.ts
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { assignRoles } from "@/game/role-assignment";
+import { assignRoles } from "@/features/play-round";
 import type { Player } from "@/game/game-types";
 
 const PLAYER_NAMES = [

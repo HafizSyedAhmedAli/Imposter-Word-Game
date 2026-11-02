@@ -1,4 +1,5 @@
 // game/game-types.ts
+
 /**
  * Shared types for game configuration.
  *
@@ -8,12 +9,10 @@
  * consumes a `GameConfig` once the player list exists.
  */
 
-export type GameMode = "classic" | "double" | "triple" | "random";
-
 /**
  * The content language for a round's word/hint (and its fallback/cache
  * data). This is deliberately separate from any UI-localization concept
- * -- see lib/settings-store.ts for where the player's preference lives,
+ * -- see entities/settings for where the player's preference lives,
  * and game/game-engine.ts for how it gets fixed onto a RoundSession once
  * a round starts. Centralized here (rather than sprinkling raw string
  * literals across the codebase) so every layer -- settings, AI prompt,
@@ -30,6 +29,36 @@ export function isGameLanguage(value: unknown): value is GameLanguage {
   return value === ENGLISH || value === ROMAN_URDU;
 }
 
+// Settings screen catalog (Language). Mirrors the CATEGORIES/DIFFICULTIES
+// pattern in features/play-round/model/game-rules.ts -- the UI reads
+// labels from here instead of hardcoding them, and this is the single
+// source of truth for which languages the game actually supports (see
+// entities/settings's DEFAULT_SETTINGS and
+// app/api/round/generate/route.ts's server-side allow-list). Lives here
+// rather than in features/play-round because entities/settings needs
+// it too, and an entities/ slice importing from a features/ slice would
+// be both a layer-direction violation and a real circular import
+// (features/play-round's game-engine.ts imports `getSettings` from
+// entities/settings).
+export const LANGUAGES: {
+  id: GameLanguage;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: "english",
+    label: "English",
+    description: "Words and hints in English",
+  },
+  {
+    id: "roman-urdu",
+    label: "Roman Urdu",
+    description: "Hints in Roman Urdu, written with English letters",
+  },
+];
+
+export const DEFAULT_LANGUAGE: GameLanguage = "english";
+
 // Category is deliberately kept open-ended (`| string`) so that additional
 // categories added later via the "More" sheet, or loaded from a local
 // category catalog, don't require a type change here.
@@ -42,198 +71,72 @@ export type Category =
   | "countries"
   | string;
 
-export type Difficulty = "easy" | "medium" | "hard";
-
-export type TimerSettings = {
-  enabled: boolean;
-  duration: number; // seconds
-};
-
-export type GameOptions = {
-  discussionTimer: TimerSettings;
-  votingTimer: TimerSettings;
-};
-
-export type GameConfig = {
-  mode: GameMode;
-  category: Category;
-  /**
-   * Which concrete category to draw a Custom Word from, e.g. "food".
-   * Only meaningful when `category === CUSTOM_CATEGORY` (see
-   * game/game-rules.ts) -- every other category ignores this field
-   * entirely. Set by the Setup screen's Custom Words toggle
-   * (components/setup/CategorySelector.tsx) once the player picks
-   * which of their saved custom-word categories to play from; `game
-   * -engine.ts`'s `getCustomRoundContent` reads it to scope
-   * `getRandomCustomWord` (lib/db.ts) down to that one category
-   * instead of the player's entire saved list.
-   */
-  customWordCategory?: Category;
-  difficulty: Difficulty;
-  options: GameOptions;
-};
-
 /**
  * A player's public identity only. Screen 3 (Players) is the only place
  * this type is constructed -- it deliberately carries no secret game
  * state (no role, word, hint, or imposter flag). That information is
  * added later, per-round, by the Round Provider in Screen 4+.
+ *
+ * NOTE: this now lives in `entities/player` (see entities/README.md) --
+ * this file re-exports it as a temporary bridge so the many existing
+ * `import { Player } from "@/game/game-types"` call sites across
+ * components/, game/, lib/, and providers/ don't all need touching in
+ * this same change. Update those imports to `@/entities/player` as each
+ * consumer is migrated; this re-export goes away once none are left.
  */
-export type Player = {
-  id: string;
-  name: string;
-};
+export type { Player } from "@/entities/player";
 
 /**
- * The handoff shape passed from Players (Screen 3) into Round Preparation
- * (Screen 4). Roles/word/hint are intentionally absent here -- Screen 4
- * is responsible for generating/loading them and assigning roles.
+ * NOTE: `GameMode`, `Difficulty`, `TimerSettings`, `GameOptions`,
+ * `GameConfig`, and `GameSession` now live in `entities/game-session`
+ * (see entities/README.md) -- this file re-exports them as a
+ * temporary bridge so the many existing call sites across
+ * components/, game/, lib/, and providers/ that still import them
+ * from "@/game/game-types" keep working unchanged. Repoint each to
+ * `@/entities/game-session` as it's touched; these re-exports go
+ * away once none are left.
  */
-export type GameSession = {
-  config: GameConfig;
-  players: Player[];
-};
+export type {
+  GameMode,
+  Difficulty,
+  TimerSettings,
+  GameOptions,
+  GameConfig,
+  GameSession,
+} from "@/entities/game-session";
 
 /* -------------------------------------------------------------------- */
 /* Round Preparation (Screen 4)                                          */
 /*                                                                       */
-/* Types describing the *result* of preparing a round: the generated     */
-/* word/hint, the resolved role assignment, and the full session that    */
-/* Screen 5 (and beyond) will consume. Nothing in this section is ever   */
-/* rendered on Screen 4 itself -- see game/game-engine.ts.                */
+/* NOTE: these types now live in `entities/round` (see                  */
+/* entities/README.md) -- this file re-exports them as a temporary      */
+/* bridge so the many existing call sites across components/, game/,    */
+/* lib/, and providers/ that still import them from                     */
+/* "@/game/game-types" keep working unchanged. Repoint each to          */
+/* `@/entities/round` as it's touched; these re-exports go away once    */
+/* none are left.                                                       */
 /* -------------------------------------------------------------------- */
+export type {
+  RoundContentSource,
+  GeneratedRoundContent,
+  PlayerRole,
+  RoundData,
+  RoundStatus,
+  RoundSession,
+} from "@/entities/round";
 
-/**
- * Which tier ultimately supplied a round's word/hint:
- *   "ai"       -- freshly generated by the AI just now (tier 1)
- *   "cache"    -- a previously AI-generated round, reused from the
- *                 IndexedDB cache (tier 2)
- *   "fallback" -- the static, in-bundle emergency word list (tier 3)
- *   "custom"   -- a player-authored word from Settings -> Custom Words
- *                 (lib/db.ts's `customWords` table), selected instead of
- *                 the 3-tier chain above when the round's category is
- *                 the CUSTOM_CATEGORY pseudo-category (game/game-rules.ts)
- * See game/game-engine.ts for the priority order between them.
- */
-export type RoundContentSource = "ai" | "cache" | "fallback" | "custom";
-
-/**
- * The output of a word provider (AI or local), before it's attached to a
- * round. Both providers return this exact shape so the game engine stays
- * provider-agnostic (see providers/word-provider.ts).
- */
-export type GeneratedRoundContent = {
-  word: string;
-  hint: string;
-  source: RoundContentSource;
-  /**
-   * Which language this specific word/hint pair is in. Always set
-   * explicitly by whichever provider produced the content (AI, cache, or
-   * static fallback) -- never inferred later from the hint text itself,
-   * since that would be unreliable (an English word like "Pizza" reads
-   * the same regardless of which language its hint is in).
-   */
-  language: GameLanguage;
-};
-
-export type PlayerRole =
-  | { playerId: string; role: "player" }
-  | { playerId: string; role: "imposter" };
-
-export type RoundData = {
-  number: number;
-  word: string;
-  hint: string;
-  imposterCount: number;
-  roles: PlayerRole[];
-  contentSource: RoundContentSource;
-  /**
-   * Fixed at round-creation time (see game/game-engine.ts) from the
-   * player's Settings selection at that moment. Deliberately part of
-   * `RoundData` (not re-read from Settings on every render) so that
-   * changing the Settings language mid-round -- or refreshing the page
-   * during Secret Reveal/Voting/Results -- never changes an
-   * already-started round's language out from under the players.
-   */
-  language: GameLanguage;
-};
-
-export type RoundStatus = "preparing" | "ready" | "playing" | "finished";
-
-/**
- * The fully-prepared round, ready to hand off to Screen 5. Distinct from
- * `GameSession` above (which is only the Setup -> Players handoff) --
- * this is what exists once word/hint/roles have actually been resolved.
- */
-export type RoundSession = {
-  id: string;
-  config: GameConfig;
-  players: Player[];
-  round: RoundData;
-  status: RoundStatus;
-  currentPlayerIndex: number;
-  /**
-   * Screen 7's (Voting) persisted ballot box -- keyed by voter player ID,
-   * valued by the player ID they voted for. Lives on `RoundSession` (not
-   * `RoundData`) for the same reason `currentPlayerIndex` does: it's
-   * mutable turn-taking state for one phase of the round, not part of
-   * the round's static generated content. There is deliberately no
-   * separate "current voter index" field -- game/vote-flow.ts derives
-   * whose turn it is directly from this map plus `players` order, so a
-   * refresh mid-voting can never desync from who has actually voted
-   * (see spec sections 58-64).
-   */
-  votes?: Record<string, string>;
-  /**
-   * Screen 8's (Results) persisted outcome of every vote applied so far
-   * this game -- player IDs who have been voted out. Optional/defensive
-   * for the same reason `votes` is: sessions created before this field
-   * existed won't have it. Lives here (not derived fresh from `votes`
-   * on every render) because a tie eliminates no one, so "who's out"
-   * is NOT simply "who got the most votes" -- it's the accumulated
-   * result of every verdict, and must survive a refresh on the Results
-   * screen itself (spec's "DATA / STATE REQUIREMENTS").
-   */
-  eliminatedPlayerIds?: string[];
-  /**
-   * Every completed voting round's snapshot, oldest first -- captured by
-   * game/results-flow.ts's `recordVotingHistoryEntry` at the same moment
-   * a round's verdict is resolved on Screen 8, which is the last point
-   * `votes` still holds that round's ballots before `continueRound`
-   * resets it for the next round (see results-flow.ts). Optional/
-   * defensive for the same reason `votes`/`eliminatedPlayerIds` are:
-   * sessions persisted before this field existed won't have it.
-   *
-   * Deliberately a plain, storage-shaped snapshot (player id/name/vote
-   * count pairs, not the full `Player` object) rather than reusing
-   * results-flow.ts's `VoteTally`/`Verdict` types -- those live in a
-   * module that already imports `RoundSession` from here, so importing
-   * them back into this file would be circular. This is purely
-   * additive read-only data for the Final Results screen's "Voting
-   * History" option -- nothing in the live game (voting, elimination,
-   * win checks) ever reads it back.
-   */
-  votingHistory?: VotingHistoryEntry[];
-};
-
-/** One player's vote count within a single recorded voting round. */
-export type VotingHistoryTallyEntry = {
-  playerId: string;
-  playerName: string;
-  votes: number;
-};
-
-/** The outcome of a single recorded voting round -- mirrors `Verdict`
- *  in game/results-flow.ts, but by player id/name rather than a full
- *  `Player` object (see `VotingHistoryEntry`'s comment for why). */
-export type VotingHistoryVerdict =
-  | { type: "tie"; tiedPlayerIds: string[] }
-  | { type: "imposter-caught"; eliminatedPlayerId: string }
-  | { type: "wrong-player"; eliminatedPlayerId: string };
-
-/** One completed voting round, as shown on the Voting History view. */
-export type VotingHistoryEntry = {
-  round: number;
-  tally: VotingHistoryTallyEntry[];
-  verdict: VotingHistoryVerdict;
-};
+/* -------------------------------------------------------------------- */
+/* Voting History (Results / Final Results)                              */
+/*                                                                       */
+/* NOTE: these types now live in `entities/voting-history` (see         */
+/* entities/README.md) -- this file re-exports them as a temporary      */
+/* bridge so the many existing call sites across components/, game/,    */
+/* and lib/ that still import them from "@/game/game-types" keep        */
+/* working unchanged. Repoint each to `@/entities/voting-history` as    */
+/* it's touched; these re-exports go away once none are left.           */
+/* -------------------------------------------------------------------- */
+export type {
+  VotingHistoryTallyEntry,
+  VotingHistoryVerdict,
+  VotingHistoryEntry,
+} from "@/entities/voting-history";

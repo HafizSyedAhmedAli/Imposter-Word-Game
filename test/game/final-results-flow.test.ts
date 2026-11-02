@@ -7,7 +7,7 @@ import {
   getFinalVerdict,
   getFinalVoteTally,
   getRoundSummary,
-} from "@/game/final-results-flow";
+} from "@/features/play-round";
 import { baseSession, multiImposterSession } from "../helpers/fixtures";
 
 describe("getFinalOutcome", () => {

@@ -3,7 +3,7 @@ import {
   computeGlobalStatistics,
   computePlayerStatistics,
   EMPTY_GLOBAL_STATISTICS,
-} from "@/lib/statistics-aggregation";
+} from "@/entities/statistics";
 import type { CompletedGameRecord } from "@/lib/db";
 
 /**

@@ -1,0 +1,109 @@
+diff --git a/ARCHITECTURE.md b/ARCHITECTURE.md
+index 5fdc5bc..b90a2f9 100644
+--- a/ARCHITECTURE.md
++++ b/ARCHITECTURE.md
+@@ -162,6 +162,10 @@ to change without breaking consumers.
+     had already been claimed by a `features/*` slice, unlike
+     vote/pass). None of the five cards were reused elsewhere. See
+     `widgets/README.md`.
++  - `widgets/round-preparation-panel` (done) -- `RoundPreparationScreen`
++    and its six supporting files, moved as one unit from
++    `components/round/` (none had consumers elsewhere).
++    `RoundPreparationHeader` was already in `shared/ui/` from the
++    `vote-panel`/`pass-phone-panel` slice. See `widgets/README.md`.
+   - **Next:** `results-panel`, `final-results-panel`,
+-    `round-preparation-panel`, `statistics-panel`,
+-    `achievements-panel`.
++    `statistics-panel`, `achievements-panel`.
+diff --git a/app/round/page.tsx b/app/round/page.tsx
+index aedc9f5..29cb505 100644
+--- a/app/round/page.tsx
++++ b/app/round/page.tsx
+@@ -1,4 +1,4 @@
+-import RoundPreparationScreen from "@/components/round/RoundPreparationScreen";
++import { RoundPreparationScreen } from "@/widgets/round-preparation-panel";
+ 
+ export default function RoundPage() {
+   return <RoundPreparationScreen />;
+diff --git a/widgets/README.md b/widgets/README.md
+index f7e3c44..6fa8c99 100644
+--- a/widgets/README.md
++++ b/widgets/README.md
+@@ -45,10 +45,20 @@ capabilities (that's `features/`), not full routes (that's `pages/`).
+   `@/widgets/discussion-panel` (barrel re-exporting `DiscussionScreen`).
+   `app/game/page.tsx` repointed.
+ 
++- `widgets/round-preparation-panel` — `RoundPreparationScreen` plus its
++  six supporting files (`GameSummaryCard`, `PreparationAnimation`,
++  `PreparationProgress`, `PreparationStatus`, `RoundSourceIndicator`,
++  `RoundErrorRecovery`), moved from `components/round/` as one unit --
++  none had consumers outside that directory, same situation as
++  `discussion-panel`. `RoundPreparationHeader` was already in
++  `shared/ui/` from the `vote-panel`/`pass-phone-panel` slice, so no
++  new extraction was needed here. Public API:
++  `@/widgets/round-preparation-panel` (barrel re-exporting
++  `RoundPreparationScreen`). `app/round/page.tsx` repointed.
++
+ ## Planned slices (not yet moved — see `../ARCHITECTURE.md`)
+ 
+ - `widgets/results-panel`, `widgets/final-results-panel`
+-- `widgets/round-preparation-panel`
+ - `widgets/statistics-panel`, `widgets/achievements-panel`
+ 
+ Import from other layers: `features/`, `entities/`, `shared/`.
+diff --git a/widgets/round-preparation-panel/index.ts b/widgets/round-preparation-panel/index.ts
+new file mode 100644
+index 0000000..99861aa
+--- /dev/null
++++ b/widgets/round-preparation-panel/index.ts
+@@ -0,0 +1 @@
++export { default as RoundPreparationScreen } from "./ui/RoundPreparationScreen";
+diff --git a/components/round/GameSummaryCard.tsx b/widgets/round-preparation-panel/ui/GameSummaryCard.tsx
+similarity index 100%
+rename from components/round/GameSummaryCard.tsx
+rename to widgets/round-preparation-panel/ui/GameSummaryCard.tsx
+diff --git a/components/round/PreparationAnimation.tsx b/widgets/round-preparation-panel/ui/PreparationAnimation.tsx
+similarity index 100%
+rename from components/round/PreparationAnimation.tsx
+rename to widgets/round-preparation-panel/ui/PreparationAnimation.tsx
+diff --git a/components/round/PreparationProgress.tsx b/widgets/round-preparation-panel/ui/PreparationProgress.tsx
+similarity index 100%
+rename from components/round/PreparationProgress.tsx
+rename to widgets/round-preparation-panel/ui/PreparationProgress.tsx
+diff --git a/components/round/PreparationStatus.tsx b/widgets/round-preparation-panel/ui/PreparationStatus.tsx
+similarity index 100%
+rename from components/round/PreparationStatus.tsx
+rename to widgets/round-preparation-panel/ui/PreparationStatus.tsx
+diff --git a/components/round/RoundErrorRecovery.tsx b/widgets/round-preparation-panel/ui/RoundErrorRecovery.tsx
+similarity index 100%
+rename from components/round/RoundErrorRecovery.tsx
+rename to widgets/round-preparation-panel/ui/RoundErrorRecovery.tsx
+diff --git a/components/round/RoundPreparationScreen.tsx b/widgets/round-preparation-panel/ui/RoundPreparationScreen.tsx
+similarity index 95%
+rename from components/round/RoundPreparationScreen.tsx
+rename to widgets/round-preparation-panel/ui/RoundPreparationScreen.tsx
+index 7689e5a..c725c64 100644
+--- a/components/round/RoundPreparationScreen.tsx
++++ b/widgets/round-preparation-panel/ui/RoundPreparationScreen.tsx
+@@ -1,5 +1,17 @@
+ "use client";
+ 
++/**
++ * Moved from `components/round/` as the `widgets/round-preparation-panel`
++ * slice (FSD migration step 7), along with its six supporting files
++ * (`GameSummaryCard`, `PreparationAnimation`, `PreparationProgress`,
++ * `PreparationStatus`, `RoundSourceIndicator`, `RoundErrorRecovery`) --
++ * none had consumers outside this directory, so the whole screen moved
++ * as one unit, same as `discussion-panel`/`final-results-panel`.
++ * `RoundPreparationHeader` had already moved to `@/shared/ui/` back in
++ * the `vote-panel`/`pass-phone-panel` slice (it was one of the six
++ * screens using it even then), so no new `shared/ui/` extraction was
++ * needed here. See `../../README.md`. `app/round/page.tsx` repointed.
++ */
+ import { useEffect, useRef, useState } from "react";
+ import { useRouter } from "next/navigation";
+ import SpaceBackdrop from "@/components/home/SpaceBackdrop";
+diff --git a/components/round/RoundSourceIndicator.tsx b/widgets/round-preparation-panel/ui/RoundSourceIndicator.tsx
+similarity index 100%
+rename from components/round/RoundSourceIndicator.tsx
+rename to widgets/round-preparation-panel/ui/RoundSourceIndicator.tsx

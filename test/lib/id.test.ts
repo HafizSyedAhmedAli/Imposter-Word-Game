@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { generateId } from "@/lib/id";
+import { generateId } from "@/shared/lib/id";
 
 describe("generateId", () => {
   afterEach(() => {

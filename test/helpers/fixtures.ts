@@ -1,5 +1,5 @@
 import type { Player, PlayerRole, RoundSession } from "@/game/game-types";
-import { DEFAULT_GAME_CONFIG } from "@/game/game-rules";
+import { DEFAULT_GAME_CONFIG } from "@/features/play-round";
 
 /**
  * A realistic 4-player session: p1 is the imposter, p2-p4 are crew.

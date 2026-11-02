@@ -1,5 +1,5 @@
 import { Activity } from "lucide-react";
-import type { GlobalStatistics } from "@/lib/statistics-aggregation";
+import type { GlobalStatistics } from "@/entities/statistics";
 
 /**
  * "Gameplay" section (spec's STATISTICS SCREEN UX): rounds, votes,

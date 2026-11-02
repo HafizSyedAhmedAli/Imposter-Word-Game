@@ -1,0 +1,1 @@
+export { default as ServiceWorkerRegister } from "./ui/ServiceWorkerRegister";

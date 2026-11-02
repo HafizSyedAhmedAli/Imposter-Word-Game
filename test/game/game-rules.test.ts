@@ -15,7 +15,7 @@ import {
   CUSTOM_WORD_CATEGORIES,
   GAME_MODE_RULES,
   DEFAULT_GAME_CONFIG,
-} from "@/game/game-rules";
+} from "@/features/play-round";
 import type { GameMode, Player } from "@/game/game-types";
 
 describe("getImposterCount", () => {

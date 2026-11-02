@@ -10,8 +10,8 @@ import {
   continueRound,
   getVotingHistory,
   recordVotingHistoryEntry,
-} from "@/game/results-flow";
-import { SKIP_VOTE } from "@/game/vote-flow";
+} from "@/features/play-round";
+import { SKIP_VOTE } from "@/features/play-round";
 import { baseSession, multiImposterSession } from "../helpers/fixtures";
 
 describe("getVoteTally / getHighestVoteCount / getMostVotedPlayers", () => {

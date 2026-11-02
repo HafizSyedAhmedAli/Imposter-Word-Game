@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { shuffle, rotate } from "@/lib/shuffle";
+import { shuffle, rotate } from "@/shared/lib/shuffle";
 
 describe("shuffle", () => {
   it("returns an array with the same elements, just reordered", () => {

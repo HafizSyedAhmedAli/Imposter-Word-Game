@@ -4,17 +4,19 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import { useGameSetup } from "@/lib/game-setup-context";
-import { validateGameConfig } from "@/game/game-rules";
+import { validateGameConfig } from "@/features/play-round";
+import {
+  CategorySelector,
+  DifficultySelector,
+  GameModeSelector,
+  GameOptions,
+} from "@/features/configure-game";
 import SetupHeader from "./SetupHeader";
 import SetupSection from "./SetupSection";
-import GameModeSelector from "./GameModeSelector";
-import CategorySelector from "./CategorySelector";
-import DifficultySelector from "./DifficultySelector";
-import GameOptions from "./GameOptions";
 import ContinueButton from "./ContinueButton";
 import PrivacyNotice from "./PrivacyNotice";
-import { light } from "@/lib/haptics";
-import { playSound } from "@/lib/sound-engine";
+import { light } from "@/shared/lib/haptics";
+import { playSound } from "@/shared/lib/sound-engine";
 import { analytics } from "@/lib/analytics";
 import type { GameMode } from "@/game/game-types";
 

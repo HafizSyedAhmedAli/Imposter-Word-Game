@@ -255,7 +255,7 @@ describe("resetAchievements", () => {
     );
 
     // Full "Reset Game Data" clears both tables (see
-    // lib/reset-game-data.ts) -- simulated here directly.
+    // features/reset-game-data/model/reset-game-data.ts) -- simulated here directly.
     await getDb().completedGames.clear();
     await resetAchievements();
 

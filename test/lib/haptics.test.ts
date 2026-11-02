@@ -30,7 +30,7 @@ vi.mock("@capacitor/haptics", () => ({
 // Imported after the mocks so every call in these tests hits the fakes
 // above instead of the real plugin.
 const { setHapticsEnabled, light, medium, success, error, warning } =
-  await import("@/lib/haptics");
+  await import("@/shared/lib/haptics");
 
 const vibrateMock = vi.fn();
 

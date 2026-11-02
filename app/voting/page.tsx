@@ -1,4 +1,4 @@
-import VoteScreen from "@/components/vote/VoteScreen";
+import { VoteScreen } from "@/widgets/vote-panel";
 
 export default function VotingPage() {
   return <VoteScreen />;

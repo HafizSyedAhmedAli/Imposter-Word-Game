@@ -1,5 +1,5 @@
 /**
- * Example visual deliberately mirrors components/pass/PlayerRevealCard.tsx
+ * Example visual deliberately mirrors features/reveal-role/ui/PlayerRevealCard.tsx
  * (same colors, badge, and word treatment) so it looks like an actual
  * preview of that screen rather than a reinvented mockup. Not built on
  * SectionCard -- this needs the role-colored card treatment, not the

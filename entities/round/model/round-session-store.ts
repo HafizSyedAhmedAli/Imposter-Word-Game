@@ -1,0 +1,55 @@
+import type { RoundSession } from "./round-types";
+import {
+  clearActiveGameRecovery,
+  mirrorActiveGameSession,
+} from "./active-game-recovery";
+
+const STORAGE_KEY = "iw:round-session";
+
+/**
+ * Session-storage-backed persistence for the prepared round. This is what
+ * makes /round (and later /pass) idempotent across a refresh -- a round
+ * is only ever generated once (see components/round/RoundPreparationScreen.tsx
+ * and Screen 4 spec sections 35-36).
+ *
+ * `sessionStorage` (not `localStorage`) is deliberate: it's scoped to
+ * this tab/game only and clears itself when the game is closed, which
+ * matches "one round in progress at a time" for a pass-the-phone game.
+ */
+export function getStoredRoundSession(): RoundSession | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as RoundSession) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function storeRoundSession(session: RoundSession): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  } catch {
+    // Best-effort -- an in-memory session (component state) still works
+    // for the current page's lifetime, it just won't survive a refresh.
+  }
+  // Mirror into localStorage (entities/round/model/active-game-recovery.ts) so the game
+  // is still detectable after a full app close, not just a refresh --
+  // sessionStorage alone can't survive that. Runs even if the
+  // sessionStorage write above failed, so recovery still works.
+  mirrorActiveGameSession(session);
+}
+
+export function clearStoredRoundSession(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // no-op
+  }
+  // Whenever the live round session is discarded, the "resumable game"
+  // record must go with it -- otherwise a cleared/left round would keep
+  // showing "Game in Progress" on next launch.
+  clearActiveGameRecovery();
+}

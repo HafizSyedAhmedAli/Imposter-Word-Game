@@ -8,12 +8,12 @@ import GameplayStatsCard from "./GameplayStatsCard";
 import MostPlayedCard from "./MostPlayedCard";
 import PlayerStatsList from "./PlayerStatsList";
 import StatisticsEmptyState from "./StatisticsEmptyState";
-import { getStatisticsSnapshot } from "@/lib/game-statistics-store";
+import { getStatisticsSnapshot } from "@/entities/statistics";
 import {
   EMPTY_GLOBAL_STATISTICS,
   type GlobalStatistics,
   type PlayerStatistics,
-} from "@/lib/statistics-aggregation";
+} from "@/entities/statistics";
 import { captureError } from "@/lib/monitoring";
 
 type Snapshot = {

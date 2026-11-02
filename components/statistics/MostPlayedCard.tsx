@@ -1,10 +1,10 @@
 import { Flame } from "lucide-react";
-import type { GlobalStatistics } from "@/lib/statistics-aggregation";
+import type { GlobalStatistics } from "@/entities/statistics";
 import {
   DIFFICULTIES,
   getGameConfigCategoryLabel,
   getModeDisplayName,
-} from "@/game/game-rules";
+} from "@/features/play-round";
 import type { Category, Difficulty, GameMode } from "@/game/game-types";
 
 function categoryLabel(category: string | null): string {

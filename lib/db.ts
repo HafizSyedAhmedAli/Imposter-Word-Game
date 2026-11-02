@@ -7,35 +7,11 @@ import {
   type GameLanguage,
   type GameMode,
 } from "@/game/game-types";
-import { generateId } from "./id";
+import { generateId } from "@/shared/lib/id";
 import { captureError } from "./monitoring";
-import {
-  getRecentWordIds,
-  getShownWordIds,
-  rememberWordId,
-} from "./recent-words";
-import {
-  validateCustomWordText,
-  type ExistingCustomWord,
-} from "@/game/custom-word-rules";
-
-/**
- * A strictly-increasing timestamp, used only for `CustomWordEntry.createdAt`.
- * Two custom words saved back-to-back (e.g. two `addCustomWord` calls in
- * the same test, or a fast successive real add) can land in the same
- * millisecond under plain `Date.now()`; `getCustomWords`'s
- * `orderBy("createdAt")` then breaks that tie by primary key (a random
- * UUID) instead of insertion order, so "newest first" silently stops
- * being true. This never returns the same or an earlier value than its
- * previous call, so insertion order is always preserved regardless of
- * how fast two saves happen.
- */
-
-let lastCustomWordTimestamp = 0;
-function nextCustomWordTimestamp(): number {
-  lastCustomWordTimestamp = Math.max(Date.now(), lastCustomWordTimestamp + 1);
-  return lastCustomWordTimestamp;
-}
+import { getShownWordIds, rememberWordId } from "./recent-words";
+import type { AchievementUnlockRecord } from "@/entities/achievement";
+import type { CustomWordEntry } from "@/entities/custom-word";
 
 /**
  * A cached round, always the result of a successful AI generation.
@@ -85,7 +61,7 @@ export type WordEntry = {
 /**
  * Device-local preference row (Settings screen: Sound, Haptics, ...).
  * Single-row table -- always read/written at the fixed `id: "app"` key
- * (see lib/settings-store.ts) since this app has no concept of multiple
+ * (see entities/settings) since this app has no concept of multiple
  * local profiles. Kept in its own table rather than folded into `words`
  * so the two can evolve independently.
  */
@@ -94,7 +70,7 @@ export type SettingsRow = {
   sound: boolean;
   haptics: boolean;
   // Optional: rows saved before this feature existed won't have it --
-  // getSettings() defaults it in, see lib/settings-store.ts.
+  // getSettings() defaults it in, see entities/settings.
   music?: boolean;
   // Optional for the same reason as `music` above -- rows saved before
   // the Language setting existed won't have it. getSettings() defaults
@@ -103,36 +79,28 @@ export type SettingsRow = {
 };
 
 /**
- * A user-saved Custom Word (Settings -> Custom Words). Deliberately its
- * own table, never folded into `words` above -- `words` is reserved
- * exclusively for AI-generated content (`source: "ai"`, see its doc
- * comment), and a hand-typed custom word is neither AI output nor safe
- * to evict under `MAX_CACHED_WORDS`. Keeping the two separate is what
- * lets `RoundData.contentSource` tell a custom word apart from a cached
- * AI one (see game/game-types.ts's `RoundContentSource`).
+ * NOTE: `CustomWordEntry` (and the custom-word CRUD/selection
+ * functions) now live in `entities/custom-word` -- see
+ * entities/README.md. This file still declares the `customWords` Dexie
+ * table itself (schema versions + migrations below) since it's the one
+ * place every table is defined, so it imports the row type from the
+ * slice and re-exports it, along with the functions, as a temporary
+ * bridge so existing `import { ... } from "@/lib/db"` call sites keep
+ * working unchanged. Repoint each to `@/entities/custom-word` as it's
+ * touched; these re-exports go away once none are left.
  */
-export type CustomWordEntry = {
-  id: string;
-  word: string;
-  /** `word.trim().toLowerCase()` -- same duplicate-detection convention
-   * as `WordEntry.normalizedWord` above (see `addCustomWord`). */
-  normalizedWord: string;
-  category: Category;
-  difficulty: Difficulty;
-  createdAt: number;
-  /**
-   * A previously AI-generated (or otherwise resolved) hint for this
-   * exact word, persisted so it can be reused offline without asking
-   * the AI again every time this custom word is selected for a round.
-   * Optional -- absent until the first round that actually uses this
-   * word resolves a hint for it (see
-   * providers/custom-word-provider.ts's `resolveCustomWordHint`).
-   */
-  hint?: string;
-  /** Which language `hint` above is written in -- a cached English hint
-   * must never be served for a Roman Urdu round, or vice versa. */
-  hintLanguage?: GameLanguage;
-};
+export type {
+  CustomWordEntry,
+  AddCustomWordResult,
+} from "@/entities/custom-word";
+export {
+  addCustomWord,
+  getCustomWords,
+  deleteCustomWord,
+  updateCustomWordHint,
+  getRandomCustomWord,
+  clearCustomWords,
+} from "@/entities/custom-word";
 
 /**
  * One player's public, post-game result within a single completed game
@@ -201,34 +169,23 @@ export type CompletedGameRecord = {
 };
 
 /**
- * One (local player, achievement) unlock -- the Achievements feature's
- * only persisted state. Every achievement *condition* is derived purely
- * from `completedGames` (see lib/achievements/engine.ts) -- this table
- * exists only to (a) remember the moment an achievement was first
- * earned (`unlockedAt`, shown on the Achievements screen) and (b) let
- * lib/achievements/store.ts tell which achievements are genuinely NEW
- * after a given game, so the unlock notification never re-fires for one
- * already earned. It is never the source of truth for whether an
- * achievement is unlocked -- the Achievements screen always recomputes
- * that live from `completedGames`, so a failed/missing write here can
- * never make an actually-earned achievement look locked.
- *
- * Primary-keyed by `id` = `${normalizedName}::${achievementId}` -- the
- * same "put is naturally idempotent" trick `CompletedGameRecord` uses
- * (see its doc comment): recording the same unlock twice overwrites the
- * same row instead of creating a duplicate, with no separate dedupe
- * bookkeeping required.
+ * NOTE: `AchievementUnlockRecord` (and the achievement-unlock CRUD
+ * functions) now live in `entities/achievement` -- see
+ * entities/README.md. Same arrangement as the custom-word bridge
+ * above: this file still declares the `achievementUnlocks` Dexie table
+ * itself (v8 below), imports the row type from the slice, and
+ * re-exports it along with the functions so existing
+ * `import { ... } from "@/lib/db"` call sites keep working unchanged.
+ * Repoint each to `@/entities/achievement` as it's touched; these
+ * re-exports go away once none are left.
  */
-export type AchievementUnlockRecord = {
-  id: string;
-  achievementId: string;
-  /** Cross-game identity key -- same convention as
-   * `CompletedGamePlayerResult.normalizedName` above. */
-  normalizedName: string;
-  /** Display name as of the moment this achievement unlocked. */
-  displayName: string;
-  unlockedAt: number;
-};
+export type { AchievementUnlockRecord } from "@/entities/achievement";
+export {
+  recordAchievementUnlock,
+  getAchievementUnlocks,
+  getAchievementUnlocksForPlayer,
+  clearAchievementUnlocks,
+} from "@/entities/achievement";
 
 class ImposterWordDB extends Dexie {
   words!: Table<WordEntry, string>;
@@ -304,7 +261,7 @@ class ImposterWordDB extends Dexie {
     // when the app only ever produced English, so it's backfilled to
     // "english" in place rather than cleared. `settings` needs no
     // schema change -- `language` there is an optional field read with
-    // a default (see lib/settings-store.ts), the same pattern already
+    // a default (see entities/settings), the same pattern already
     // used for `music` in v4.
     this.version(5)
       .stores({
@@ -598,7 +555,7 @@ export async function getRandomCachedWord(
 
 /**
  * Deletes all locally-cached AI rounds -- the data layer half of
- * "Reset Game Data" (see lib/reset-game-data.ts, which also clears
+ * "Reset Game Data" (see features/reset-game-data/model/reset-game-data.ts, which also clears
  * statistics and session-scoped tracking). Only ever touches this
  * table: built-in words live entirely outside IndexedDB (see
  * lib/fallback-words.ts), so there is nothing here that needs to be
@@ -614,166 +571,6 @@ export async function getRandomCachedWord(
 export async function resetUserData(): Promise<void> {
   const db = getDb();
   await db.words.clear();
-}
-
-/* -------------------------------------------------------------------- */
-/* Custom Words (Settings -> Custom Words)                               */
-/*                                                                        */
-/* CRUD + selection for user-saved custom words. Kept in this file       */
-/* (rather than a separate lib module) so every Dexie table this app has */
-/* is defined and accessed from one place, matching the existing         */
-/* words/settings functions above.                                       */
-/* -------------------------------------------------------------------- */
-
-export type AddCustomWordResult =
-  | { ok: true; entry: CustomWordEntry }
-  | { ok: false; error: string };
-
-/**
- * Validates (game/custom-word-rules.ts) and saves a new custom word.
- * Duplicate detection is case-insensitive and scoped to ALL of the
- * player's saved custom words (not just the same category/difficulty)
- * -- "Pizza" saved under Food/Easy and "pizza" under Food/Medium are
- * still the same word to a player reading their list back.
- */
-export async function addCustomWord(input: {
-  word: string;
-  category: Category;
-  difficulty: Difficulty;
-}): Promise<AddCustomWordResult> {
-  const db = getDb();
-  const existing: ExistingCustomWord[] = await db.customWords
-    .toArray()
-    .then((rows) => rows.map((r) => ({ normalizedWord: r.normalizedWord })));
-
-  const validation = validateCustomWordText(input.word, existing);
-  if (!validation.valid) {
-    return { ok: false, error: validation.error };
-  }
-
-  const entry: CustomWordEntry = {
-    id: generateId(),
-    word: validation.value,
-    normalizedWord: validation.value.toLowerCase(),
-    category: input.category,
-    difficulty: input.difficulty,
-    createdAt: nextCustomWordTimestamp(),
-  };
-  await db.customWords.put(entry);
-  return { ok: true, entry };
-}
-
-/**
- * All saved custom words, newest first -- the order the management
- * screen (Settings -> Custom Words) displays them in.
- */
-export async function getCustomWords(): Promise<CustomWordEntry[]> {
-  const db = getDb();
-  return db.customWords.orderBy("createdAt").reverse().toArray();
-}
-
-/**
- * Deletes a single saved custom word. Never affects a round already in
- * progress -- `RoundData.word`/`hint` are plain strings copied onto the
- * round once at preparation time (see game/game-engine.ts), so an
- * active round has no live reference back to this table to be disrupted
- * by a deletion here (spec: "Custom Word Deletion During A Game" /
- * "Game State Isolation").
- */
-export async function deleteCustomWord(id: string): Promise<void> {
-  const db = getDb();
-  await db.customWords.delete(id);
-}
-
-/**
- * Persists a resolved hint back onto a custom word so future rounds
- * (including offline ones) can reuse it without asking the AI again --
- * see providers/custom-word-provider.ts's `resolveCustomWordHint`, the
- * only caller. Best-effort and silent, same reasoning as `cacheAiWord`
- * above: a failed write here must never fail the round that's already
- * using the hint it was just given. Deliberately never logs `hint`
- * itself to Sentry -- only the `phase` tag, same as every other
- * `captureError` call in this file.
- */
-export async function updateCustomWordHint(
-  id: string,
-  hint: string,
-  language: GameLanguage,
-): Promise<void> {
-  try {
-    const db = getDb();
-    await db.customWords.update(id, { hint, hintLanguage: language });
-  } catch (error) {
-    captureError(error, { phase: "update-custom-word-hint" });
-  }
-}
-
-/**
- * Selects a random saved custom word for a round.
- *
- * Selection rule (deliberately more forgiving than
- * `getRandomCachedWord`'s exact category/difficulty match above): a
- * custom word pool is small and hand-curated by one player, so
- * requiring an exact difficulty match could easily leave zero
- * candidates (e.g. every saved word is "hard" but "easy" was selected).
- * Prefer an exact difficulty match; if none exists, fall back to any
- * saved custom word rather than failing the round -- matching the spec's
- * "custom word availability must never make the game unplayable."
- * Returns `null` only when there are no saved custom words at all; the
- * caller (game/game-engine.ts) falls through to the normal AI -> cache
- * -> fallback pipeline in that case.
- *
- * `category`, when given, narrows the pool to that one category first
- * (Setup screen's Custom Words toggle -- see
- * components/setup/CategorySelector.tsx and
- * `GameConfig.customWordCategory`). Same forgiving spirit as the
- * difficulty match above: if narrowing to `category` would leave zero
- * candidates (e.g. the player deleted every word in that category from
- * Settings after starting Setup, or restored a stale session), this
- * falls back to the player's full saved list rather than failing the
- * round. Omitting `category` entirely (existing callers/tests) searches
- * every saved custom word, exactly as before this parameter existed.
- *
- * Deliberately still uses the capped `getRecentWordIds` tracker (NOT
- * `getShownWordIds`) -- a custom word list is small and hand-curated,
- * and this selector already falls back to repeating when narrowing
- * would leave zero candidates (see above), so it only ever needs
- * "avoid an immediate repeat," not full-session exhaustion detection.
- */
-export async function getRandomCustomWord(
-  difficulty: Difficulty,
-  category?: Category,
-): Promise<CustomWordEntry | null> {
-  const db = getDb();
-  const all = await db.customWords.toArray();
-  if (all.length === 0) return null;
-
-  const categoryPool = category
-    ? all.filter((w) => w.category === category)
-    : all;
-  const basePool = categoryPool.length > 0 ? categoryPool : all;
-
-  const exactDifficulty = basePool.filter((w) => w.difficulty === difficulty);
-  const pool = exactDifficulty.length > 0 ? exactDifficulty : basePool;
-
-  const recentIds = new Set(getRecentWordIds());
-  const nonRecent = pool.filter((w) => !recentIds.has(w.id));
-  const candidates = nonRecent.length > 0 ? nonRecent : pool;
-
-  const entry = candidates[Math.floor(Math.random() * candidates.length)];
-  rememberWordId(entry.id);
-  return entry;
-}
-
-/**
- * Deletes every saved custom word -- the Custom Words half of "Reset
- * Game Data" (see lib/reset-game-data.ts). Rethrows on failure, same as
- * `resetUserData` above, since it's part of the same user-initiated,
- * must-report-failure reset action.
- */
-export async function clearCustomWords(): Promise<void> {
-  const db = getDb();
-  await db.customWords.clear();
 }
 
 /* -------------------------------------------------------------------- */
@@ -821,7 +618,7 @@ export async function getCompletedGames(): Promise<CompletedGameRecord[]> {
 
 /**
  * Deletes every stored completed-game record -- the Statistics half of
- * "Reset Game Data" (see lib/reset-game-data.ts). Rethrows on failure,
+ * "Reset Game Data" (see features/reset-game-data/model/reset-game-data.ts). Rethrows on failure,
  * same as `resetUserData`/`clearCustomWords` above: this is a
  * user-initiated action that must report success or failure, not fail
  * silently and leave stale statistics behind.
@@ -829,74 +626,4 @@ export async function getCompletedGames(): Promise<CompletedGameRecord[]> {
 export async function clearCompletedGames(): Promise<void> {
   const db = getDb();
   await db.completedGames.clear();
-}
-
-/* -------------------------------------------------------------------- */
-/* Achievements (Home -> Achievements)                                   */
-/*                                                                        */
-/* CRUD for locally-stored achievement unlock records. Like the          */
-/* Statistics section above, this module never decides whether an       */
-/* achievement is earned -- see lib/achievements/engine.ts (pure         */
-/* evaluation from `completedGames`) and lib/achievements/store.ts       */
-/* (orchestrates evaluation + persists newly-earned unlocks). This file  */
-/* only persists/reads/clears rows.                                      */
-/* -------------------------------------------------------------------- */
-
-/**
- * Saves one (player, achievement) unlock. A plain Dexie `put` against
- * the primary key (`record.id` = `${normalizedName}::${achievementId}`)
- * -- recording the same unlock twice is a no-op overwrite, same
- * reasoning as `recordCompletedGame` above.
- *
- * Best-effort and silent, same reasoning as `recordCompletedGame`: this
- * always runs after a game is already fully decided and (usually) after
- * the Final Results screen has already shown an unlock notification for
- * it -- a failed write must never surface an error on a screen whose
- * game is already over. Because achievement *state* is always
- * recomputed live from `completedGames` (see this table's doc comment
- * on `AchievementUnlockRecord`), a failed write here only means a
- * missing "unlocked on" timestamp and a possible repeat notification
- * next time -- never a real achievement silently failing to unlock.
- */
-export async function recordAchievementUnlock(
-  record: AchievementUnlockRecord,
-): Promise<void> {
-  try {
-    const db = getDb();
-    await db.achievementUnlocks.put(record);
-  } catch (error) {
-    captureError(error, { phase: "record-achievement-unlock" });
-  }
-}
-
-/** Every locally-stored achievement unlock, across every local player. */
-export async function getAchievementUnlocks(): Promise<
-  AchievementUnlockRecord[]
-> {
-  const db = getDb();
-  return db.achievementUnlocks.toArray();
-}
-
-/** One local player's unlock history, keyed the same way
- * `computePlayerStatistics` groups players (trimmed, lowercased name). */
-export async function getAchievementUnlocksForPlayer(
-  normalizedName: string,
-): Promise<AchievementUnlockRecord[]> {
-  const db = getDb();
-  return db.achievementUnlocks
-    .where("normalizedName")
-    .equals(normalizedName)
-    .toArray();
-}
-
-/**
- * Deletes every stored achievement unlock -- the Achievements half of
- * "Reset Game Data" (see lib/reset-game-data.ts). Rethrows on failure,
- * same as `clearCompletedGames` above: a user-initiated reset must
- * report failure rather than silently leaving stale unlock history
- * (and stale "already notified" state) behind.
- */
-export async function clearAchievementUnlocks(): Promise<void> {
-  const db = getDb();
-  await db.achievementUnlocks.clear();
 }

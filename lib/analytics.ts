@@ -6,7 +6,7 @@ import type {
   GameMode,
   RoundContentSource,
 } from "@/game/game-types";
-import type { FinalOutcome } from "@/game/final-results-flow";
+import type { FinalOutcome } from "@/features/play-round";
 import { addBreadcrumb } from "@/lib/monitoring";
 
 /**

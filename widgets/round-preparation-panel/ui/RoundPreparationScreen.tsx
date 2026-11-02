@@ -1,0 +1,402 @@
+"use client";
+
+/**
+ * Moved from `components/round/` as the `widgets/round-preparation-panel`
+ * slice (FSD migration step 7), along with its six supporting files
+ * (`GameSummaryCard`, `PreparationAnimation`, `PreparationProgress`,
+ * `PreparationStatus`, `RoundSourceIndicator`, `RoundErrorRecovery`) --
+ * none had consumers outside this directory, so the whole screen moved
+ * as one unit, same as `discussion-panel`/`final-results-panel`.
+ * `RoundPreparationHeader` had already moved to `@/shared/ui/` back in
+ * the `vote-panel`/`pass-phone-panel` slice (it was one of the six
+ * screens using it even then), so no new `shared/ui/` extraction was
+ * needed here. See `../../README.md`. `app/round/page.tsx` repointed.
+ */
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import SpaceBackdrop from "@/components/home/SpaceBackdrop";
+import { useGameSetup } from "@/lib/game-setup-context";
+import { getImposterCount, isPlayerCountValid } from "@/features/play-round";
+import type { RoundSession } from "@/game/game-types";
+import { prepareGameRound, type PreparationStage } from "@/features/play-round";
+import {
+  clearStoredRoundSession,
+  getStoredRoundSession,
+  markActiveGameRoute,
+  storeRoundSession,
+} from "@/entities/round";
+import RoundPreparationHeader from "@/shared/ui/RoundPreparationHeader";
+import GameSummaryCard from "./GameSummaryCard";
+import PreparationAnimation from "./PreparationAnimation";
+import PreparationProgress from "./PreparationProgress";
+import PreparationStatus from "./PreparationStatus";
+import RoundSourceIndicator from "./RoundSourceIndicator";
+import RoundErrorRecovery from "./RoundErrorRecovery";
+import { analytics, toRoundSource } from "@/lib/analytics";
+import { captureError, setGameContext } from "@/lib/monitoring";
+
+type ScreenPhase = "preparing" | "ready" | "no-players" | "error";
+
+const STAGE_META: Record<
+  PreparationStage,
+  { step: number; onlineStatus: string; offlineStatus: string }
+> = {
+  word: {
+    step: 1,
+    onlineStatus: "Creating your secret word...",
+    offlineStatus: "Using your offline word collection...",
+  },
+  hint: {
+    step: 2,
+    onlineStatus: "Crafting a clever hint...",
+    offlineStatus: "Preparing your offline hint...",
+  },
+  roles: {
+    step: 3,
+    onlineStatus: "Choosing the imposters...",
+    offlineStatus: "Choosing the imposters...",
+  },
+  finalizing: {
+    step: 4,
+    onlineStatus: "Securing the round...",
+    offlineStatus: "Securing the round...",
+  },
+};
+
+// Small, deliberate pause per post-fetch stage so the progress meter never
+// jumps straight from 25% to 100% -- but short enough that it never reads
+// as an artificial delay (see Screen 4 spec, section 48).
+const STAGE_PACING_MS = 320;
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export default function RoundPreparationScreen() {
+  const router = useRouter();
+  const { config, players, isHydrated } = useGameSetup();
+
+  // NOTE: GameSetupProvider *also* has its own sessionStorage recovery
+  // now (lib/game-setup-store.ts), covering the case where this whole
+  // component tree just remounted from scratch (e.g. a client-side
+  // route transition that fell back to a hard navigation while offline
+  // -- see that file's doc comment for the full mechanism). That
+  // recovery lands one tick AFTER this first render, so `players` here
+  // is still `[]` on the very first paint even when a real player list
+  // is about to be restored. The recovery effect further below (keyed
+  // on `isHydrated`) is what corrects `phase` once that lands -- it
+  // must not be removed just because this initializer "looks" correct
+  // in isolation.
+  // Read the stored round once, synchronously, as the initial state for
+  // all three -- `phase`/`stage` derive from whether a session was
+  // already recovered, so nothing needs to be set from inside the
+  // mount effect below. A recovered session always takes priority over
+  // the player-count check, matching the original recovery behavior.
+  const [session, setSession] = useState<RoundSession | null>(() =>
+    getStoredRoundSession(),
+  );
+  const [phase, setPhase] = useState<ScreenPhase>(() => {
+    if (session) return "ready";
+    return isPlayerCountValid(config.mode, players.length)
+      ? "preparing"
+      : "no-players";
+  });
+  const [stage, setStage] = useState<PreparationStage>(() =>
+    session ? "finalizing" : "word",
+  );
+  const [wasOnlineAtStart, setWasOnlineAtStart] = useState(true);
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
+
+  const startedRef = useRef(false);
+  const recoveredRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  async function runPreparation() {
+    // Explicitly defer to a microtask before touching state. The initial
+    // call happens from the mount effect below, where `phase` is already
+    // "preparing" via the lazy initializer -- this just ensures every
+    // state update here happens from an async callback, not synchronously
+    // inside the effect body itself.
+    await Promise.resolve();
+
+    setPhase("preparing");
+    setStage("word");
+    setSession(null);
+    setWasOnlineAtStart(
+      typeof navigator === "undefined" ? true : navigator.onLine,
+    );
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const onlineAtStart =
+      typeof navigator === "undefined" ? true : navigator.onLine;
+
+    try {
+      const prepared = await prepareGameRound(config, players, {
+        signal: controller.signal,
+        onStage: async (nextStage) => {
+          setStage(nextStage);
+          if (nextStage !== "word") {
+            await wait(STAGE_PACING_MS);
+          }
+        },
+      });
+
+      if (controller.signal.aborted) return;
+
+      storeRoundSession(prepared);
+      markActiveGameRoute("/round");
+      setSession(prepared);
+      setPhase("ready");
+
+      // The game has genuinely started now -- round content resolved,
+      // roles assigned, and stored. Fired after the state above, never
+      // awaited, so it can never delay or block the player reaching
+      // Screen 5 (see lib/analytics.ts's doc comment).
+      analytics.gameStarted({
+        playerCount: prepared.players.length,
+        mode: prepared.config.mode,
+        category: prepared.config.category,
+        difficulty: prepared.config.difficulty,
+        roundSource: toRoundSource(prepared.round.contentSource),
+        offline: !onlineAtStart,
+      });
+
+      // Safe, coarse technical context attached to any future Sentry
+      // event for the rest of this round -- never the word/hint or a
+      // player's name/id (see lib/monitoring.ts). Purely diagnostic;
+      // never awaited or allowed to affect the flow below.
+      setGameContext({
+        mode: prepared.config.mode,
+        category: prepared.config.category,
+        difficulty: prepared.config.difficulty,
+        playerCount: prepared.players.length,
+        imposterCount: prepared.round.imposterCount,
+        roundSource: prepared.round.contentSource,
+        language: prepared.round.language,
+        online: onlineAtStart,
+      });
+
+      await wait(1100);
+      if (!controller.signal.aborted) {
+        router.push("/pass");
+      }
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      // A genuine, unexpected round-preparation failure -- NOT the
+      // expected AI-fallback path (that's handled entirely inside
+      // game/game-engine.ts's getRoundContent and never throws). The
+      // most common real cause here is an invalid imposter count for
+      // this player count/mode (see prepareGameRound's doc comment).
+      captureError(error, {
+        mode: config.mode,
+        category: config.category,
+        difficulty: config.difficulty,
+        playerCount: players.length,
+        phase: "round-preparation",
+      });
+      setPhase("error");
+    }
+  }
+
+  useEffect(() => {
+    // Guards against React StrictMode's double-invoked effects in dev --
+    // a round must only ever be generated once (see Screen 4 spec,
+    // section 35).
+    if (startedRef.current) return;
+    startedRef.current = true;
+
+    // `session`/`phase`/`stage` were already derived from a recovered
+    // round (if any) in their lazy initializers above -- a recovered
+    // session always takes priority over the player-count check below,
+    // matching the original recovery behavior: if a round was already
+    // prepared before a refresh, it's reused rather than regenerated,
+    // regardless of what the current player list looks like.
+    if (session) {
+      markActiveGameRoute("/round");
+      // Nothing to regenerate -- just continue on to Screen 5 (see
+      // Screen 4 spec, section 36).
+      const timer = setTimeout(() => router.push("/pass"), 900);
+      return () => clearTimeout(timer);
+    }
+
+    if (phase === "no-players") {
+      // Nothing to run, the recovery card handles it.
+      return;
+    }
+
+    // Kicking off the (cancellable, StrictMode-guarded) round
+    // preparation pipeline on mount -- its state updates happen from
+    // async callbacks, not synchronously here. See runPreparation().
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void runPreparation();
+    return () => {
+      abortRef.current?.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
+
+  // Recovers from a false "no-players" reading. `phase` was decided
+  // synchronously above, before GameSetupProvider's own sessionStorage
+  // hydration (lib/game-setup-store.ts) had a chance to run -- normally
+  // that's moot because `players` really is `[]` on a fresh mount, but
+  // after an offline hard-navigation remount it usually isn't: hydration
+  // lands a tick later with the real player list. `isHydrated` gates
+  // this so it never fires before that recovery has actually resolved
+  // one way or the other, and `recoveredRef` (separate from
+  // `startedRef`, which the effect above already marked `true`) ensures
+  // this can only ever trigger `runPreparation()` once.
+  useEffect(() => {
+    if (phase !== "no-players") return;
+    if (!isHydrated) return;
+    if (recoveredRef.current) return;
+    if (!isPlayerCountValid(config.mode, players.length)) return;
+
+    recoveredRef.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void runPreparation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, isHydrated, config.mode, players.length]);
+
+  function handleBack() {
+    if (phase === "preparing") {
+      // Preparation is still running -- cancel it outright rather than
+      // leaving an AI request running in the background (see Screen 4
+      // spec, section 17).
+      abortRef.current?.abort();
+      router.push("/players");
+      return;
+    }
+    if (phase === "ready") {
+      setConfirmingLeave(true);
+      return;
+    }
+    router.push("/players");
+  }
+
+  function confirmLeave() {
+    // Only reachable from phase "ready" (see handleBack below) -- the
+    // round has already been prepared (game_started already fired) and
+    // is now being discarded before the player ever reaches Pass, so
+    // this is a genuine abandonment, not a setup cancellation.
+    analytics.gameAbandoned({
+      phase: "round-ready",
+      playerCount: session?.players.length,
+      mode: session?.config.mode,
+    });
+    clearStoredRoundSession();
+    router.push("/players");
+  }
+
+  const displayConfig = session?.config ?? config;
+  const displayPlayerCount = session?.players.length ?? players.length;
+  const displayImposterCount =
+    session?.round.imposterCount ??
+    getImposterCount(players.length, config.mode);
+
+  const stageMeta = STAGE_META[stage];
+  const statusText = wasOnlineAtStart
+    ? stageMeta.onlineStatus
+    : stageMeta.offlineStatus;
+
+  return (
+    <div className="relative flex min-h-dvh w-full justify-center">
+      <SpaceBackdrop />
+
+      <div className="flex w-full max-w-[1400px] flex-col px-4 pl-safe pr-safe pt-safe pb-safe sm:px-6 sm:py-8 lg:px-10">
+        <RoundPreparationHeader onBack={handleBack} />
+
+        <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center gap-6 py-6 text-center lg:max-w-3xl">
+          <div className="animate-iw-fade-up">
+            <h1 className="font-display text-3xl font-bold tracking-tight text-iw-ink-100 sm:text-4xl">
+              {phase === "ready" ? "ROUND READY!" : "GETTING READY..."}
+            </h1>
+            <p className="mt-1 text-sm text-iw-violet-300 sm:text-base">
+              {phase === "ready"
+                ? "Pass the phone to the first player."
+                : "Preparing your secret round"}
+            </p>
+          </div>
+
+          {(phase === "preparing" || phase === "ready") && (
+            <>
+              <GameSummaryCard
+                config={displayConfig}
+                playerCount={displayPlayerCount}
+                imposterCount={displayImposterCount}
+              />
+
+              <PreparationAnimation ready={phase === "ready"} />
+
+              {phase === "preparing" && (
+                <>
+                  <PreparationStatus text={statusText} />
+                  <PreparationProgress step={stageMeta.step} />
+                </>
+              )}
+
+              <RoundSourceIndicator
+                source={session?.round.contentSource ?? null}
+              />
+            </>
+          )}
+
+          {phase === "no-players" && (
+            <RoundErrorRecovery
+              title="Let's set up the players first"
+              message="We couldn't find a player list for this round. Head back to add your players."
+              onBack={() => router.push("/players")}
+            />
+          )}
+
+          {phase === "error" && (
+            <RoundErrorRecovery
+              title="Couldn't prepare the round"
+              message="Something went wrong getting your round ready. Give it another try, or head back to check your players."
+              onRetry={() => void runPreparation()}
+              onBack={() => {
+                clearStoredRoundSession();
+                router.push("/players");
+              }}
+            />
+          )}
+        </main>
+
+        {confirmingLeave && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-iw-void/70 px-6 backdrop-blur-sm">
+            <div className="animate-iw-fade-up w-full max-w-sm rounded-3xl border border-iw-border bg-iw-surface p-6 text-center">
+              <h2 className="font-display text-lg font-bold text-iw-ink-100">
+                Leave round setup?
+              </h2>
+              <p className="mt-2 text-sm text-iw-ink-500">
+                Your prepared round will be discarded.
+              </p>
+              <div className="mt-5 flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={() => setConfirmingLeave(false)}
+                  className="w-full rounded-2xl border border-iw-gold-600/40 bg-gradient-to-b from-iw-gold-100 via-iw-gold-400 to-iw-gold-500 px-6 py-3 font-display text-sm font-bold text-iw-gold-ink cursor-pointer"
+                >
+                  STAY HERE
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmLeave}
+                  className="w-full rounded-2xl border border-iw-border bg-iw-surface-2 px-6 py-3 font-display text-sm font-bold text-iw-ink-100 transition-colors hover:border-iw-border-strong cursor-pointer"
+                >
+                  LEAVE ROUND SETUP
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

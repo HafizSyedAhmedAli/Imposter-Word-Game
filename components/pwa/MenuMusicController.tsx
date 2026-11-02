@@ -7,8 +7,8 @@ import {
   stopAmbient,
   persistAmbientContinuity,
   consumeAmbientContinuity,
-} from "@/lib/sound-engine";
-import { onBeforeHardNavigate } from "@/lib/offline-navigation";
+} from "@/shared/lib/sound-engine";
+import { onBeforeHardNavigate } from "@/shared/lib/offline-navigation";
 
 // The screens the ambient menu bed should play across. Single source
 // of truth. Exported so test/pwa/menu-music-routes.test.ts can check it
@@ -47,7 +47,7 @@ export default function MenuMusicController() {
   const wasInMenuRef = useRef(false);
 
   useEffect(() => {
-    const isMenuRoute = MENU_ROUTES.has(pathname);
+    const isMenuRoute = MENU_ROUTES.has(pathname ?? "");
 
     // Always consume the flag, even on branches that don't use it, so a
     // stale "yes" from an earlier hard reload never leaks into some

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Settings, HelpCircle } from "lucide-react";
 import ConnectionStatus from "./ConnectionStatus";
-import { playSound } from "@/lib/sound-engine";
+import { playSound } from "@/shared/lib/sound-engine";
 
 function IconButton({
   href,

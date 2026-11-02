@@ -5,17 +5,19 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import SpaceBackdrop from "@/components/home/SpaceBackdrop";
 import { useGameSetup } from "@/lib/game-setup-context";
-import { isPlayerCountValid, MAX_PLAYERS } from "@/game/game-rules";
-import { error, light } from "@/lib/haptics";
-import { playSound } from "@/lib/sound-engine";
-import PlayersHeader from "./PlayersHeader";
-import GameConfigSummary from "./GameConfigSummary";
-import PlayerCount from "./PlayerCount";
-import PlayerInput from "./PlayerInput";
-import PlayerList from "./PlayerList";
-import RandomizePlayersToggle from "./RandomizePlayersToggle";
-import PlayerValidationMessage from "./PlayerValidationMessage";
-import PlayersContinueButton from "./PlayersContinueButton";
+import { isPlayerCountValid, MAX_PLAYERS } from "@/features/play-round";
+import { GameConfigSummary } from "@/features/configure-game";
+import { error, light } from "@/shared/lib/haptics";
+import { playSound } from "@/shared/lib/sound-engine";
+import {
+  PlayersHeader,
+  PlayerCount,
+  PlayerInput,
+  PlayerList,
+  RandomizePlayersToggle,
+  PlayerValidationMessage,
+  PlayersContinueButton,
+} from "@/features/manage-players";
 
 export default function PlayersScreen() {
   const router = useRouter();
