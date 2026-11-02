@@ -66,6 +66,12 @@ test.describe("Language setting (Roman Urdu)", () => {
     await page.goto("/settings");
     await selectLanguage(page, "Roman Urdu");
 
+    await page.waitForFunction(async () => {
+      const dbs = await indexedDB.databases();
+      return dbs.some((d) => d.name === "imposter-word-db");
+    });
+    await page.waitForTimeout(250);
+
     await page.goto("/");
     const playLink = page.getByRole("link", { name: /play game/i });
     await playLink.waitFor({ state: "visible" });

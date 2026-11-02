@@ -108,12 +108,12 @@ test.describe("Achievements", () => {
     const crewFirstGameCard = page
       .locator("li")
       .filter({ hasText: "First Game" });
-    await expect(crewFirstGameCard.getByText("Unlocked")).toBeVisible();
+    await expect(crewFirstGameCard.getByText("Unlocked", { exact: true })).toBeVisible();
 
     const imposterHunterCard = page
       .locator("li")
       .filter({ hasText: "Imposter Hunter" });
-    await expect(imposterHunterCard.getByText("Unlocked")).toBeVisible();
+    await expect(imposterHunterCard.getByText("Unlocked", { exact: true })).toBeVisible();
 
     const partyStarterCard = page
       .locator("li")
@@ -129,7 +129,7 @@ test.describe("Achievements", () => {
     const imposterFirstGameCard = page
       .locator("li")
       .filter({ hasText: "First Game" });
-    await expect(imposterFirstGameCard.getByText("Unlocked")).toBeVisible();
+    await expect(imposterFirstGameCard.getByText("Unlocked", { exact: true })).toBeVisible();
 
     const firstBetrayalCard = page
       .locator("li")
